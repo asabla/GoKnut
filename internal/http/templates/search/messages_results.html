@@ -1,0 +1,83 @@
+<!-- Message Search Results Fragment (for HTMX partial updates) -->
+{{if not .HasQuery}}
+<div class="text-center py-12 text-gray-500">
+    <svg class="mx-auto h-12 w-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+    </svg>
+    <p class="mt-4 text-lg">Enter a search term to find messages</p>
+    <p class="mt-1 text-sm">Minimum 2 characters required</p>
+</div>
+{{else if .IsEmpty}}
+<div class="text-center py-12 text-gray-500">
+    <svg class="mx-auto h-12 w-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <p class="mt-4 text-lg">No messages found for "{{.Query}}"</p>
+    <p class="mt-1 text-sm">Try a different search term or adjust your filters</p>
+</div>
+{{else}}
+<div class="space-y-4">
+    <!-- Results count -->
+    <div class="text-sm text-gray-400">
+        Found {{.TotalCount}} message{{if ne .TotalCount 1}}s{{end}} matching "{{.Query}}"
+    </div>
+
+    <!-- Results list -->
+    <div class="space-y-3">
+        {{range .Messages}}
+        <div class="bg-twitch-gray rounded-lg border border-gray-700 p-4 hover:border-gray-600 transition-colors">
+            <div class="flex items-start justify-between">
+                <div class="flex items-center space-x-3">
+                    <a href="/users/{{.Message.UserID}}" 
+                       class="font-medium text-twitch-purple hover:text-purple-400"
+                       hx-boost="true">
+                        {{if .Message.DisplayName}}{{.Message.DisplayName}}{{else}}{{.Message.Username}}{{end}}
+                    </a>
+                    <span class="text-gray-500">in</span>
+                    <a href="/channels/{{.Message.ChannelID}}/view" 
+                       class="text-gray-400 hover:text-gray-300"
+                       hx-boost="true">
+                        #{{.Message.ChannelName}}
+                    </a>
+                </div>
+                <time class="text-sm text-gray-500" datetime="{{.Message.SentAt.Format "2006-01-02T15:04:05Z07:00"}}">
+                    {{.Message.SentAt.Format "Jan 02, 2006 15:04:05"}}
+                </time>
+            </div>
+            <div class="mt-2 text-gray-200">
+                {{.HighlightedText}}
+            </div>
+        </div>
+        {{end}}
+    </div>
+
+    <!-- Pagination -->
+    {{if or .HasPrev .HasNext}}
+    <nav class="flex items-center justify-between pt-4" aria-label="Pagination">
+        <div class="flex-1 flex justify-between sm:justify-end space-x-3">
+            {{if .HasPrev}}
+            <a href="/search/messages?q={{.Query}}&page={{.PrevPage}}{{if .ChannelID}}&channel_id={{.ChannelID}}{{end}}{{if .UserID}}&user_id={{.UserID}}{{end}}"
+               hx-get="/search/messages?q={{.Query}}&page={{.PrevPage}}{{if .ChannelID}}&channel_id={{.ChannelID}}{{end}}{{if .UserID}}&user_id={{.UserID}}{{end}}"
+               hx-target="#search-results"
+               hx-swap="innerHTML"
+               class="relative inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-twitch-gray hover:bg-gray-700">
+                Previous
+            </a>
+            {{end}}
+            <span class="text-sm text-gray-400 self-center">
+                Page {{.Page}} of {{.TotalPages}}
+            </span>
+            {{if .HasNext}}
+            <a href="/search/messages?q={{.Query}}&page={{.NextPage}}{{if .ChannelID}}&channel_id={{.ChannelID}}{{end}}{{if .UserID}}&user_id={{.UserID}}{{end}}"
+               hx-get="/search/messages?q={{.Query}}&page={{.NextPage}}{{if .ChannelID}}&channel_id={{.ChannelID}}{{end}}{{if .UserID}}&user_id={{.UserID}}{{end}}"
+               hx-target="#search-results"
+               hx-swap="innerHTML"
+               class="relative inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-twitch-gray hover:bg-gray-700">
+                Next
+            </a>
+            {{end}}
+        </div>
+    </nav>
+    {{end}}
+</div>
+{{end}}

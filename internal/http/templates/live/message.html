@@ -1,0 +1,15 @@
+{{define "live/message.html"}}
+<div class="flex items-start space-x-2 py-1 hover:bg-gray-800/50 rounded px-2 -mx-2 group"
+     id="msg-{{.ID}}">
+    <span class="text-gray-500 text-xs shrink-0 tabular-nums"
+          title="{{.SentAt.Format "2006-01-02 15:04:05 MST"}}">
+        {{.SentAt.Format "15:04:05"}}
+    </span>
+    <span class="font-medium text-twitch-purple shrink-0">
+        {{if .DisplayName}}{{.DisplayName}}{{else}}{{.Username}}{{end}}:
+    </span>
+    <span class="text-twitch-light break-words flex-1">
+        {{.Text}}
+    </span>
+</div>
+{{end}}

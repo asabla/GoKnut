@@ -1,0 +1,143 @@
+{{/*
+  Highlighting Utilities Partial
+  
+  This partial provides CSS classes for search result highlighting.
+  The actual highlighting is done server-side in search_repository.go
+  using the HighlightTerm function which wraps matches in <mark> tags.
+  
+  Usage in templates:
+  1. For server-side highlighted text (already has <mark> tags):
+     {{.HighlightedText}}
+  
+  2. The highlight styles below are included via layout.html
+*/}}
+
+<!-- Highlight Styles (included in layout.html <style> block) -->
+{{define "partials/highlight-styles"}}
+/* Search result highlighting */
+mark, .highlight {
+    background-color: rgba(145, 70, 255, 0.3);
+    color: inherit;
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+mark:hover, .highlight:hover {
+    background-color: rgba(145, 70, 255, 0.5);
+}
+
+/* Alternative highlight variants */
+.highlight-primary {
+    background-color: rgba(145, 70, 255, 0.3);
+}
+
+.highlight-success {
+    background-color: rgba(34, 197, 94, 0.3);
+}
+
+.highlight-warning {
+    background-color: rgba(234, 179, 8, 0.3);
+}
+
+.highlight-error {
+    background-color: rgba(239, 68, 68, 0.3);
+}
+{{end}}
+
+{{/*
+  Pagination Component
+  
+  Expects the following data:
+  - .Page: current page number (1-based)
+  - .TotalPages: total number of pages
+  - .HasNext: boolean
+  - .HasPrev: boolean
+  - .NextPage: next page number
+  - .PrevPage: previous page number
+  - .BaseURL: base URL for pagination links (e.g., "/search/messages?q=test")
+  - .TargetID: HTMX target ID for partial updates (optional)
+*/}}
+{{define "partials/pagination"}}
+{{if or .HasPrev .HasNext}}
+<nav class="flex items-center justify-between pt-4" aria-label="Pagination">
+    <div class="hidden sm:block">
+        <p class="text-sm text-gray-400">
+            Page <span class="font-medium text-white">{{.Page}}</span>
+            of <span class="font-medium text-white">{{.TotalPages}}</span>
+        </p>
+    </div>
+    <div class="flex-1 flex justify-between sm:justify-end space-x-3">
+        {{if .HasPrev}}
+        <a href="{{.BaseURL}}&page={{.PrevPage}}"
+           {{if .TargetID}}
+           hx-get="{{.BaseURL}}&page={{.PrevPage}}"
+           hx-target="{{.TargetID}}"
+           hx-swap="innerHTML"
+           {{end}}
+           class="relative inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-twitch-gray hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-twitch-purple">
+            <svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Previous
+        </a>
+        {{else}}
+        <span class="relative inline-flex items-center px-4 py-2 border border-gray-700 text-sm font-medium rounded-md text-gray-500 bg-gray-800 cursor-not-allowed">
+            <svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Previous
+        </span>
+        {{end}}
+        
+        {{if .HasNext}}
+        <a href="{{.BaseURL}}&page={{.NextPage}}"
+           {{if .TargetID}}
+           hx-get="{{.BaseURL}}&page={{.NextPage}}"
+           hx-target="{{.TargetID}}"
+           hx-swap="innerHTML"
+           {{end}}
+           class="relative inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-twitch-gray hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-twitch-purple">
+            Next
+            <svg class="ml-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </a>
+        {{else}}
+        <span class="relative inline-flex items-center px-4 py-2 border border-gray-700 text-sm font-medium rounded-md text-gray-500 bg-gray-800 cursor-not-allowed">
+            Next
+            <svg class="ml-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </span>
+        {{end}}
+    </div>
+</nav>
+{{end}}
+{{end}}
+
+{{/*
+  Empty State Component
+  
+  Expects:
+  - .Icon: SVG path for the icon (optional, defaults to document icon)
+  - .Title: main message
+  - .Subtitle: secondary message (optional)
+*/}}
+{{define "partials/empty-state"}}
+<div class="text-center py-12 text-gray-500">
+    <svg class="mx-auto h-12 w-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        {{if .Icon}}
+        {{.Icon}}
+        {{else}}
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        {{end}}
+    </svg>
+    {{if .Title}}
+    <p class="mt-4 text-lg">{{.Title}}</p>
+    {{end}}
+    {{if .Subtitle}}
+    <p class="mt-1 text-sm">{{.Subtitle}}</p>
+    {{end}}
+</div>
+{{end}}

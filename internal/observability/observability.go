@@ -74,6 +74,11 @@ type Metrics struct {
 	httpRequests     int64
 	httpLatencySum   time.Duration
 	httpRequestCount int64
+
+	// Stream polling metrics
+	streamPollRequests int64
+	streamLatencySum   time.Duration
+	streamPollCount    int64
 }
 
 // NewMetrics creates a new Metrics instance.
@@ -134,6 +139,15 @@ func (m *Metrics) RecordSearchQuery(latency time.Duration) {
 	m.searchQueryCount++
 }
 
+// RecordSearchRequest records a search request with type information.
+func (m *Metrics) RecordSearchRequest(searchType string, latency time.Duration) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.searchQueries++
+	m.searchLatencySum += latency
+	m.searchQueryCount++
+}
+
 // RecordHTTPRequest records an HTTP request.
 func (m *Metrics) RecordHTTPRequest(latency time.Duration) {
 	m.mu.Lock()
@@ -148,7 +162,7 @@ func (m *Metrics) Stats() MetricsSnapshot {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	var avgBatchLatency, avgSearchLatency, avgHTTPLatency time.Duration
+	var avgBatchLatency, avgSearchLatency, avgHTTPLatency, avgStreamLatency time.Duration
 	if m.batchCount > 0 {
 		avgBatchLatency = m.totalBatchLatency / time.Duration(m.batchCount)
 	}
@@ -158,33 +172,49 @@ func (m *Metrics) Stats() MetricsSnapshot {
 	if m.httpRequestCount > 0 {
 		avgHTTPLatency = m.httpLatencySum / time.Duration(m.httpRequestCount)
 	}
+	if m.streamPollCount > 0 {
+		avgStreamLatency = m.streamLatencySum / time.Duration(m.streamPollCount)
+	}
 
 	return MetricsSnapshot{
-		IRCConnections:    m.ircConnections,
-		IRCDisconnections: m.ircDisconnections,
-		IRCMessagesRecv:   m.ircMessagesRecv,
-		BatchesProcessed:  m.batchesProcessed,
-		MessagesIngested:  m.messagesIngested,
-		DroppedMessages:   m.droppedMessages,
-		AvgBatchLatency:   avgBatchLatency,
-		SearchQueries:     m.searchQueries,
-		AvgSearchLatency:  avgSearchLatency,
-		HTTPRequests:      m.httpRequests,
-		AvgHTTPLatency:    avgHTTPLatency,
+		IRCConnections:     m.ircConnections,
+		IRCDisconnections:  m.ircDisconnections,
+		IRCMessagesRecv:    m.ircMessagesRecv,
+		BatchesProcessed:   m.batchesProcessed,
+		MessagesIngested:   m.messagesIngested,
+		DroppedMessages:    m.droppedMessages,
+		AvgBatchLatency:    avgBatchLatency,
+		SearchQueries:      m.searchQueries,
+		AvgSearchLatency:   avgSearchLatency,
+		HTTPRequests:       m.httpRequests,
+		AvgHTTPLatency:     avgHTTPLatency,
+		StreamPollRequests: m.streamPollRequests,
+		AvgStreamLatency:   avgStreamLatency,
 	}
 }
 
 // MetricsSnapshot is a point-in-time snapshot of metrics.
 type MetricsSnapshot struct {
-	IRCConnections    int64
-	IRCDisconnections int64
-	IRCMessagesRecv   int64
-	BatchesProcessed  int64
-	MessagesIngested  int64
-	DroppedMessages   int64
-	AvgBatchLatency   time.Duration
-	SearchQueries     int64
-	AvgSearchLatency  time.Duration
-	HTTPRequests      int64
-	AvgHTTPLatency    time.Duration
+	IRCConnections     int64
+	IRCDisconnections  int64
+	IRCMessagesRecv    int64
+	BatchesProcessed   int64
+	MessagesIngested   int64
+	DroppedMessages    int64
+	AvgBatchLatency    time.Duration
+	SearchQueries      int64
+	AvgSearchLatency   time.Duration
+	HTTPRequests       int64
+	AvgHTTPLatency     time.Duration
+	StreamPollRequests int64
+	AvgStreamLatency   time.Duration
+}
+
+// RecordStreamPoll records a stream poll request.
+func (m *Metrics) RecordStreamPoll(latency time.Duration, messageCount int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.streamPollRequests++
+	m.streamLatencySum += latency
+	m.streamPollCount++
 }
