@@ -16,10 +16,11 @@ func TestConfigValidation(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "valid config",
+			name: "valid authenticated config",
 			cfg: &config.Config{
 				DBPath:           "./test.db",
 				HTTPAddr:         ":8080",
+				TwitchAuthMode:   config.AuthModeAuthenticated,
 				TwitchUsername:   "testuser",
 				TwitchOAuthToken: "oauth:token",
 				BatchSize:        100,
@@ -28,10 +29,83 @@ func TestConfigValidation(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "valid anonymous config",
+			cfg: &config.Config{
+				DBPath:         "./test.db",
+				HTTPAddr:       ":8080",
+				TwitchAuthMode: config.AuthModeAnonymous,
+				BatchSize:      100,
+				FlushTimeout:   100,
+			},
+			wantErr: false,
+		},
+		{
+			name: "anonymous with username is valid",
+			cfg: &config.Config{
+				DBPath:         "./test.db",
+				HTTPAddr:       ":8080",
+				TwitchAuthMode: config.AuthModeAnonymous,
+				TwitchUsername: "justinfan12345",
+				BatchSize:      100,
+				FlushTimeout:   100,
+			},
+			wantErr: false,
+		},
+		{
+			name: "anonymous with token is invalid",
+			cfg: &config.Config{
+				DBPath:           "./test.db",
+				HTTPAddr:         ":8080",
+				TwitchAuthMode:   config.AuthModeAnonymous,
+				TwitchOAuthToken: "oauth:token",
+				BatchSize:        100,
+				FlushTimeout:     100,
+			},
+			wantErr: true,
+		},
+		{
+			name: "authenticated missing token",
+			cfg: &config.Config{
+				DBPath:         "./test.db",
+				HTTPAddr:       ":8080",
+				TwitchAuthMode: config.AuthModeAuthenticated,
+				TwitchUsername: "testuser",
+				BatchSize:      100,
+				FlushTimeout:   100,
+			},
+			wantErr: true,
+		},
+		{
+			name: "authenticated missing username",
+			cfg: &config.Config{
+				DBPath:           "./test.db",
+				HTTPAddr:         ":8080",
+				TwitchAuthMode:   config.AuthModeAuthenticated,
+				TwitchOAuthToken: "oauth:token",
+				BatchSize:        100,
+				FlushTimeout:     100,
+			},
+			wantErr: true,
+		},
+		{
+			name: "authenticated token without oauth prefix",
+			cfg: &config.Config{
+				DBPath:           "./test.db",
+				HTTPAddr:         ":8080",
+				TwitchAuthMode:   config.AuthModeAuthenticated,
+				TwitchUsername:   "testuser",
+				TwitchOAuthToken: "invalidtoken",
+				BatchSize:        100,
+				FlushTimeout:     100,
+			},
+			wantErr: true,
+		},
+		{
 			name: "missing db path",
 			cfg: &config.Config{
 				DBPath:           "",
 				HTTPAddr:         ":8080",
+				TwitchAuthMode:   config.AuthModeAuthenticated,
 				TwitchUsername:   "testuser",
 				TwitchOAuthToken: "oauth:token",
 				BatchSize:        100,
@@ -44,32 +118,9 @@ func TestConfigValidation(t *testing.T) {
 			cfg: &config.Config{
 				DBPath:           "./test.db",
 				HTTPAddr:         "",
+				TwitchAuthMode:   config.AuthModeAuthenticated,
 				TwitchUsername:   "testuser",
 				TwitchOAuthToken: "oauth:token",
-				BatchSize:        100,
-				FlushTimeout:     100,
-			},
-			wantErr: true,
-		},
-		{
-			name: "missing twitch username",
-			cfg: &config.Config{
-				DBPath:           "./test.db",
-				HTTPAddr:         ":8080",
-				TwitchUsername:   "",
-				TwitchOAuthToken: "oauth:token",
-				BatchSize:        100,
-				FlushTimeout:     100,
-			},
-			wantErr: true,
-		},
-		{
-			name: "missing oauth token",
-			cfg: &config.Config{
-				DBPath:           "./test.db",
-				HTTPAddr:         ":8080",
-				TwitchUsername:   "testuser",
-				TwitchOAuthToken: "",
 				BatchSize:        100,
 				FlushTimeout:     100,
 			},
@@ -80,6 +131,7 @@ func TestConfigValidation(t *testing.T) {
 			cfg: &config.Config{
 				DBPath:           "./test.db",
 				HTTPAddr:         ":8080",
+				TwitchAuthMode:   config.AuthModeAuthenticated,
 				TwitchUsername:   "testuser",
 				TwitchOAuthToken: "oauth:token",
 				BatchSize:        0,
@@ -92,6 +144,7 @@ func TestConfigValidation(t *testing.T) {
 			cfg: &config.Config{
 				DBPath:           "./test.db",
 				HTTPAddr:         ":8080",
+				TwitchAuthMode:   config.AuthModeAuthenticated,
 				TwitchUsername:   "testuser",
 				TwitchOAuthToken: "oauth:token",
 				BatchSize:        -1,
@@ -104,6 +157,7 @@ func TestConfigValidation(t *testing.T) {
 			cfg: &config.Config{
 				DBPath:           "./test.db",
 				HTTPAddr:         ":8080",
+				TwitchAuthMode:   config.AuthModeAuthenticated,
 				TwitchUsername:   "testuser",
 				TwitchOAuthToken: "oauth:token",
 				BatchSize:        100,
@@ -135,6 +189,9 @@ func TestDefaultConfig(t *testing.T) {
 	}
 	if cfg.HTTPAddr != ":8080" {
 		t.Errorf("expected default HTTPAddr ':8080', got %s", cfg.HTTPAddr)
+	}
+	if cfg.TwitchAuthMode != config.AuthModeAuthenticated {
+		t.Errorf("expected default TwitchAuthMode 'authenticated', got %s", cfg.TwitchAuthMode)
 	}
 	if cfg.BatchSize != 100 {
 		t.Errorf("expected default BatchSize 100, got %d", cfg.BatchSize)

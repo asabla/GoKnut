@@ -20,16 +20,45 @@ A Go single-binary service for archiving Twitch chat messages and providing sear
 ## Prerequisites
 
 - Go 1.22+
-- Twitch credentials (username and OAuth token)
+- Twitch credentials (username and OAuth token) OR anonymous mode for read-only access
 
 ## Setup
+
+### Authentication Modes
+
+GoKnut supports two authentication modes for connecting to Twitch IRC:
+
+#### Authenticated Mode (Full Access)
+Uses your Twitch username and OAuth token. Provides full access including:
+- Reading chat from all public channels
+- Joining subscriber-only or verified-only channels (if your account has access)
+- More stable connection with lower disconnect rates
+
+```bash
+export TWITCH_AUTH_MODE=authenticated  # Optional, this is the default
+export TWITCH_USERNAME=your_username
+export TWITCH_OAUTH_TOKEN=oauth:your_token
+```
+
+#### Anonymous Mode (Read-Only)
+Uses a "justinfan" anonymous login. Limitations:
+- **Read-only**: Cannot send messages
+- **Public channels only**: No access to subscriber-only or verified-only channels
+- **Higher disconnect risk**: Anonymous connections may be rate-limited more aggressively
+- **Best for**: Testing, read-only monitoring of public channels
+
+```bash
+export TWITCH_AUTH_MODE=anonymous
+# No username or token required - a justinfan nick is auto-generated
+```
 
 ### Environment Variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `TWITCH_USERNAME` | Yes | - | Your Twitch username |
-| `TWITCH_OAUTH_TOKEN` | Yes | - | OAuth token (format: `oauth:xxxxx`) |
+| `TWITCH_AUTH_MODE` | No | `authenticated` | Auth mode: `authenticated` or `anonymous` |
+| `TWITCH_USERNAME` | Auth mode | - | Your Twitch username (required for authenticated) |
+| `TWITCH_OAUTH_TOKEN` | Auth mode | - | OAuth token (format: `oauth:xxxxx`, required for authenticated) |
 | `TWITCH_CHANNELS` | No | - | Comma-separated list of channels to auto-join |
 | `DB_PATH` | No | `./twitch.db` | Path to SQLite database file |
 | `HTTP_ADDR` | No | `:8080` | HTTP server listen address |
@@ -49,9 +78,19 @@ A Go single-binary service for archiving Twitch chat messages and providing sear
 
 ## Running
 
+### Authenticated Mode (Recommended)
+
 ```bash
 export TWITCH_USERNAME=your_username
 export TWITCH_OAUTH_TOKEN=oauth:your_token
+
+go run ./cmd/server --db-path=./twitch.db --http-addr=:8080
+```
+
+### Anonymous Mode (Read-Only, No Credentials)
+
+```bash
+export TWITCH_AUTH_MODE=anonymous
 
 go run ./cmd/server --db-path=./twitch.db --http-addr=:8080
 ```

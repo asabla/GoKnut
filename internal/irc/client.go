@@ -29,6 +29,16 @@ const (
 	reconnectJitterFactor = 0.2 // 20% jitter to prevent thundering herd
 )
 
+// AuthMode represents the IRC authentication mode.
+type AuthMode string
+
+const (
+	// AuthModeAuthenticated uses OAuth token for full access.
+	AuthModeAuthenticated AuthMode = "authenticated"
+	// AuthModeAnonymous uses justinfan nick for read-only access.
+	AuthModeAnonymous AuthMode = "anonymous"
+)
+
 // Message represents a parsed IRC PRIVMSG.
 type Message struct {
 	Channel     string
@@ -47,6 +57,7 @@ type ChannelChangeHandler func(channel string, joined bool)
 
 // Client is a Twitch IRC client.
 type Client struct {
+	authMode   AuthMode
 	username   string
 	oauthToken string
 
@@ -68,16 +79,25 @@ type Client struct {
 
 // ClientConfig holds IRC client configuration.
 type ClientConfig struct {
-	Username        string
-	OAuthToken      string
+	AuthMode        AuthMode // "authenticated" or "anonymous"
+	Username        string   // Required for authenticated, optional for anonymous
+	OAuthToken      string   // Required for authenticated, must be empty for anonymous
 	OnMessage       MessageHandler
 	OnChannelChange ChannelChangeHandler
 }
 
 // NewClient creates a new IRC client.
 func NewClient(cfg ClientConfig) *Client {
+	username := cfg.Username
+
+	// For anonymous mode, generate a justinfan nick if not provided
+	if cfg.AuthMode == AuthModeAnonymous && username == "" {
+		username = fmt.Sprintf("justinfan%d", rand.IntN(99999)+1)
+	}
+
 	return &Client{
-		username:        cfg.Username,
+		authMode:        cfg.AuthMode,
+		username:        username,
 		oauthToken:      cfg.OAuthToken,
 		channels:        make(map[string]bool),
 		reconnectDelay:  initialReconnectDelay,
@@ -116,15 +136,21 @@ func (c *Client) Connect(ctx context.Context) error {
 	c.conn = conn
 	c.reader = bufio.NewReader(conn)
 
-	// Authenticate
+	// Request capabilities (works for both auth modes)
 	if err := c.send("CAP REQ :twitch.tv/tags twitch.tv/commands"); err != nil {
 		c.conn.Close()
 		return fmt.Errorf("failed to request capabilities: %w", err)
 	}
-	if err := c.send("PASS " + c.oauthToken); err != nil {
-		c.conn.Close()
-		return fmt.Errorf("failed to send password: %w", err)
+
+	// Authenticate based on mode
+	if c.authMode == AuthModeAuthenticated {
+		// Authenticated mode: send PASS with OAuth token, then NICK
+		if err := c.send("PASS " + c.oauthToken); err != nil {
+			c.conn.Close()
+			return fmt.Errorf("failed to send password: %w", err)
+		}
 	}
+	// For both modes, send NICK (anonymous uses justinfan nick)
 	if err := c.send("NICK " + c.username); err != nil {
 		c.conn.Close()
 		return fmt.Errorf("failed to send nick: %w", err)
@@ -231,6 +257,17 @@ func (c *Client) Channels() []string {
 	return channels
 }
 
+// IsAnonymous returns true if the client is using anonymous (justinfan) mode.
+// In anonymous mode, the client is read-only and cannot send messages.
+func (c *Client) IsAnonymous() bool {
+	return c.authMode == AuthModeAnonymous
+}
+
+// AuthMode returns the current authentication mode.
+func (c *Client) AuthMode() AuthMode {
+	return c.authMode
+}
+
 func (c *Client) send(msg string) error {
 	if c.conn == nil {
 		return fmt.Errorf("not connected")
@@ -268,6 +305,16 @@ func (c *Client) handleLine(line string) {
 		c.send("PONG" + line[4:])
 		c.mu.Unlock()
 		return
+	}
+
+	// Handle NOTICE (may contain auth failures or rate limit warnings)
+	if strings.Contains(line, "NOTICE") {
+		// Common auth failure messages:
+		// - "Login authentication failed"
+		// - "Improperly formatted auth"
+		// Rate limit messages typically contain "You are sending"
+		// For now, we log these internally but don't take action
+		// (could add callback for error handling in future)
 	}
 
 	// Parse PRIVMSG
