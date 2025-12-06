@@ -1,0 +1,103 @@
+{{template "layout.html" .}}
+
+{{define "title"}}Channels - GoKnut{{end}}
+
+{{define "content"}}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-white">Channels</h1>
+        <button 
+            type="button"
+            onclick="document.getElementById('add-channel-form').classList.toggle('hidden')"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-twitch-purple hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-twitch-purple">
+            Add Channel
+        </button>
+    </div>
+
+    <!-- Add Channel Form -->
+    <div id="add-channel-form" class="hidden bg-twitch-gray rounded-lg p-6 border border-gray-700">
+        <h2 class="text-lg font-medium text-white mb-4">Add New Channel</h2>
+        <form hx-post="/channels" 
+              hx-target="#channels-list" 
+              hx-swap="beforeend"
+              hx-on::after-request="if(event.detail.successful) { this.reset(); document.getElementById('add-channel-form').classList.add('hidden'); }"
+              class="space-y-4">
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-300">Channel Name</label>
+                <input type="text" 
+                       name="name" 
+                       id="name" 
+                       required
+                       pattern="[a-zA-Z0-9_]+"
+                       maxlength="25"
+                       placeholder="e.g. xqc"
+                       class="mt-1 block w-full rounded-md bg-twitch-dark border-gray-600 text-white shadow-sm focus:border-twitch-purple focus:ring-twitch-purple sm:text-sm">
+            </div>
+            <div>
+                <label for="display_name" class="block text-sm font-medium text-gray-300">Display Name (optional)</label>
+                <input type="text" 
+                       name="display_name" 
+                       id="display_name"
+                       placeholder="e.g. xQc"
+                       class="mt-1 block w-full rounded-md bg-twitch-dark border-gray-600 text-white shadow-sm focus:border-twitch-purple focus:ring-twitch-purple sm:text-sm">
+            </div>
+            <div class="flex items-center space-x-4">
+                <label class="flex items-center">
+                    <input type="checkbox" 
+                           name="enabled" 
+                           checked
+                           class="rounded bg-twitch-dark border-gray-600 text-twitch-purple focus:ring-twitch-purple">
+                    <span class="ml-2 text-sm text-gray-300">Enabled (join channel)</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" 
+                           name="retain_history_on_delete" 
+                           checked
+                           class="rounded bg-twitch-dark border-gray-600 text-twitch-purple focus:ring-twitch-purple">
+                    <span class="ml-2 text-sm text-gray-300">Retain history on delete</span>
+                </label>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button type="button" 
+                        onclick="document.getElementById('add-channel-form').classList.add('hidden')"
+                        class="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-twitch-purple hover:bg-purple-700">
+                    Add Channel
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Channels List -->
+    <div class="bg-twitch-gray rounded-lg border border-gray-700 overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-700">
+            <thead class="bg-gray-800">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Channel</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Messages</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Last Activity</th>
+                    <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody id="channels-list" class="divide-y divide-gray-700">
+                {{if .IsEmpty}}
+                <tr id="empty-state">
+                    <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                        <p class="text-lg">No channels configured</p>
+                        <p class="mt-1 text-sm">Add a channel to start archiving chat messages.</p>
+                    </td>
+                </tr>
+                {{else}}
+                {{range .Channels}}
+                {{template "channels/row.html" .}}
+                {{end}}
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+{{end}}

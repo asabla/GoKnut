@@ -1,0 +1,13 @@
+<!-- Channels List Fragment (for HTMX partial updates) -->
+{{if .IsEmpty}}
+<tr id="empty-state">
+    <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+        <p class="text-lg">No channels configured</p>
+        <p class="mt-1 text-sm">Add a channel to start archiving chat messages.</p>
+    </td>
+</tr>
+{{else}}
+{{range .Channels}}
+{{template "channels/row.html" .}}
+{{end}}
+{{end}}
