@@ -1,0 +1,115 @@
+{{template "layout.html" .}}
+
+{{define "title"}}{{.DisplayName}} - Channels - GoKnut{{end}}
+
+{{define "content"}}
+<div class="space-y-6">
+    <!-- Back Link -->
+    <div>
+        <a href="/channels" class="text-twitch-purple hover:text-purple-400 text-sm">&larr; Back to Channels</a>
+    </div>
+
+    <!-- Channel Header -->
+    <div class="bg-twitch-gray rounded-lg p-6 border border-gray-700">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 h-16 w-16 rounded-full bg-twitch-purple flex items-center justify-center">
+                    <span class="text-white text-2xl font-bold">{{slice .Name 0 1 | upper}}</span>
+                </div>
+                <div class="ml-4">
+                    <h1 class="text-2xl font-bold text-white">{{.DisplayName}}</h1>
+                    <p class="text-gray-400">#{{.Name}}</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                {{if .Enabled}}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-900 text-green-300">
+                    <span class="w-2 h-2 mr-2 rounded-full bg-green-400 animate-pulse"></span>
+                    Active
+                </span>
+                {{else}}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-700 text-gray-300">
+                    Disabled
+                </span>
+                {{end}}
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
+            <div class="bg-twitch-dark rounded-lg p-4">
+                <dt class="text-sm font-medium text-gray-400">Total Messages</dt>
+                <dd class="mt-1 text-2xl font-semibold text-white">{{.TotalMessages | formatNumber}}</dd>
+            </div>
+            <div class="bg-twitch-dark rounded-lg p-4">
+                <dt class="text-sm font-medium text-gray-400">Created</dt>
+                <dd class="mt-1 text-lg text-white">{{.CreatedAt | formatDate}}</dd>
+            </div>
+            <div class="bg-twitch-dark rounded-lg p-4">
+                <dt class="text-sm font-medium text-gray-400">Last Message</dt>
+                <dd class="mt-1 text-lg text-white">
+                    {{if .LastMessageAt}}{{.LastMessageAt | formatTime}}{{else}}Never{{end}}
+                </dd>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Form -->
+    <div class="bg-twitch-gray rounded-lg p-6 border border-gray-700">
+        <h2 class="text-lg font-medium text-white mb-4">Channel Settings</h2>
+        <form hx-post="/channels/{{.ID}}" 
+              hx-swap="none"
+              hx-on::after-request="if(event.detail.successful) { alert('Settings saved!'); }"
+              class="space-y-4">
+            <div>
+                <label for="display_name" class="block text-sm font-medium text-gray-300">Display Name</label>
+                <input type="text" 
+                       name="display_name" 
+                       id="display_name"
+                       value="{{.DisplayName}}"
+                       class="mt-1 block w-full rounded-md bg-twitch-dark border-gray-600 text-white shadow-sm focus:border-twitch-purple focus:ring-twitch-purple sm:text-sm">
+            </div>
+            <div class="flex items-center space-x-4">
+                <label class="flex items-center">
+                    <input type="checkbox" 
+                           name="enabled" 
+                           {{if .Enabled}}checked{{end}}
+                           class="rounded bg-twitch-dark border-gray-600 text-twitch-purple focus:ring-twitch-purple">
+                    <span class="ml-2 text-sm text-gray-300">Enabled (join channel)</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" 
+                           name="retain_history_on_delete" 
+                           {{if .RetainHistoryOnDelete}}checked{{end}}
+                           class="rounded bg-twitch-dark border-gray-600 text-twitch-purple focus:ring-twitch-purple">
+                    <span class="ml-2 text-sm text-gray-300">Retain history on delete</span>
+                </label>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" 
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-twitch-purple hover:bg-purple-700">
+                    Save Settings
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="bg-red-900/20 rounded-lg p-6 border border-red-800">
+        <h2 class="text-lg font-medium text-red-400 mb-4">Danger Zone</h2>
+        <p class="text-sm text-gray-400 mb-4">
+            Deleting this channel will remove it from the tracking list. 
+            {{if .RetainHistoryOnDelete}}Messages will be retained for search.{{else}}All messages will be permanently deleted.{{end}}
+        </p>
+        <form hx-post="/channels/{{.ID}}/delete"
+              hx-confirm="Are you sure you want to delete this channel? This action cannot be undone."
+              hx-on::after-request="if(event.detail.successful) { window.location.href = '/channels'; }">
+            <input type="hidden" name="retain_history" value="{{if .RetainHistoryOnDelete}}true{{else}}false{{end}}">
+            <button type="submit" 
+                    class="inline-flex items-center px-4 py-2 border border-red-600 text-sm font-medium rounded-md text-red-400 hover:bg-red-800 hover:text-red-300">
+                Delete Channel
+            </button>
+        </form>
+    </div>
+</div>
+{{end}}

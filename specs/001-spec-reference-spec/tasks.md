@@ -24,10 +24,10 @@ description: "Task list for Twitch Chat Archiver & Explorer"
 
 **Purpose**: Project initialization and baseline tooling
 
-- [ ] T001 Confirm Go 1.22 toolchain and sqlite driver in `go.mod`
-- [ ] T002 [P] Establish feature configuration flags/env parsing in `internal/config/config.go`
-- [ ] T003 [P] Add feature README pointer in `docs/` to spec and quickstart
-- [ ] T004 Set baseline HTMX/Tailwind template layout shell in `internal/http/templates/layout.html`
+- [X] T001 Confirm Go 1.22 toolchain and sqlite driver in `go.mod`
+- [X] T002 [P] Establish feature configuration flags/env parsing in `internal/config/config.go`
+- [X] T003 [P] Add feature README pointer in `docs/` to spec and quickstart
+- [X] T004 Set baseline HTMX/Tailwind template layout shell in `internal/http/templates/layout.html`
 
 ---
 
@@ -37,16 +37,16 @@ description: "Task list for Twitch Chat Archiver & Explorer"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Initialize SQLite schema migrations for channels/users/messages in `internal/repository/migrations/001_init.sql`
-- [ ] T006 [P] Implement database bootstrap with WAL and pragmas in `internal/repository/sqlite.go`
-- [ ] T007 [P] Add IRC client scaffolding with connect/reconnect hooks in `internal/irc/client.go`
-- [ ] T008 [P] Define ingestion pipeline interfaces and batcher skeleton in `internal/ingestion/pipeline.go`
-- [ ] T009 Add structured logging and metrics hooks for IRC/ingestion/search in `internal/observability/observability.go`
-- [ ] T010 Configure HTTP router, middleware, and health endpoint in `internal/http/server.go`
-- [ ] T011 Seed shared template partials (loading/empty/error states) in `internal/http/templates/partials/`
-- [ ] T012 Define shared DTOs and validation helpers in `internal/http/dto/dto.go`
-- [ ] T013 Establish test fakes for IRC and repositories in `tests/integration/fakes/`
-- [ ] T014 Add make/Go script for contract test harness in `tests/contract/README.md`
+- [X] T005 Initialize SQLite schema migrations for channels/users/messages in `internal/repository/migrations/001_init.sql`
+- [X] T006 [P] Implement database bootstrap with WAL and pragmas in `internal/repository/sqlite.go`
+- [X] T007 [P] Add IRC client scaffolding with connect/reconnect hooks in `internal/irc/client.go`
+- [X] T008 [P] Define ingestion pipeline interfaces and batcher skeleton in `internal/ingestion/pipeline.go`
+- [X] T009 Add structured logging and metrics hooks for IRC/ingestion/search in `internal/observability/observability.go`
+- [X] T010 Configure HTTP router, middleware, and health endpoint in `internal/http/server.go`
+- [X] T011 Seed shared template partials (loading/empty/error states) in `internal/http/templates/partials/`
+- [X] T012 Define shared DTOs and validation helpers in `internal/http/dto/dto.go`
+- [X] T013 Establish test fakes for IRC and repositories in `tests/integration/fakes/`
+- [X] T014 Add make/Go script for contract test harness in `tests/contract/README.md`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -60,19 +60,19 @@ description: "Task list for Twitch Chat Archiver & Explorer"
 
 ### Tests for User Story 1
 
-- [ ] T015 [P] [US1] Contract tests for channel CRUD endpoints in `tests/contract/channels_test.go`
-- [ ] T016 [P] [US1] Integration tests for channel config persistence and IRC join/part in `tests/integration/channels_integration_test.go`
-- [ ] T017 [P] [US1] Unit tests for channel validation and service logic in `tests/unit/channel_service_test.go`
+- [X] T015 [P] [US1] Contract tests for channel CRUD endpoints in `tests/contract/channels_test.go`
+- [X] T016 [P] [US1] Integration tests for channel config persistence and IRC join/part in `tests/integration/channels_integration_test.go`
+- [X] T017 [P] [US1] Unit tests for channel validation and service logic in `tests/unit/channel_service_test.go`
 
 ### Implementation for User Story 1
 
-- [ ] T018 [P] [US1] Implement Channel repository (CRUD, stats) in `internal/repository/channel_repository.go`
-- [ ] T019 [P] [US1] Implement Channel service with enable/disable/delete semantics in `internal/services/channel_service.go`
-- [ ] T020 [US1] Wire channel service to IRC join/part callbacks in `internal/irc/client.go`
-- [ ] T021 [US1] Add HTTP handlers for list/create/update/delete in `internal/http/handlers/channels.go`
-- [ ] T022 [US1] Add HTMX templates for channel list and forms in `internal/http/templates/channels/`
-- [ ] T023 [US1] Add input validation and error/empty states for channels in `internal/http/handlers/channels.go`
-- [ ] T024 [US1] Add logging and metrics for channel lifecycle events in `internal/services/channel_service.go`
+- [X] T018 [P] [US1] Implement Channel repository (CRUD, stats) in `internal/repository/channel_repository.go`
+- [X] T019 [P] [US1] Implement Channel service with enable/disable/delete semantics in `internal/services/channel_service.go`
+- [X] T020 [US1] Wire channel service to IRC join/part callbacks in `internal/irc/client.go`
+- [X] T021 [US1] Add HTTP handlers for list/create/update/delete in `internal/http/handlers/channels.go`
+- [X] T022 [US1] Add HTMX templates for channel list and forms in `internal/http/templates/channels/`
+- [X] T023 [US1] Add input validation and error/empty states for channels in `internal/http/handlers/channels.go`
+- [X] T024 [US1] Add logging and metrics for channel lifecycle events in `internal/services/channel_service.go`
 
 **Checkpoint**: User Story 1 fully functional and independently testable
 

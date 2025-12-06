@@ -1,0 +1,68 @@
+<!-- Channel Row Fragment -->
+<tr id="channel-{{.ID}}" class="hover:bg-gray-800">
+    <td class="px-6 py-4 whitespace-nowrap">
+        <div class="flex items-center">
+            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-twitch-purple flex items-center justify-center">
+                <span class="text-white font-medium">{{slice .Name 0 1 | upper}}</span>
+            </div>
+            <div class="ml-4">
+                <div class="text-sm font-medium text-white">{{.DisplayName}}</div>
+                <div class="text-sm text-gray-400">#{{.Name}}</div>
+            </div>
+        </div>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        {{if .Enabled}}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-900 text-green-300">
+            <span class="w-2 h-2 mr-1.5 rounded-full bg-green-400 animate-pulse"></span>
+            Active
+        </span>
+        {{else}}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-700 text-gray-300">
+            Disabled
+        </span>
+        {{end}}
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+        {{.TotalMessages | formatNumber}}
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+        {{if .LastMessageAt}}
+        {{.LastMessageAt | formatTime}}
+        {{else}}
+        Never
+        {{end}}
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        <div class="flex items-center justify-end space-x-2">
+            <a href="/channels/{{.ID}}" class="text-twitch-purple hover:text-purple-400">View</a>
+            {{if .Enabled}}
+            <button 
+                hx-post="/channels/{{.ID}}" 
+                hx-vals='{"enabled": "false"}'
+                hx-target="#channel-{{.ID}}"
+                hx-swap="outerHTML"
+                class="text-yellow-500 hover:text-yellow-400">
+                Disable
+            </button>
+            {{else}}
+            <button 
+                hx-post="/channels/{{.ID}}" 
+                hx-vals='{"enabled": "true"}'
+                hx-target="#channel-{{.ID}}"
+                hx-swap="outerHTML"
+                class="text-green-500 hover:text-green-400">
+                Enable
+            </button>
+            {{end}}
+            <button 
+                hx-post="/channels/{{.ID}}/delete"
+                hx-target="#channel-{{.ID}}"
+                hx-swap="delete"
+                hx-confirm="Are you sure you want to delete this channel?"
+                class="text-red-500 hover:text-red-400">
+                Delete
+            </button>
+        </div>
+    </td>
+</tr>
