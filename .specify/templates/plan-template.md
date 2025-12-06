@@ -31,7 +31,11 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- **Quality**: Lint/format clean, cohesive scope, documentation updated with behavior changes.
+- **Testing**: Failing-first unit/integration/contract/regression coverage for new or changed behavior.
+- **UX**: Design system usage, accessibility (WCAG 2.1 AA), and loading/empty/error states documented and validated.
+- **Performance**: Budgets declared; defaults backend p95≤250ms/p99≤500ms, frontend critical render/interaction ≤2s; validation or planned measurement recorded.
+- **Observability**: Structured logs/metrics/traces defined for new paths and failure modes, with review evidence noted.
 
 ## Project Structure
 

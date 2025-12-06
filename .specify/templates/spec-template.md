@@ -79,7 +79,8 @@
 
 <!--
   ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right functional requirements.
+  Fill them out with the right functional and non-functional requirements.
+  Include quality, testing, UX, performance, and observability expectations from the constitution.
 -->
 
 ### Functional Requirements
@@ -94,6 +95,14 @@
 
 - **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
 - **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
+
+### Non-Functional Requirements (Constitutional)
+
+- **NFR-QUALITY**: Code remains small, cohesive, lint/format clean; docs updated with behavior changes.
+- **NFR-TESTING**: Automated failing-first coverage for new/changed behavior (unit/integration/contract/regression as applicable).
+- **NFR-UX**: Uses design system; validates accessibility (WCAG 2.1 AA) and loading/empty/error states with evidence.
+- **NFR-PERF**: Declares and validates budgets; defaults backend p95≤250ms/p99≤500ms, frontend critical render/interaction ≤2s unless otherwise specified.
+- **NFR-OBS**: Defines structured logs/metrics/traces for new paths and failure modes; observability plan recorded.
 
 ### Key Entities *(include if feature involves data)*
 
