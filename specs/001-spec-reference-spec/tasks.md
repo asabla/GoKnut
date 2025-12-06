@@ -132,12 +132,12 @@ description: "Task list for Twitch Chat Archiver & Explorer"
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T043 [P] Documentation updates in `docs/` for setup, latency budgets, observability
-- [ ] T044 Code cleanup and dependency audit in `internal/`
-- [ ] T045 Performance validation runbook for ingestion/search in `docs/perf.md`
-- [ ] T046 [P] Additional regression/unit tests for shared helpers in `tests/unit/`
-- [ ] T047 Security and resilience review for IRC reconnect/backoff in `internal/irc/client.go`
-- [ ] T048 Run quickstart validation steps in `quickstart.md`
+- [X] T043 [P] Documentation updates in `docs/` for setup, latency budgets, observability
+- [X] T044 Code cleanup and dependency audit in `internal/`
+- [X] T045 Performance validation runbook for ingestion/search in `docs/perf.md`
+- [X] T046 [P] Additional regression/unit tests for shared helpers in `tests/unit/`
+- [X] T047 Security and resilience review for IRC reconnect/backoff in `internal/irc/client.go`
+- [X] T048 Run quickstart validation steps in `quickstart.md`
 
 ---
 

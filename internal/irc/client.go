@@ -4,7 +4,9 @@ package irc
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"fmt"
+	"math/rand/v2"
 	"net"
 	"strings"
 	"sync"
@@ -12,13 +14,19 @@ import (
 )
 
 const (
-	// TwitchIRCServer is the Twitch IRC server address.
+	// TwitchIRCServerTLS is the Twitch IRC server address for TLS connections.
+	TwitchIRCServerTLS = "irc.chat.twitch.tv:6697"
+
+	// TwitchIRCServer is the Twitch IRC server address (non-TLS, deprecated).
+	// Prefer TwitchIRCServerTLS for secure connections.
 	TwitchIRCServer = "irc.chat.twitch.tv:6667"
 
 	// reconnect settings
 	initialReconnectDelay = 1 * time.Second
 	maxReconnectDelay     = 30 * time.Second
 	reconnectBackoffMult  = 2
+	maxReconnectAttempts  = 10  // Maximum attempts before giving up temporarily
+	reconnectJitterFactor = 0.2 // 20% jitter to prevent thundering herd
 )
 
 // Message represents a parsed IRC PRIVMSG.
@@ -79,7 +87,8 @@ func NewClient(cfg ClientConfig) *Client {
 	}
 }
 
-// Connect establishes a connection to Twitch IRC.
+// Connect establishes a TLS connection to Twitch IRC.
+// The context is used for cancellation during the connection process.
 func (c *Client) Connect(ctx context.Context) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -88,9 +97,20 @@ func (c *Client) Connect(ctx context.Context) error {
 		return nil
 	}
 
-	conn, err := net.DialTimeout("tcp", TwitchIRCServer, 10*time.Second)
+	// Check for context cancellation before connecting
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	// Use TLS for secure connection (port 6697)
+	dialer := &net.Dialer{Timeout: 10 * time.Second}
+	conn, err := tls.DialWithDialer(dialer, "tcp", TwitchIRCServerTLS, &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to connect to Twitch IRC: %w", err)
+		return fmt.Errorf("failed to connect to Twitch IRC (TLS): %w", err)
 	}
 
 	c.conn = conn
@@ -326,6 +346,7 @@ func (c *Client) handleDisconnect() {
 }
 
 func (c *Client) reconnect() {
+	attempts := 0
 	for {
 		select {
 		case <-c.done:
@@ -333,11 +354,28 @@ func (c *Client) reconnect() {
 		default:
 		}
 
+		// Check if we've exceeded max attempts
+		attempts++
+		if attempts > maxReconnectAttempts {
+			// Reset delay and wait longer before trying again
+			c.mu.Lock()
+			c.reconnectDelay = maxReconnectDelay
+			c.mu.Unlock()
+			attempts = 0
+		}
+
 		c.mu.RLock()
 		delay := c.reconnectDelay
 		c.mu.RUnlock()
 
-		time.Sleep(delay)
+		// Add jitter to prevent thundering herd (±20% randomization)
+		jitter := time.Duration(float64(delay) * reconnectJitterFactor * (2*rand.Float64() - 1))
+		sleepTime := delay + jitter
+		if sleepTime < 0 {
+			sleepTime = delay
+		}
+
+		time.Sleep(sleepTime)
 
 		if err := c.Connect(context.Background()); err != nil {
 			c.mu.Lock()
