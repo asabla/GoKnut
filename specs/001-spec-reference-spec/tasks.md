@@ -86,18 +86,18 @@ description: "Task list for Twitch Chat Archiver & Explorer"
 
 ### Tests for User Story 2
 
-- [ ] T025 [P] [US2] Contract tests for channel view/stream endpoints in `tests/contract/channel_view_test.go`
-- [ ] T026 [P] [US2] Integration tests for ingestion → storage → HTMX fragments in `tests/integration/live_view_integration_test.go`
-- [ ] T027 [P] [US2] Unit tests for message formatting/pagination helpers in `tests/unit/message_format_test.go`
+- [X] T025 [P] [US2] Contract tests for channel view/stream endpoints in `tests/contract/channel_view_test.go`
+- [X] T026 [P] [US2] Integration tests for ingestion → storage → HTMX fragments in `tests/integration/live_view_integration_test.go`
+- [X] T027 [P] [US2] Unit tests for message formatting/pagination helpers in `tests/unit/message_format_test.go`
 
 ### Implementation for User Story 2
 
-- [ ] T028 [P] [US2] Implement Message repository (recent, paginated, stream) in `internal/repository/message_repository.go`
-- [ ] T029 [P] [US2] Implement ingestion processor to normalize/store messages in `internal/ingestion/processor.go`
-- [ ] T030 [US2] Implement live view handlers (page, messages, stream) in `internal/http/handlers/channel_view.go`
-- [ ] T031 [US2] Add HTMX templates for live feed and pagination in `internal/http/templates/live/`
-- [ ] T032 [US2] Ensure batching/WAL settings meet latency budgets in `internal/ingestion/processor.go`
-- [ ] T033 [US2] Add logging/metrics for ingestion latency and stream delivery in `internal/ingestion/processor.go`
+- [X] T028 [P] [US2] Implement Message repository (recent, paginated, stream) in `internal/repository/message_repository.go`
+- [X] T029 [P] [US2] Implement ingestion processor to normalize/store messages in `internal/ingestion/processor.go`
+- [X] T030 [US2] Implement live view handlers (page, messages, stream) in `internal/http/handlers/channel_view.go`
+- [X] T031 [US2] Add HTMX templates for live feed and pagination in `internal/http/templates/live/`
+- [X] T032 [US2] Ensure batching/WAL settings meet latency budgets in `internal/ingestion/processor.go`
+- [X] T033 [US2] Add logging/metrics for ingestion latency and stream delivery in `internal/ingestion/processor.go`
 
 **Checkpoint**: User Stories 1 AND 2 independently functional
 
@@ -111,18 +111,18 @@ description: "Task list for Twitch Chat Archiver & Explorer"
 
 ### Tests for User Story 3
 
-- [ ] T034 [P] [US3] Contract tests for search endpoints in `tests/contract/search_test.go`
-- [ ] T035 [P] [US3] Integration tests for FTS/LIKE search paths in `tests/integration/search_integration_test.go`
-- [ ] T036 [P] [US3] Unit tests for search query builders and highlighting in `tests/unit/search_service_test.go`
+- [X] T034 [P] [US3] Contract tests for search endpoints in `tests/contract/search_test.go`
+- [X] T035 [P] [US3] Integration tests for FTS/LIKE search paths in `tests/integration/search_integration_test.go`
+- [X] T036 [P] [US3] Unit tests for search query builders and highlighting in `tests/unit/search_service_test.go`
 
 ### Implementation for User Story 3
 
-- [ ] T037 [P] [US3] Implement Search/FTS repository helpers in `internal/search/search_repository.go`
-- [ ] T038 [P] [US3] Implement Search service for users/messages with filters in `internal/services/search_service.go`
-- [ ] T039 [US3] Implement HTTP handlers for user/message search in `internal/http/handlers/search.go`
-- [ ] T040 [US3] Add HTMX templates for search results and user profiles in `internal/http/templates/search/`
-- [ ] T041 [US3] Add pagination and highlighting utilities in `internal/http/templates/partials/highlight.html`
-- [ ] T042 [US3] Add logging/metrics for search latency and empty states in `internal/services/search_service.go`
+- [X] T037 [P] [US3] Implement Search/FTS repository helpers in `internal/search/search_repository.go`
+- [X] T038 [P] [US3] Implement Search service for users/messages with filters in `internal/services/search_service.go`
+- [X] T039 [US3] Implement HTTP handlers for user/message search in `internal/http/handlers/search.go`
+- [X] T040 [US3] Add HTMX templates for search results and user profiles in `internal/http/templates/search/`
+- [X] T041 [US3] Add pagination and highlighting utilities in `internal/http/templates/partials/highlight.html`
+- [X] T042 [US3] Add logging/metrics for search latency and empty states in `internal/services/search_service.go`
 
 **Checkpoint**: All user stories independently functional and testable
 
