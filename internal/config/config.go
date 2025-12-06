@@ -9,6 +9,16 @@ import (
 	"strings"
 )
 
+// AuthMode represents the Twitch IRC authentication mode.
+type AuthMode string
+
+const (
+	// AuthModeAuthenticated uses OAuth token authentication (full access).
+	AuthModeAuthenticated AuthMode = "authenticated"
+	// AuthModeAnonymous uses justinfan anonymous login (read-only).
+	AuthModeAnonymous AuthMode = "anonymous"
+)
+
 // Config holds the application configuration.
 type Config struct {
 	// Database
@@ -18,8 +28,9 @@ type Config struct {
 	HTTPAddr string
 
 	// Twitch IRC
-	TwitchUsername   string
-	TwitchOAuthToken string
+	TwitchAuthMode   AuthMode // "authenticated" or "anonymous"
+	TwitchUsername   string   // Required for authenticated mode
+	TwitchOAuthToken string   // Required for authenticated mode (format: oauth:xxx)
 	TwitchChannels   []string
 
 	// Ingestion
@@ -33,11 +44,12 @@ type Config struct {
 // DefaultConfig returns a Config with default values.
 func DefaultConfig() *Config {
 	return &Config{
-		DBPath:       "./twitch.db",
-		HTTPAddr:     ":8080",
-		BatchSize:    100,
-		FlushTimeout: 100,
-		EnableFTS:    true,
+		DBPath:         "./twitch.db",
+		HTTPAddr:       ":8080",
+		TwitchAuthMode: AuthModeAuthenticated, // Default to authenticated
+		BatchSize:      100,
+		FlushTimeout:   100,
+		EnableFTS:      true,
 	}
 }
 
@@ -90,6 +102,23 @@ func Load() (*Config, error) {
 	if v := os.Getenv("ENABLE_FTS"); v != "" {
 		cfg.EnableFTS = strings.ToLower(v) == "true" || v == "1"
 	}
+	if v := os.Getenv("TWITCH_AUTH_MODE"); v != "" {
+		switch strings.ToLower(v) {
+		case "authenticated", "auth":
+			cfg.TwitchAuthMode = AuthModeAuthenticated
+		case "anonymous", "anon":
+			cfg.TwitchAuthMode = AuthModeAnonymous
+		default:
+			return nil, fmt.Errorf("invalid TWITCH_AUTH_MODE: %s (must be 'authenticated' or 'anonymous')", v)
+		}
+	}
+
+	// Auto-detect auth mode if not explicitly set: anonymous if no credentials provided
+	if os.Getenv("TWITCH_AUTH_MODE") == "" {
+		if cfg.TwitchUsername == "" && cfg.TwitchOAuthToken == "" {
+			cfg.TwitchAuthMode = AuthModeAnonymous
+		}
+	}
 
 	// Validate required fields
 	if err := cfg.Validate(); err != nil {
@@ -109,12 +138,27 @@ func (c *Config) Validate() error {
 	if c.HTTPAddr == "" {
 		errs = append(errs, "http-addr is required")
 	}
-	if c.TwitchUsername == "" {
-		errs = append(errs, "TWITCH_USERNAME environment variable is required")
+
+	// Auth mode-specific validation
+	switch c.TwitchAuthMode {
+	case AuthModeAuthenticated:
+		if c.TwitchUsername == "" {
+			errs = append(errs, "TWITCH_USERNAME is required for authenticated mode")
+		}
+		if c.TwitchOAuthToken == "" {
+			errs = append(errs, "TWITCH_OAUTH_TOKEN is required for authenticated mode")
+		} else if !strings.HasPrefix(c.TwitchOAuthToken, "oauth:") {
+			errs = append(errs, "TWITCH_OAUTH_TOKEN must start with 'oauth:' prefix")
+		}
+	case AuthModeAnonymous:
+		if c.TwitchOAuthToken != "" {
+			errs = append(errs, "TWITCH_OAUTH_TOKEN must not be set for anonymous mode")
+		}
+		// Username is optional for anonymous mode (will generate justinfan nick)
+	default:
+		errs = append(errs, fmt.Sprintf("invalid auth mode: %s", c.TwitchAuthMode))
 	}
-	if c.TwitchOAuthToken == "" {
-		errs = append(errs, "TWITCH_OAUTH_TOKEN environment variable is required")
-	}
+
 	if c.BatchSize <= 0 {
 		errs = append(errs, "batch-size must be positive")
 	}

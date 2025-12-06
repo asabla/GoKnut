@@ -14,6 +14,8 @@ type FakeIRCClient struct {
 	mu sync.RWMutex
 
 	connected bool
+	anonymous bool
+	authMode  irc.AuthMode
 	channels  map[string]bool
 	messages  []irc.Message
 
@@ -32,6 +34,17 @@ func NewFakeIRCClient() *FakeIRCClient {
 	return &FakeIRCClient{
 		channels: make(map[string]bool),
 		messages: make([]irc.Message, 0),
+		authMode: irc.AuthModeAuthenticated,
+	}
+}
+
+// NewFakeAnonymousIRCClient creates a new fake anonymous IRC client.
+func NewFakeAnonymousIRCClient() *FakeIRCClient {
+	return &FakeIRCClient{
+		channels:  make(map[string]bool),
+		messages:  make([]irc.Message, 0),
+		authMode:  irc.AuthModeAnonymous,
+		anonymous: true,
 	}
 }
 
@@ -126,6 +139,20 @@ func (f *FakeIRCClient) Channels() []string {
 		channels = append(channels, ch)
 	}
 	return channels
+}
+
+// IsAnonymous returns true if the client is using anonymous mode.
+func (f *FakeIRCClient) IsAnonymous() bool {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	return f.anonymous
+}
+
+// AuthMode returns the current authentication mode.
+func (f *FakeIRCClient) AuthMode() irc.AuthMode {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	return f.authMode
 }
 
 // SimulateMessage simulates receiving a message.
