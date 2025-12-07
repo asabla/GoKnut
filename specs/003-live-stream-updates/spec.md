@@ -5,6 +5,11 @@
 **Status**: Draft  
 **Input**: User description: "This is the third spec (003). We're gonna refactor some parts of the real-time functionality. Were we aim to stream live events to the UX were it makes sense. Such as the start page and the metrics values at the top but also the latest messages. We should also update /messages to support this streaming as well. Under /channels we want to make sure the amount of messages are also updated as they're ingested. The same goes under /users where we want to update the amount of messages they've sent. Under /users/<user-name> we also want to update values as they're ingested"
 
+## Clarifications
+
+### Session 2025-12-07
+- Q: Preferred live delivery mechanism for these read-only updates? → A: Use Server-Sent Events for all read-only live streams.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Home view stays live (Priority: P1)
@@ -104,6 +109,7 @@ Visitors on `/users/<user-name>` see that user’s message count and latest mess
 - **FR-008**: The experience must degrade gracefully when live updates are unavailable, informing users and allowing manual refresh to recover.
 - **FR-009**: Live update failures or reconnect attempts must surface clear status without blocking navigation or other page interactions.
 - **FR-010**: Live updates must avoid visibly degrading page responsiveness during high-volume ingestion.
+- **FR-011**: Live delivery uses Server-Sent Events (SSE) for all read-only updates across views; reconnect/resume semantics should align with SSE.
 
 ### Non-Functional Requirements (Constitutional)
 
