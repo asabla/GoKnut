@@ -169,19 +169,27 @@ func (c *Client) Connect(ctx context.Context) error {
 // Disconnect closes the IRC connection.
 func (c *Client) Disconnect() error {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 
-	if !c.connected {
+	// Check if already disconnected (done channel closed)
+	select {
+	case <-c.done:
+		// Already closed, nothing to do
+		c.mu.Unlock()
 		return nil
+	default:
 	}
 
+	// Signal all goroutines to stop
 	close(c.done)
 	c.connected = false
 
+	// Close connection to unblock any pending reads
 	if c.conn != nil {
 		c.conn.Close()
 	}
+	c.mu.Unlock()
 
+	// Wait for all goroutines (readLoop and reconnect) to finish
 	c.wg.Wait()
 	return nil
 }
@@ -389,10 +397,14 @@ func (c *Client) handleDisconnect() {
 	c.mu.Unlock()
 
 	// Attempt reconnection with exponential backoff
+	// Track in WaitGroup so Disconnect() waits for it
+	c.wg.Add(1)
 	go c.reconnect()
 }
 
 func (c *Client) reconnect() {
+	defer c.wg.Done()
+
 	attempts := 0
 	for {
 		select {
@@ -422,7 +434,14 @@ func (c *Client) reconnect() {
 			sleepTime = delay
 		}
 
-		time.Sleep(sleepTime)
+		// Use select with timer instead of time.Sleep to allow cancellation
+		timer := time.NewTimer(sleepTime)
+		select {
+		case <-c.done:
+			timer.Stop()
+			return
+		case <-timer.C:
+		}
 
 		if err := c.Connect(context.Background()); err != nil {
 			c.mu.Lock()
