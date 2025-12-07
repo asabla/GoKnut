@@ -60,10 +60,10 @@ func (r *ChannelRepository) List(ctx context.Context) ([]Channel, error) {
 			return nil, fmt.Errorf("failed to scan channel: %w", err)
 		}
 
-		ch.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-		ch.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+		ch.CreatedAt, _ = ParseSQLiteDatetime(createdAt)
+		ch.UpdatedAt, _ = ParseSQLiteDatetime(updatedAt)
 		if lastMessageAt.Valid {
-			t, _ := time.Parse(time.RFC3339, lastMessageAt.String)
+			t, _ := ParseSQLiteDatetime(lastMessageAt.String)
 			ch.LastMessageAt = &t
 		}
 
@@ -103,10 +103,10 @@ func (r *ChannelRepository) ListEnabled(ctx context.Context) ([]Channel, error) 
 			return nil, fmt.Errorf("failed to scan channel: %w", err)
 		}
 
-		ch.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-		ch.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+		ch.CreatedAt, _ = ParseSQLiteDatetime(createdAt)
+		ch.UpdatedAt, _ = ParseSQLiteDatetime(updatedAt)
 		if lastMessageAt.Valid {
-			t, _ := time.Parse(time.RFC3339, lastMessageAt.String)
+			t, _ := ParseSQLiteDatetime(lastMessageAt.String)
 			ch.LastMessageAt = &t
 		}
 
@@ -140,10 +140,10 @@ func (r *ChannelRepository) GetByID(ctx context.Context, id int64) (*Channel, er
 		return nil, fmt.Errorf("failed to get channel: %w", err)
 	}
 
-	ch.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-	ch.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+	ch.CreatedAt, _ = ParseSQLiteDatetime(createdAt)
+	ch.UpdatedAt, _ = ParseSQLiteDatetime(updatedAt)
 	if lastMessageAt.Valid {
-		t, _ := time.Parse(time.RFC3339, lastMessageAt.String)
+		t, _ := ParseSQLiteDatetime(lastMessageAt.String)
 		ch.LastMessageAt = &t
 	}
 
@@ -174,10 +174,10 @@ func (r *ChannelRepository) GetByName(ctx context.Context, name string) (*Channe
 		return nil, fmt.Errorf("failed to get channel by name: %w", err)
 	}
 
-	ch.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-	ch.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+	ch.CreatedAt, _ = ParseSQLiteDatetime(createdAt)
+	ch.UpdatedAt, _ = ParseSQLiteDatetime(updatedAt)
 	if lastMessageAt.Valid {
-		t, _ := time.Parse(time.RFC3339, lastMessageAt.String)
+		t, _ := ParseSQLiteDatetime(lastMessageAt.String)
 		ch.LastMessageAt = &t
 	}
 

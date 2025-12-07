@@ -7,9 +7,41 @@ import (
 	_ "embed"
 	"fmt"
 	"sync"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
+
+// SQLite datetime formats
+const (
+	// SQLiteDatetime is the format used by SQLite's datetime() function
+	SQLiteDatetime = "2006-01-02 15:04:05"
+)
+
+// ParseSQLiteDatetime parses a datetime string from SQLite.
+// It tries multiple formats since SQLite can store dates in various formats.
+func ParseSQLiteDatetime(s string) (time.Time, error) {
+	if s == "" {
+		return time.Time{}, nil
+	}
+
+	// Try SQLite datetime format first (most common)
+	if t, err := time.Parse(SQLiteDatetime, s); err == nil {
+		return t, nil
+	}
+
+	// Try RFC3339 as fallback
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t, nil
+	}
+
+	// Try RFC3339Nano as another fallback
+	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
+		return t, nil
+	}
+
+	return time.Time{}, fmt.Errorf("unable to parse datetime: %s", s)
+}
 
 //go:embed migrations/001_init.sql
 var initSQL string
