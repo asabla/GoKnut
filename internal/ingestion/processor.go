@@ -11,11 +11,25 @@ import (
 	"github.com/asabla/goknut/internal/repository"
 )
 
+// StoredMessage represents a message that was successfully stored.
+type StoredMessage struct {
+	ID          int64
+	ChannelID   int64
+	ChannelName string
+	UserID      int64
+	Username    string
+	DisplayName string
+	Text        string
+	SentAt      time.Time
+}
+
 // ProcessorConfig holds processor configuration.
 type ProcessorConfig struct {
-	Logger   *observability.Logger
-	Metrics  *observability.Metrics
-	CacheTTL time.Duration // TTL for cache entries, defaults to 5 minutes
+	Logger          *observability.Logger
+	Metrics         *observability.Metrics
+	CacheTTL        time.Duration                  // TTL for cache entries, defaults to 5 minutes
+	OnMessageStored func(msg StoredMessage)        // Called for each message stored (optional)
+	OnBatchStored   func(messages []StoredMessage) // Called after a batch is stored (optional)
 }
 
 // cacheEntry holds a cached value with its timestamp.
@@ -32,6 +46,10 @@ type Processor struct {
 	logger      *observability.Logger
 	metrics     *observability.Metrics
 	cacheTTL    time.Duration
+
+	// Callbacks
+	onMessageStored func(msg StoredMessage)
+	onBatchStored   func(messages []StoredMessage)
 
 	// Cache for channel name -> ID mapping with TTL
 	channelCache   map[string]cacheEntry
@@ -55,15 +73,29 @@ func NewProcessor(
 	}
 
 	return &Processor{
-		messageRepo:  messageRepo,
-		userRepo:     userRepo,
-		channelRepo:  channelRepo,
-		logger:       cfg.Logger,
-		metrics:      cfg.Metrics,
-		cacheTTL:     cacheTTL,
-		channelCache: make(map[string]cacheEntry),
-		userCache:    make(map[string]cacheEntry),
+		messageRepo:     messageRepo,
+		userRepo:        userRepo,
+		channelRepo:     channelRepo,
+		logger:          cfg.Logger,
+		metrics:         cfg.Metrics,
+		cacheTTL:        cacheTTL,
+		onMessageStored: cfg.OnMessageStored,
+		onBatchStored:   cfg.OnBatchStored,
+		channelCache:    make(map[string]cacheEntry),
+		userCache:       make(map[string]cacheEntry),
 	}
+}
+
+// SetOnMessageStored sets the callback for when a message is stored.
+// This can be called after processor creation to wire up dependencies.
+func (p *Processor) SetOnMessageStored(callback func(msg StoredMessage)) {
+	p.onMessageStored = callback
+}
+
+// SetOnBatchStored sets the callback for when a batch is stored.
+// This can be called after processor creation to wire up dependencies.
+func (p *Processor) SetOnBatchStored(callback func(messages []StoredMessage)) {
+	p.onBatchStored = callback
 }
 
 // StoreBatch implements the MessageStore interface for the ingestion pipeline.
@@ -76,6 +108,13 @@ func (p *Processor) StoreBatch(ctx context.Context, messages []Message) error {
 
 	// Convert ingestion messages to repository messages
 	repoMessages := make([]repository.Message, 0, len(messages))
+	// Track metadata for callbacks (parallel to repoMessages)
+	type msgMeta struct {
+		channelName string
+		username    string
+		displayName string
+	}
+	msgMetadata := make([]msgMeta, 0, len(messages))
 
 	for _, msg := range messages {
 		// Normalize channel name
@@ -127,13 +166,18 @@ func (p *Processor) StoreBatch(ctx context.Context, messages []Message) error {
 			Tags:      msg.Tags,
 		}
 		repoMessages = append(repoMessages, repoMsg)
+		msgMetadata = append(msgMetadata, msgMeta{
+			channelName: channelName,
+			username:    username,
+			displayName: msg.DisplayName,
+		})
 	}
 
 	if len(repoMessages) == 0 {
 		return nil
 	}
 
-	// Store batch
+	// Store batch - CreateBatch sets the ID on each message
 	if err := p.messageRepo.CreateBatch(ctx, repoMessages); err != nil {
 		if p.logger != nil {
 			p.logger.Error("failed to store message batch",
@@ -157,6 +201,35 @@ func (p *Processor) StoreBatch(ctx context.Context, messages []Message) error {
 			"latency_ms", latency.Milliseconds(),
 			"dropped", len(messages)-len(repoMessages),
 		)
+	}
+
+	// Call callbacks if configured
+	if p.onMessageStored != nil || p.onBatchStored != nil {
+		storedMsgs := make([]StoredMessage, len(repoMessages))
+		for i, repoMsg := range repoMessages {
+			storedMsgs[i] = StoredMessage{
+				ID:          repoMsg.ID,
+				ChannelID:   repoMsg.ChannelID,
+				ChannelName: msgMetadata[i].channelName,
+				UserID:      repoMsg.UserID,
+				Username:    msgMetadata[i].username,
+				DisplayName: msgMetadata[i].displayName,
+				Text:        repoMsg.Text,
+				SentAt:      repoMsg.SentAt,
+			}
+		}
+
+		// Call per-message callback
+		if p.onMessageStored != nil {
+			for _, sm := range storedMsgs {
+				p.onMessageStored(sm)
+			}
+		}
+
+		// Call batch callback
+		if p.onBatchStored != nil {
+			p.onBatchStored(storedMsgs)
+		}
 	}
 
 	return nil

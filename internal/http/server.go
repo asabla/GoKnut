@@ -145,6 +145,12 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
+// SSEHandler returns the SSE handler for broadcasting events.
+// Returns nil if SSE is not enabled.
+func (s *Server) SSEHandler() *handlers.SSEHandler {
+	return s.sseHandler
+}
+
 func (s *Server) registerRoutes() {
 	// Health check
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
@@ -255,4 +261,11 @@ type responseWriter struct {
 func (rw *responseWriter) WriteHeader(code int) {
 	rw.statusCode = code
 	rw.ResponseWriter.WriteHeader(code)
+}
+
+// Flush implements http.Flusher to support SSE streaming.
+func (rw *responseWriter) Flush() {
+	if f, ok := rw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
 }
