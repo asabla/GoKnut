@@ -30,26 +30,26 @@
         }
     </style>
 </head>
-<body class="h-full bg-twitch-dark text-twitch-light">
+<body class="min-h-screen flex flex-col bg-twitch-dark text-twitch-light">
     <nav class="bg-twitch-gray border-b border-gray-700">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
                     <a href="/" class="flex-shrink-0"><span class="text-twitch-purple font-bold text-xl">GoKnut</span></a>
-                    <div class="ml-10 flex items-baseline space-x-4">
-                        <a href="/channels" class="text-white bg-twitch-gray px-3 py-2 rounded-md text-sm font-medium">Channels</a>
-                        <a href="/users" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Users</a>
-                        <a href="/search/messages" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Search</a>
+                    <div class="ml-10 flex items-baseline space-x-1">
+                        <a href="/channels" class="text-white bg-twitch-purple/20 border border-twitch-purple/50 px-3 py-2 rounded-md text-sm font-medium">Channels</a>
+                        <a href="/users" class="text-gray-300 hover:text-white hover:bg-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">Users</a>
+                        <a href="/search/messages" class="text-gray-300 hover:text-white hover:bg-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">Search</a>
                     </div>
                 </div>
             </div>
         </div>
     </nav>
-    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <main class="flex-1 max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 w-full">
         <div class="space-y-6">
             <!-- Back Link -->
             <div>
-                <a href="/channels" class="text-twitch-purple hover:text-purple-400 text-sm">&larr; Back to Channels</a>
+                <a href="/channels" class="inline-flex items-center px-3 py-1.5 border border-gray-600 text-sm font-medium rounded text-gray-300 hover:bg-gray-700 hover:text-white hover:border-gray-500 transition-colors">&larr; Back to Channels</a>
             </div>
 
             <!-- Channel Header -->
