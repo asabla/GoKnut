@@ -345,6 +345,52 @@ func (h *SSEHandler) BroadcastToAll(event any) {
 	}
 }
 
+// BroadcastMessage broadcasts a new message to all relevant SSE clients.
+// This is called when a new message is stored in the database.
+func (h *SSEHandler) BroadcastMessage(id, channelID int64, channelName string,
+	userID int64, username, displayName, text string, sentAt time.Time) {
+
+	event := MessageEvent{
+		SSEEvent:    SSEEvent{Type: EventTypeMessage, Cursor: id},
+		ID:          id,
+		ChannelID:   channelID,
+		ChannelName: channelName,
+		UserID:      userID,
+		Username:    username,
+		DisplayName: displayName,
+		Text:        text,
+		SentAt:      sentAt,
+	}
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	for _, client := range h.clients {
+		// Send to home view (shows all messages)
+		if client.View == "home" {
+			h.sendEvent(client, event)
+			continue
+		}
+
+		// Send to messages view (shows all messages)
+		if client.View == "messages" {
+			h.sendEvent(client, event)
+			continue
+		}
+
+		// Send to channel-specific views
+		if client.View == "channels" && client.Channel == channelName {
+			h.sendEvent(client, event)
+			continue
+		}
+
+		// Send to user profile views
+		if client.View == "user_profile" && client.User == username {
+			h.sendEvent(client, event)
+		}
+	}
+}
+
 // sendEvent sends a formatted SSE event to a client.
 func (h *SSEHandler) sendEvent(client *SSEClient, event any) {
 	data, err := json.Marshal(event)

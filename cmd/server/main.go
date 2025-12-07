@@ -137,9 +137,19 @@ func run() error {
 		ChannelRepo:    channelRepo,
 		MessageRepo:    messageRepo,
 		UserRepo:       userRepo,
+		EnableSSE:      cfg.EnableSSE,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create HTTP server: %w", err)
+	}
+
+	// Wire up SSE broadcasting for new messages
+	if sseHandler := httpServer.SSEHandler(); sseHandler != nil {
+		processor.SetOnMessageStored(func(msg ingestion.StoredMessage) {
+			sseHandler.BroadcastMessage(msg.ID, msg.ChannelID, msg.ChannelName,
+				msg.UserID, msg.Username, msg.DisplayName, msg.Text, msg.SentAt)
+		})
+		logger.Info("SSE message broadcasting enabled")
 	}
 
 	// Start ingestion pipeline
