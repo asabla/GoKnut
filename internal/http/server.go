@@ -123,11 +123,12 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 	s.registerRoutes()
 
 	s.server = &http.Server{
-		Addr:         s.addr,
-		Handler:      s.middleware(s.mux),
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Addr:        s.addr,
+		Handler:     s.middleware(s.mux),
+		ReadTimeout: 15 * time.Second,
+		// WriteTimeout disabled (0) to support SSE long-lived connections.
+		// SSE handler manages its own timeouts via heartbeats.
+		IdleTimeout: 60 * time.Second,
 	}
 
 	return s, nil
@@ -142,6 +143,12 @@ func (s *Server) Start() error {
 // Shutdown gracefully shuts down the HTTP server.
 func (s *Server) Shutdown(ctx context.Context) error {
 	s.logger.HTTP("shutting down HTTP server")
+
+	// Close all SSE connections first so they don't block shutdown
+	if s.sseHandler != nil {
+		s.sseHandler.Shutdown()
+	}
+
 	return s.server.Shutdown(ctx)
 }
 
