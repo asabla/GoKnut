@@ -344,11 +344,28 @@ func (r *SearchRepository) GetUserProfile(ctx context.Context, userID int64) (*U
 		WHERE id = ?
 	`
 
+	return r.getUserProfile(ctx, userQuery, userID)
+}
+
+// GetUserProfileByUsername returns detailed user information by username.
+func (r *SearchRepository) GetUserProfileByUsername(ctx context.Context, username string) (*UserProfile, error) {
+	// Get user basic info
+	userQuery := `
+		SELECT id, username, display_name, first_seen_at, last_seen_at, total_messages
+		FROM users
+		WHERE username = ?
+	`
+
+	return r.getUserProfile(ctx, userQuery, username)
+}
+
+// getUserProfile is a shared helper for fetching user profiles.
+func (r *SearchRepository) getUserProfile(ctx context.Context, userQuery string, arg any) (*UserProfile, error) {
 	var profile UserProfile
 	var firstSeen, lastSeen string
 	var displayName sql.NullString
 
-	err := r.db.QueryRowContext(ctx, userQuery, userID).Scan(
+	err := r.db.QueryRowContext(ctx, userQuery, arg).Scan(
 		&profile.ID, &profile.Username, &displayName, &firstSeen, &lastSeen, &profile.TotalMessages,
 	)
 	if err == sql.ErrNoRows {
@@ -364,7 +381,7 @@ func (r *SearchRepository) GetUserProfile(ctx context.Context, userID int64) (*U
 		profile.DisplayName = displayName.String
 	}
 
-	// Get channel summaries
+	// Get channel summaries using the profile.ID we just fetched
 	channelQuery := `
 		SELECT 
 			c.id, c.name, c.display_name,
@@ -377,7 +394,7 @@ func (r *SearchRepository) GetUserProfile(ctx context.Context, userID int64) (*U
 		ORDER BY message_count DESC
 	`
 
-	rows, err := r.db.QueryContext(ctx, channelQuery, userID)
+	rows, err := r.db.QueryContext(ctx, channelQuery, profile.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user channels: %w", err)
 	}
@@ -424,6 +441,93 @@ func (r *SearchRepository) GetUserMessages(ctx context.Context, userID int64, ch
 
 	// Count query
 	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM messages m WHERE %s`, whereClause)
+
+	var totalCount int
+	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalCount); err != nil {
+		return nil, 0, fmt.Errorf("failed to count messages: %w", err)
+	}
+
+	// Main query
+	query := fmt.Sprintf(`
+		SELECT 
+			m.id, m.channel_id, c.name, m.user_id, u.username, u.display_name,
+			m.text, m.sent_at, m.tags
+		FROM messages m
+		JOIN channels c ON m.channel_id = c.id
+		JOIN users u ON m.user_id = u.id
+		WHERE %s
+		ORDER BY m.sent_at DESC, m.id DESC
+		LIMIT ? OFFSET ?
+	`, whereClause)
+
+	args = append(args, pageSize, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get user messages: %w", err)
+	}
+	defer rows.Close()
+
+	var results []MessageSearchResult
+	for rows.Next() {
+		var m MessageSearchResult
+		var sentAt string
+		var displayName, tagsJSON sql.NullString
+
+		if err := rows.Scan(
+			&m.ID, &m.ChannelID, &m.ChannelName, &m.UserID, &m.Username, &displayName,
+			&m.Text, &sentAt, &tagsJSON,
+		); err != nil {
+			return nil, 0, fmt.Errorf("failed to scan message: %w", err)
+		}
+
+		m.SentAt, _ = time.Parse(time.RFC3339, sentAt)
+		if displayName.Valid {
+			m.DisplayName = displayName.String
+		}
+		if tagsJSON.Valid && tagsJSON.String != "" {
+			_ = json.Unmarshal([]byte(tagsJSON.String), &m.Tags)
+		}
+		m.HighlightedText = m.Text // No highlighting for user messages view
+
+		results = append(results, m)
+	}
+
+	return results, totalCount, rows.Err()
+}
+
+// GetUserMessagesByUsername returns paginated messages for a user by username.
+func (r *SearchRepository) GetUserMessagesByUsername(ctx context.Context, username string, channelName *string, page, pageSize int) ([]MessageSearchResult, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+	offset := (page - 1) * pageSize
+
+	// Build WHERE clause using JOINs to resolve names to IDs
+	var conditions []string
+	var args []any
+
+	conditions = append(conditions, "u.username = ?")
+	args = append(args, username)
+
+	if channelName != nil {
+		conditions = append(conditions, "c.name = ?")
+		args = append(args, *channelName)
+	}
+
+	whereClause := strings.Join(conditions, " AND ")
+
+	// Count query
+	countQuery := fmt.Sprintf(`
+		SELECT COUNT(*) 
+		FROM messages m
+		JOIN users u ON m.user_id = u.id
+		JOIN channels c ON m.channel_id = c.id
+		WHERE %s
+	`, whereClause)
 
 	var totalCount int
 	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalCount); err != nil {

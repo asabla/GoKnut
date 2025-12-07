@@ -6,7 +6,7 @@
 {{/* Update the stream trigger with new latest ID */}}
 {{if gt .LatestID 0}}
 <div hx-swap-oob="true" id="stream-target"
-     hx-get="/channels/{{.ChannelID}}/messages/stream?after_id={{.LatestID}}"
+     hx-get="/channels/{{.ChannelName}}/messages/stream?after_id={{.LatestID}}"
      hx-trigger="every 1000ms"
      hx-swap="beforeend"
      hx-target="#message-list">

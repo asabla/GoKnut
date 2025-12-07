@@ -65,7 +65,7 @@
                         </div>
                     </div>
                     <div class="flex items-center space-x-3">
-                        <a href="/channels/{{.ID}}/view" class="inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium bg-twitch-purple text-white hover:bg-purple-700">
+                        <a href="/channels/{{.Name}}/view" class="inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium bg-twitch-purple text-white hover:bg-purple-700">
                             Live Chat
                         </a>
                         {{if .Enabled}}
@@ -103,7 +103,7 @@
             <!-- Edit Form -->
             <div class="bg-twitch-gray rounded-lg p-6 border border-gray-700">
                 <h2 class="text-lg font-medium text-white mb-4">Channel Settings</h2>
-                <form hx-post="/channels/{{.ID}}" hx-swap="none" hx-on::after-request="if(event.detail.successful) { alert('Settings saved!'); }" class="space-y-4">
+                <form hx-post="/channels/{{.Name}}" hx-swap="none" hx-on::after-request="if(event.detail.successful) { alert('Settings saved!'); }" class="space-y-4">
                     <div>
                         <label for="display_name" class="block text-sm font-medium text-gray-300">Display Name</label>
                         <input type="text" name="display_name" id="display_name" value="{{.DisplayName}}" class="mt-1 block w-full rounded-md bg-twitch-dark border-gray-600 text-white shadow-sm focus:border-twitch-purple focus:ring-twitch-purple sm:text-sm">
@@ -133,7 +133,7 @@
                     Deleting this channel will remove it from the tracking list. 
                     {{if .RetainHistoryOnDelete}}Messages will be retained for search.{{else}}All messages will be permanently deleted.{{end}}
                 </p>
-                <form hx-post="/channels/{{.ID}}/delete" hx-confirm="Are you sure you want to delete this channel? This action cannot be undone." hx-on::after-request="if(event.detail.successful) { window.location.href = '/channels'; }">
+                <form hx-post="/channels/{{.Name}}/delete" hx-confirm="Are you sure you want to delete this channel? This action cannot be undone." hx-on::after-request="if(event.detail.successful) { window.location.href = '/channels'; }">
                     <input type="hidden" name="retain_history" value="{{if .RetainHistoryOnDelete}}true{{else}}false{{end}}">
                     <button type="submit" class="inline-flex items-center px-4 py-2 border border-red-600 text-sm font-medium rounded-md text-red-400 hover:bg-red-800 hover:text-red-300">
                         Delete Channel

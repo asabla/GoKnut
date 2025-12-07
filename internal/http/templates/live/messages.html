@@ -9,7 +9,7 @@
     
     {{if .HasNext}}
     <div class="text-center py-2">
-        <button hx-get="/channels/{{.ChannelID}}/messages?page={{.NextPage}}"
+        <button hx-get="/channels/{{.ChannelName}}/messages?page={{.NextPage}}"
                 hx-target="this"
                 hx-swap="outerHTML"
                 class="text-sm text-twitch-purple hover:text-white transition-colors">

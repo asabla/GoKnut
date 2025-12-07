@@ -28,13 +28,13 @@
         <div class="bg-twitch-gray rounded-lg border border-gray-700 p-4 hover:border-gray-600 transition-colors">
             <div class="flex items-start justify-between">
                 <div class="flex items-center space-x-3">
-                    <a href="/users/{{.Message.UserID}}" 
+                    <a href="/users/{{.Message.Username}}" 
                        class="font-medium text-twitch-purple hover:text-purple-400"
                        hx-boost="true">
                         {{if .Message.DisplayName}}{{.Message.DisplayName}}{{else}}{{.Message.Username}}{{end}}
                     </a>
                     <span class="text-gray-500">in</span>
-                    <a href="/channels/{{.Message.ChannelID}}/view" 
+                    <a href="/channels/{{.Message.ChannelName}}/view" 
                        class="text-gray-400 hover:text-gray-300"
                        hx-boost="true">
                         #{{.Message.ChannelName}}

@@ -18,7 +18,7 @@ func TestChannelViewGET(t *testing.T) {
 	defer srv.Close()
 
 	// Channel view should return HTML page with recent messages
-	resp, err := http.Get(srv.URL + "/channels/1")
+	resp, err := http.Get(srv.URL + "/channels/testchannel/view")
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestChannelViewNotFound(t *testing.T) {
 	srv := httptest.NewServer(nil) // TODO: Wire up actual server
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/channels/99999")
+	resp, err := http.Get(srv.URL + "/channels/nonexistentchannel/view")
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestChannelMessagesGET(t *testing.T) {
 	defer srv.Close()
 
 	// Messages endpoint should return HTML fragment or JSON based on Accept header
-	resp, err := http.Get(srv.URL + "/channels/1/messages")
+	resp, err := http.Get(srv.URL + "/channels/testchannel/messages")
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestChannelMessagesPagination(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := http.Get(srv.URL + "/channels/1/messages" + tt.query)
+			resp, err := http.Get(srv.URL + "/channels/testchannel/messages" + tt.query)
 			if err != nil {
 				t.Fatalf("request failed: %v", err)
 			}
@@ -127,7 +127,7 @@ func TestChannelMessagesStreamGET(t *testing.T) {
 	defer srv.Close()
 
 	// Stream endpoint should return new messages after the given ID
-	resp, err := http.Get(srv.URL + "/channels/1/messages/stream?after_id=50")
+	resp, err := http.Get(srv.URL + "/channels/testchannel/messages/stream?after_id=50")
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestChannelMessagesStreamWithHTMXHeader(t *testing.T) {
 	srv := httptest.NewServer(nil) // TODO: Wire up actual server
 	defer srv.Close()
 
-	req, _ := http.NewRequest("GET", srv.URL+"/channels/1/messages/stream?after_id=50", nil)
+	req, _ := http.NewRequest("GET", srv.URL+"/channels/testchannel/messages/stream?after_id=50", nil)
 	req.Header.Set("HX-Request", "true")
 
 	client := &http.Client{}
@@ -171,7 +171,7 @@ func TestChannelMessagesJSONResponse(t *testing.T) {
 	srv := httptest.NewServer(nil) // TODO: Wire up actual server
 	defer srv.Close()
 
-	req, _ := http.NewRequest("GET", srv.URL+"/channels/1/messages", nil)
+	req, _ := http.NewRequest("GET", srv.URL+"/channels/testchannel/messages", nil)
 	req.Header.Set("Accept", "application/json")
 
 	client := &http.Client{}
@@ -207,7 +207,7 @@ func TestChannelMessagesResponseFormat(t *testing.T) {
 	srv := httptest.NewServer(nil) // TODO: Wire up actual server
 	defer srv.Close()
 
-	req, _ := http.NewRequest("GET", srv.URL+"/channels/1/messages?page=1&page_size=10", nil)
+	req, _ := http.NewRequest("GET", srv.URL+"/channels/testchannel/messages?page=1&page_size=10", nil)
 	req.Header.Set("Accept", "application/json")
 
 	client := &http.Client{}

@@ -196,6 +196,35 @@ func (s *SearchService) GetUserProfile(ctx context.Context, userID int64) (*sear
 	return profile, nil
 }
 
+// GetUserProfileByUsername returns detailed user information by username.
+func (s *SearchService) GetUserProfileByUsername(ctx context.Context, username string) (*search.UserProfile, error) {
+	start := time.Now()
+	defer func() {
+		latency := time.Since(start)
+		if s.metrics != nil {
+			s.metrics.RecordSearchRequest("profile", latency)
+		}
+	}()
+
+	profile, err := s.repo.GetUserProfileByUsername(ctx, username)
+	if err != nil {
+		s.logger.Error("failed to get user profile", "username", username, "error", err)
+		return nil, err
+	}
+	if profile == nil {
+		return nil, ErrUserNotFound
+	}
+
+	s.logger.Search("user profile fetched",
+		"user_id", profile.ID,
+		"username", profile.Username,
+		"channels", len(profile.Channels),
+		"latency_ms", time.Since(start).Milliseconds(),
+	)
+
+	return profile, nil
+}
+
 // GetUserMessages returns paginated messages for a user.
 func (s *SearchService) GetUserMessages(ctx context.Context, userID int64, channelID *int64, page, pageSize int) (*MessageSearchResult, error) {
 	start := time.Now()
@@ -237,6 +266,55 @@ func (s *SearchService) GetUserMessages(ctx context.Context, userID int64, chann
 	s.logger.Search("user messages fetched",
 		"user_id", userID,
 		"channel_id", channelID,
+		"results", len(messages),
+		"total", totalCount,
+		"latency_ms", time.Since(start).Milliseconds(),
+	)
+
+	return result, nil
+}
+
+// GetUserMessagesByUsername returns paginated messages for a user by username.
+func (s *SearchService) GetUserMessagesByUsername(ctx context.Context, username string, channelName *string, page, pageSize int) (*MessageSearchResult, error) {
+	start := time.Now()
+	defer func() {
+		latency := time.Since(start)
+		if s.metrics != nil {
+			s.metrics.RecordSearchRequest("user_messages", latency)
+		}
+	}()
+
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	messages, totalCount, err := s.repo.GetUserMessagesByUsername(ctx, username, channelName, page, pageSize)
+	if err != nil {
+		s.logger.Error("failed to get user messages", "username", username, "error", err)
+		return nil, err
+	}
+
+	totalPages := (totalCount + pageSize - 1) / pageSize
+	if totalPages < 1 {
+		totalPages = 1
+	}
+
+	result := &MessageSearchResult{
+		Messages:   messages,
+		TotalCount: totalCount,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalPages: totalPages,
+		HasNext:    page < totalPages,
+		HasPrev:    page > 1,
+	}
+
+	s.logger.Search("user messages fetched",
+		"username", username,
+		"channel_name", channelName,
 		"results", len(messages),
 		"total", totalCount,
 		"latency_ms", time.Since(start).Milliseconds(),

@@ -102,7 +102,7 @@
                         {{range .Channels}}
                         <tr class="hover:bg-gray-700/50 transition-colors">
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <a href="/channels/{{.ID}}/view" class="text-twitch-purple hover:text-purple-400 font-medium">
+                                <a href="/channels/{{.Name}}/view" class="text-twitch-purple hover:text-purple-400 font-medium">
                                     #{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Name}}{{end}}
                                 </a>
                             </td>
@@ -111,7 +111,7 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{{.LastMessageAt.Format "Jan 02, 2006 15:04"}}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <a href="/users/{{$.User.ID}}/messages?channel_id={{.ID}}" class="text-gray-400 hover:text-gray-300">View Messages</a>
+                                <a href="/users/{{$.User.Username}}/messages?channel={{.Name}}" class="text-gray-400 hover:text-gray-300">View Messages</a>
                             </td>
                         </tr>
                         {{end}}
@@ -124,9 +124,9 @@
             <div class="bg-twitch-gray rounded-lg border border-gray-700">
                 <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
                     <h2 class="text-lg font-medium text-white">Recent Messages</h2>
-                    <a href="/users/{{.User.ID}}/messages" class="text-sm text-twitch-purple hover:text-purple-400">View All</a>
+                    <a href="/users/{{.User.Username}}/messages" class="text-sm text-twitch-purple hover:text-purple-400">View All</a>
                 </div>
-                <div id="user-messages" hx-get="/users/{{.User.ID}}/messages" hx-trigger="load" hx-swap="innerHTML">
+                <div id="user-messages" hx-get="/users/{{.User.Username}}/messages" hx-trigger="load" hx-swap="innerHTML">
                     <div class="p-6 text-center text-gray-500">
                         <svg class="animate-spin mx-auto h-8 w-8 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
