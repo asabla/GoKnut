@@ -104,13 +104,17 @@ description: "Task list for Message Search View feature"
 
 ---
 
-## Phase N: Polish & Cross-Cutting Concerns
+## Phase 6: UX Refactor - Align Messages with Users/Channels
 
-**Purpose**: Consolidate UX, performance, observability, and documentation improvements.
+**Goal**: Move message search to `/messages`, align templates/layout with users/channels, and add expandable rows.
 
-- [X] T021 [P] Document performance/observability for search paths in `docs/perf.md` and structured logging in `internal/observability/observability.go`
-- [X] T022 Address accessibility, empty, loading, and error states for search templates in `internal/http/templates/search/messages.html`
-- [X] T023 Update quickstart and feature docs with usage examples in `specs/002-message-search-view/quickstart.md` and `specs/002-message-search-view/research.md`
+- [ ] T024 Create `internal/http/templates/messages/index.html` (page shell) and wire to `/messages`
+- [ ] T025 Create `internal/http/templates/messages/list.html` (HTMX partial) with table layout + expandable rows for full text
+- [ ] T026 Update `internal/http/handlers/search.go` to serve `/messages` and new templates
+- [ ] T027 Update navigation links across templates to point to `/messages` (rename "Search" to "Messages")
+- [ ] T028 Remove legacy `internal/http/templates/search/messages*.html`
+- [ ] T029 Update contract test URLs in `tests/contract/search_test.go` to `/messages`
+- [ ] T030 Build/verify route + HTMX flow (no new dependencies)
 
 ---
 
