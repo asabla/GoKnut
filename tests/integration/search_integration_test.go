@@ -7,14 +7,13 @@ import (
 	"time"
 
 	"github.com/asabla/goknut/internal/repository"
+	"github.com/asabla/goknut/internal/search"
 )
 
 // Note: These tests follow the failing-first TDD pattern.
 // They will be enabled as search repository and service are implemented.
 
 func TestMessageSearchFTS(t *testing.T) {
-	t.Skip("Search repository not yet implemented - failing-first TDD")
-
 	// Setup temporary database with FTS enabled
 	tmpFile, err := os.CreateTemp("", "test-*.db")
 	if err != nil {
@@ -69,24 +68,26 @@ func TestMessageSearchFTS(t *testing.T) {
 		t.Fatalf("failed to create messages: %v", err)
 	}
 
-	// TODO: Create search repository and test FTS search
-	// searchRepo := search.NewSearchRepository(db)
-	// results, total, err := searchRepo.SearchMessages(ctx, search.MessageSearchParams{
-	// 	Query:    "test",
-	// 	Page:     1,
-	// 	PageSize: 20,
-	// })
-	// if err != nil {
-	// 	t.Fatalf("failed to search messages: %v", err)
-	// }
-	// if total != 3 {
-	// 	t.Errorf("expected 3 results, got %d", total)
-	// }
+	// Create search repository and test FTS search
+	searchRepo := search.NewSearchRepository(db, true)
+	results, totalCount, err := searchRepo.SearchMessages(ctx, search.MessageSearchParams{
+		Query:    "test",
+		Page:     1,
+		PageSize: 20,
+	})
+	if err != nil {
+		t.Fatalf("failed to search messages: %v", err)
+	}
+	// Should match: "hello world this is a test", "another message about testing", "testing one two three"
+	if totalCount < 2 {
+		t.Errorf("expected at least 2 results, got %d", totalCount)
+	}
+	if len(results) < 2 {
+		t.Errorf("expected at least 2 result items, got %d", len(results))
+	}
 }
 
 func TestMessageSearchLIKE(t *testing.T) {
-	t.Skip("Search repository not yet implemented - failing-first TDD")
-
 	// Setup temporary database with FTS DISABLED
 	tmpFile, err := os.CreateTemp("", "test-*.db")
 	if err != nil {
@@ -109,12 +110,53 @@ func TestMessageSearchLIKE(t *testing.T) {
 		t.Fatalf("failed to migrate: %v", err)
 	}
 
-	// TODO: Create test data and verify LIKE-based search works
+	// Create test data
+	channelRepo := repository.NewChannelRepository(db)
+	channel := &repository.Channel{
+		Name:        "testchannel",
+		DisplayName: "Test Channel",
+		Enabled:     true,
+	}
+	if err := channelRepo.Create(ctx, channel); err != nil {
+		t.Fatalf("failed to create channel: %v", err)
+	}
+
+	userRepo := repository.NewUserRepository(db)
+	user, err := userRepo.GetOrCreate(ctx, "testuser", "TestUser")
+	if err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	msgRepo := repository.NewMessageRepository(db)
+
+	// Insert test messages
+	messages := []repository.Message{
+		{ChannelID: channel.ID, UserID: user.ID, Text: "hello world", SentAt: time.Now().Add(-2 * time.Minute)},
+		{ChannelID: channel.ID, UserID: user.ID, Text: "goodbye world", SentAt: time.Now().Add(-1 * time.Minute)},
+	}
+	if err := msgRepo.CreateBatch(ctx, messages); err != nil {
+		t.Fatalf("failed to create messages: %v", err)
+	}
+
+	// Create search repository with FTS disabled
+	searchRepo := search.NewSearchRepository(db, false)
+	results, totalCount, err := searchRepo.SearchMessages(ctx, search.MessageSearchParams{
+		Query:    "world",
+		Page:     1,
+		PageSize: 20,
+	})
+	if err != nil {
+		t.Fatalf("failed to search messages: %v", err)
+	}
+	if totalCount != 2 {
+		t.Errorf("expected 2 results, got %d", totalCount)
+	}
+	if len(results) != 2 {
+		t.Errorf("expected 2 result items, got %d", len(results))
+	}
 }
 
 func TestUserSearch(t *testing.T) {
-	t.Skip("Search repository not yet implemented - failing-first TDD")
-
 	// Setup temporary database
 	tmpFile, err := os.CreateTemp("", "test-*.db")
 	if err != nil {
@@ -152,24 +194,25 @@ func TestUserSearch(t *testing.T) {
 		t.Fatalf("failed to create otheruser: %v", err)
 	}
 
-	// TODO: Create search repository and test user search
-	// searchRepo := search.NewSearchRepository(db)
-	// results, total, err := searchRepo.SearchUsers(ctx, search.UserSearchParams{
-	// 	Query:    "test",
-	// 	Page:     1,
-	// 	PageSize: 20,
-	// })
-	// if err != nil {
-	// 	t.Fatalf("failed to search users: %v", err)
-	// }
-	// if total != 2 {
-	// 	t.Errorf("expected 2 results, got %d", total)
-	// }
+	// Create search repository and test user search
+	searchRepo := search.NewSearchRepository(db, true)
+	results, totalCount, err := searchRepo.SearchUsers(ctx, search.UserSearchParams{
+		Query:    "test",
+		Page:     1,
+		PageSize: 20,
+	})
+	if err != nil {
+		t.Fatalf("failed to search users: %v", err)
+	}
+	if totalCount != 2 {
+		t.Errorf("expected 2 results, got %d", totalCount)
+	}
+	if len(results) != 2 {
+		t.Errorf("expected 2 result items, got %d", len(results))
+	}
 }
 
 func TestUserSearchWithMessageCount(t *testing.T) {
-	t.Skip("Search repository not yet implemented - failing-first TDD")
-
 	// Setup temporary database
 	tmpFile, err := os.CreateTemp("", "test-*.db")
 	if err != nil {
@@ -199,27 +242,47 @@ func TestUserSearchWithMessageCount(t *testing.T) {
 		DisplayName: "Test Channel",
 		Enabled:     true,
 	}
-	_ = channelRepo.Create(ctx, channel)
+	if err := channelRepo.Create(ctx, channel); err != nil {
+		t.Fatalf("failed to create channel: %v", err)
+	}
 
 	userRepo := repository.NewUserRepository(db)
-	user, _ := userRepo.GetOrCreate(ctx, "testuser", "TestUser")
+	user, err := userRepo.GetOrCreate(ctx, "testuser", "TestUser")
+	if err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
 
 	msgRepo := repository.NewMessageRepository(db)
 	for i := 0; i < 5; i++ {
-		_ = msgRepo.Create(ctx, &repository.Message{
+		if err := msgRepo.Create(ctx, &repository.Message{
 			ChannelID: channel.ID,
 			UserID:    user.ID,
 			Text:      "test message",
 			SentAt:    time.Now(),
-		})
+		}); err != nil {
+			t.Fatalf("failed to create message: %v", err)
+		}
 	}
 
-	// TODO: Verify user search returns correct message count
+	// Verify user search returns correct message count
+	searchRepo := search.NewSearchRepository(db, true)
+	results, _, err := searchRepo.SearchUsers(ctx, search.UserSearchParams{
+		Query:    "test",
+		Page:     1,
+		PageSize: 20,
+	})
+	if err != nil {
+		t.Fatalf("failed to search users: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 user, got %d", len(results))
+	}
+	if results[0].TotalMessages != 5 {
+		t.Errorf("expected 5 messages, got %d", results[0].TotalMessages)
+	}
 }
 
 func TestSearchFiltersChannelAndTimeRange(t *testing.T) {
-	t.Skip("Search repository not yet implemented - failing-first TDD")
-
 	// Setup temporary database
 	tmpFile, err := os.CreateTemp("", "test-*.db")
 	if err != nil {
@@ -249,43 +312,87 @@ func TestSearchFiltersChannelAndTimeRange(t *testing.T) {
 		DisplayName: "Channel 1",
 		Enabled:     true,
 	}
-	_ = channelRepo.Create(ctx, channel1)
+	if err := channelRepo.Create(ctx, channel1); err != nil {
+		t.Fatalf("failed to create channel1: %v", err)
+	}
 	channel2 := &repository.Channel{
 		Name:        "channel2",
 		DisplayName: "Channel 2",
 		Enabled:     true,
 	}
-	_ = channelRepo.Create(ctx, channel2)
+	if err := channelRepo.Create(ctx, channel2); err != nil {
+		t.Fatalf("failed to create channel2: %v", err)
+	}
 
 	userRepo := repository.NewUserRepository(db)
-	user, _ := userRepo.GetOrCreate(ctx, "testuser", "TestUser")
+	user, err := userRepo.GetOrCreate(ctx, "testuser", "TestUser")
+	if err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
 
 	msgRepo := repository.NewMessageRepository(db)
 
-	// Messages in channel1
-	_ = msgRepo.Create(ctx, &repository.Message{
+	// Messages in channel1 (2 days ago)
+	oldTime := time.Now().Add(-48 * time.Hour)
+	if err := msgRepo.Create(ctx, &repository.Message{
 		ChannelID: channel1.ID,
 		UserID:    user.ID,
 		Text:      "hello channel1",
-		SentAt:    time.Now().Add(-48 * time.Hour), // 2 days ago
-	})
+		SentAt:    oldTime,
+	}); err != nil {
+		t.Fatalf("failed to create message: %v", err)
+	}
 
-	// Messages in channel2
-	_ = msgRepo.Create(ctx, &repository.Message{
+	// Messages in channel2 (1 hour ago)
+	recentTime := time.Now().Add(-1 * time.Hour)
+	if err := msgRepo.Create(ctx, &repository.Message{
 		ChannelID: channel2.ID,
 		UserID:    user.ID,
 		Text:      "hello channel2",
-		SentAt:    time.Now().Add(-1 * time.Hour), // 1 hour ago
-	})
+		SentAt:    recentTime,
+	}); err != nil {
+		t.Fatalf("failed to create message: %v", err)
+	}
 
-	// TODO: Test channel filter
-	// TODO: Test time range filter
-	// TODO: Test combined filters
+	searchRepo := search.NewSearchRepository(db, true)
+
+	// Test channel filter
+	channel1Name := "channel1"
+	results, totalCount, err := searchRepo.SearchMessages(ctx, search.MessageSearchParams{
+		Query:       "hello",
+		ChannelName: &channel1Name,
+		Page:        1,
+		PageSize:    20,
+	})
+	if err != nil {
+		t.Fatalf("failed to search messages: %v", err)
+	}
+	if totalCount != 1 {
+		t.Errorf("expected 1 result for channel filter, got %d", totalCount)
+	}
+	if len(results) != 1 {
+		t.Errorf("expected 1 result item, got %d", len(results))
+	}
+
+	// Test time range filter (only recent)
+	startTime := time.Now().Add(-2 * time.Hour)
+	endTime := time.Now()
+	results, totalCount, err = searchRepo.SearchMessages(ctx, search.MessageSearchParams{
+		Query:     "hello",
+		StartTime: &startTime,
+		EndTime:   &endTime,
+		Page:      1,
+		PageSize:  20,
+	})
+	if err != nil {
+		t.Fatalf("failed to search messages: %v", err)
+	}
+	if totalCount != 1 {
+		t.Errorf("expected 1 result for time range filter, got %d", totalCount)
+	}
 }
 
 func TestSearchResultsReverseChronological(t *testing.T) {
-	t.Skip("Search repository not yet implemented - failing-first TDD")
-
 	// Setup temporary database
 	tmpFile, err := os.CreateTemp("", "test-*.db")
 	if err != nil {
@@ -315,40 +422,68 @@ func TestSearchResultsReverseChronological(t *testing.T) {
 		DisplayName: "Test Channel",
 		Enabled:     true,
 	}
-	_ = channelRepo.Create(ctx, channel)
+	if err := channelRepo.Create(ctx, channel); err != nil {
+		t.Fatalf("failed to create channel: %v", err)
+	}
 
 	userRepo := repository.NewUserRepository(db)
-	user, _ := userRepo.GetOrCreate(ctx, "testuser", "TestUser")
+	user, err := userRepo.GetOrCreate(ctx, "testuser", "TestUser")
+	if err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
 
 	msgRepo := repository.NewMessageRepository(db)
 
 	// Insert messages at different times
-	_ = msgRepo.Create(ctx, &repository.Message{
+	if err := msgRepo.Create(ctx, &repository.Message{
 		ChannelID: channel.ID,
 		UserID:    user.ID,
 		Text:      "oldest test message",
 		SentAt:    time.Now().Add(-3 * time.Hour),
-	})
-	_ = msgRepo.Create(ctx, &repository.Message{
+	}); err != nil {
+		t.Fatalf("failed to create message: %v", err)
+	}
+	if err := msgRepo.Create(ctx, &repository.Message{
 		ChannelID: channel.ID,
 		UserID:    user.ID,
 		Text:      "middle test message",
 		SentAt:    time.Now().Add(-2 * time.Hour),
-	})
-	_ = msgRepo.Create(ctx, &repository.Message{
+	}); err != nil {
+		t.Fatalf("failed to create message: %v", err)
+	}
+	if err := msgRepo.Create(ctx, &repository.Message{
 		ChannelID: channel.ID,
 		UserID:    user.ID,
 		Text:      "newest test message",
 		SentAt:    time.Now().Add(-1 * time.Hour),
-	})
+	}); err != nil {
+		t.Fatalf("failed to create message: %v", err)
+	}
 
-	// TODO: Search for "test" and verify results are in reverse chronological order
-	// (newest first)
+	// Search for "test" and verify results are in reverse chronological order (newest first)
+	searchRepo := search.NewSearchRepository(db, true)
+	results, _, err := searchRepo.SearchMessages(ctx, search.MessageSearchParams{
+		Query:    "test",
+		Page:     1,
+		PageSize: 20,
+	})
+	if err != nil {
+		t.Fatalf("failed to search messages: %v", err)
+	}
+	if len(results) < 3 {
+		t.Fatalf("expected at least 3 results, got %d", len(results))
+	}
+
+	// Verify order: newest first
+	if results[0].Text != "newest test message" {
+		t.Errorf("expected newest message first, got: %s", results[0].Text)
+	}
+	if results[len(results)-1].Text != "oldest test message" {
+		t.Errorf("expected oldest message last, got: %s", results[len(results)-1].Text)
+	}
 }
 
 func TestUserProfileData(t *testing.T) {
-	t.Skip("Search repository not yet implemented - failing-first TDD")
-
 	// Setup temporary database
 	tmpFile, err := os.CreateTemp("", "test-*.db")
 	if err != nil {
@@ -378,35 +513,61 @@ func TestUserProfileData(t *testing.T) {
 		DisplayName: "Channel 1",
 		Enabled:     true,
 	}
-	_ = channelRepo.Create(ctx, channel1)
+	if err := channelRepo.Create(ctx, channel1); err != nil {
+		t.Fatalf("failed to create channel1: %v", err)
+	}
 	channel2 := &repository.Channel{
 		Name:        "channel2",
 		DisplayName: "Channel 2",
 		Enabled:     true,
 	}
-	_ = channelRepo.Create(ctx, channel2)
+	if err := channelRepo.Create(ctx, channel2); err != nil {
+		t.Fatalf("failed to create channel2: %v", err)
+	}
 
 	userRepo := repository.NewUserRepository(db)
-	user, _ := userRepo.GetOrCreate(ctx, "testuser", "TestUser")
+	user, err := userRepo.GetOrCreate(ctx, "testuser", "TestUser")
+	if err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
 
 	msgRepo := repository.NewMessageRepository(db)
 
 	// Add messages across channels
-	_ = msgRepo.Create(ctx, &repository.Message{
+	if err := msgRepo.Create(ctx, &repository.Message{
 		ChannelID: channel1.ID,
 		UserID:    user.ID,
 		Text:      "message in channel1",
 		SentAt:    time.Now().Add(-2 * time.Hour),
-	})
-	_ = msgRepo.Create(ctx, &repository.Message{
+	}); err != nil {
+		t.Fatalf("failed to create message: %v", err)
+	}
+	if err := msgRepo.Create(ctx, &repository.Message{
 		ChannelID: channel2.ID,
 		UserID:    user.ID,
 		Text:      "message in channel2",
 		SentAt:    time.Now().Add(-1 * time.Hour),
-	})
+	}); err != nil {
+		t.Fatalf("failed to create message: %v", err)
+	}
 
-	// TODO: Get user profile and verify:
-	// - first_seen_at and last_seen_at are correct
-	// - total_messages is correct
-	// - channels list includes both channels
+	// Get user profile and verify
+	searchRepo := search.NewSearchRepository(db, true)
+	profile, err := searchRepo.GetUserProfileByUsername(ctx, "testuser")
+	if err != nil {
+		t.Fatalf("failed to get user profile: %v", err)
+	}
+	if profile == nil {
+		t.Fatal("expected profile, got nil")
+	}
+
+	// Verify total_messages is correct
+	if profile.TotalMessages != 2 {
+		t.Errorf("expected 2 total messages, got %d", profile.TotalMessages)
+	}
+
+	// Verify channels list includes both channels
+	if len(profile.Channels) != 2 {
+		t.Errorf("expected 2 channels, got %d", len(profile.Channels))
+	}
 }
