@@ -44,8 +44,13 @@
                         <a href="/messages" class="text-white bg-twitch-purple/20 border border-twitch-purple/50 px-3 py-2 rounded-md text-sm font-medium">Messages</a>
                     </div>
                 </div>
-                <!-- SSE Status Indicator -->
-                <div class="flex items-center space-x-2">
+                <!-- Streaming Toggle & SSE Status Indicator -->
+                <div class="flex items-center space-x-4">
+                    <label class="flex items-center space-x-2 text-xs text-gray-400 cursor-pointer select-none" title="Toggle live message streaming">
+                        <input type="checkbox" id="streaming-toggle" checked
+                               class="w-3.5 h-3.5 rounded border-gray-600 bg-twitch-dark text-twitch-purple focus:ring-twitch-purple focus:ring-offset-0 cursor-pointer">
+                        <span>Streaming</span>
+                    </label>
                     <span id="sse-status-messages" class="inline-flex items-center text-xs" data-testid="sse-status-messages">
                         <span id="sse-messages-connected" class="hidden items-center text-green-400">
                             <span class="relative flex h-1.5 w-1.5 mr-1">
@@ -146,7 +151,79 @@
         var lastCursor = 0;
         var isConnected = false;
         var seenMessageIds = new Set();
-        var sseEnabled = true; // Can be toggled off during search
+        var streamingEnabled = true; // Controlled by toggle, default true
+        
+        // Get filter values from the form
+        function getFilters() {
+            return {
+                query: (document.getElementById('q') || {}).value || '',
+                channel: (document.getElementById('channel') || {}).value || '',
+                username: (document.getElementById('username') || {}).value || '',
+                startDate: (document.getElementById('start') || {}).value || '',
+                endDate: (document.getElementById('end') || {}).value || ''
+            };
+        }
+        
+        // Check if any filters are active
+        function hasActiveFilters() {
+            var filters = getFilters();
+            return filters.query.trim() !== '' || 
+                   filters.channel.trim() !== '' || 
+                   filters.username.trim() !== '' ||
+                   filters.startDate !== '' ||
+                   filters.endDate !== '';
+        }
+        
+        // Check if a message matches the current filters
+        function messageMatchesFilters(msg) {
+            var filters = getFilters();
+            
+            // If query is set, skip SSE messages (search requires server-side FTS)
+            if (filters.query.trim() !== '') {
+                return false;
+            }
+            
+            // Check channel filter (case-insensitive)
+            if (filters.channel.trim() !== '') {
+                var filterChannel = filters.channel.trim().toLowerCase();
+                var msgChannel = (msg.channel_name || '').toLowerCase();
+                if (msgChannel !== filterChannel) {
+                    return false;
+                }
+            }
+            
+            // Check username filter (case-insensitive)
+            if (filters.username.trim() !== '') {
+                var filterUsername = filters.username.trim().toLowerCase();
+                var msgUsername = (msg.username || '').toLowerCase();
+                if (msgUsername !== filterUsername) {
+                    return false;
+                }
+            }
+            
+            // Check date range filters
+            if (filters.startDate !== '' || filters.endDate !== '') {
+                var msgDate = new Date(msg.sent_at);
+                
+                if (filters.startDate !== '') {
+                    var startDate = new Date(filters.startDate);
+                    startDate.setHours(0, 0, 0, 0);
+                    if (msgDate < startDate) {
+                        return false;
+                    }
+                }
+                
+                if (filters.endDate !== '') {
+                    var endDate = new Date(filters.endDate);
+                    endDate.setHours(23, 59, 59, 999);
+                    if (msgDate > endDate) {
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        }
         
         // Status indicator management
         function showStatus(state) {
@@ -194,7 +271,7 @@
             var time = formatTime(msg.sent_at);
             var fullTime = formatFullTime(msg.sent_at);
             
-            return '<tr class="hover:bg-gray-700/50 transition-colors group cursor-pointer sse-new-message" onclick="toggleRow(' + idx + ')" data-message-id="' + msg.id + '">' +
+            return '<tr class="hover:bg-gray-700/50 transition-colors group cursor-pointer sse-new-message" onclick="toggleRow(\'' + idx + '\')" data-message-id="' + msg.id + '">' +
                 '<td class="px-6 py-4 whitespace-nowrap">' +
                     '<a href="/users/' + escapeHtml(msg.username) + '" class="font-medium text-twitch-purple hover:text-purple-400" onclick="event.stopPropagation();">' +
                         escapeHtml(displayName) + '</a>' +
@@ -210,7 +287,7 @@
                     '<time datetime="' + fullTime + '">' + time + '</time>' +
                 '</td>' +
                 '<td class="px-6 py-4 whitespace-nowrap text-right text-sm">' +
-                    '<button type="button" class="text-gray-400 hover:text-gray-300 expand-btn" aria-label="Expand message" onclick="event.stopPropagation(); toggleRow(' + idx + ');">' +
+                    '<button type="button" class="text-gray-400 hover:text-gray-300 expand-btn" aria-label="Expand message" onclick="event.stopPropagation(); toggleRow(\'' + idx + '\');">' +
                         '<svg class="h-5 w-5 transform transition-transform" id="expand-icon-' + idx + '" fill="none" viewBox="0 0 24 24" stroke="currentColor">' +
                             '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>' +
                         '</svg>' +
@@ -246,14 +323,15 @@
             if (seenMessageIds.has(msg.id)) return;
             seenMessageIds.add(msg.id);
             
-            // Only add if we're viewing the default list (no search active)
-            var searchInput = document.getElementById('q');
-            if (searchInput && searchInput.value.trim() !== '') return;
+            // Apply client-side filtering for SSE messages
+            if (!messageMatchesFilters(msg)) {
+                return;
+            }
             
+            var container = document.getElementById('messages-list');
             var tbody = document.querySelector('#messages-list tbody');
             if (!tbody) {
                 // Messages list might be empty state, need to create table
-                var container = document.getElementById('messages-list');
                 if (container) {
                     // Check if we have the empty state
                     var emptyState = container.querySelector('.text-center');
@@ -348,7 +426,10 @@
         
         // Connect to SSE
         function connect() {
-            if (!sseEnabled) return;
+            if (!streamingEnabled) {
+                showStatus('idle');
+                return;
+            }
             
             if (eventSource) {
                 eventSource.close();
@@ -375,6 +456,9 @@
                 showStatus('error');
                 eventSource.close();
                 
+                // Only attempt reconnection if streaming is still enabled
+                if (!streamingEnabled) return;
+                
                 // Exponential backoff reconnection
                 if (reconnectAttempts < maxReconnectAttempts) {
                     var delay = Math.min(baseReconnectDelay * Math.pow(2, reconnectAttempts), maxReconnectDelay);
@@ -387,12 +471,38 @@
             };
         }
         
+        // Disconnect from SSE
+        function disconnect() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            isConnected = false;
+            showStatus('idle');
+        }
+        
         // Initialize seen message IDs from existing rows
         function initSeenIds() {
             var rows = document.querySelectorAll('[data-message-id]');
             rows.forEach(function(row) {
                 var id = parseInt(row.getAttribute('data-message-id'));
                 if (id) seenMessageIds.add(id);
+            });
+        }
+        
+        // Handle streaming toggle
+        function setupStreamingToggle() {
+            var toggle = document.getElementById('streaming-toggle');
+            if (!toggle) return;
+            
+            toggle.addEventListener('change', function() {
+                streamingEnabled = toggle.checked;
+                if (streamingEnabled) {
+                    reconnectAttempts = 0;
+                    connect();
+                } else {
+                    disconnect();
+                }
             });
         }
         
@@ -405,6 +515,7 @@
         // Start connection when page loads
         if (typeof EventSource !== 'undefined') {
             initSeenIds();
+            setupStreamingToggle();
             connect();
         } else {
             console.log('SSE not supported');
