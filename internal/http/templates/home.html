@@ -48,13 +48,33 @@
     <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div class="space-y-8">
             <!-- Hero Section -->
-            <div class="text-center py-12">
+            <div class="text-center py-8">
                 <h1 class="text-4xl font-bold text-white mb-4">
                     <span class="text-twitch-purple">GoKnut</span> - Twitch Chat Archiver
                 </h1>
                 <p class="text-xl text-gray-400 max-w-2xl mx-auto">
                     Archive, search, and explore Twitch chat messages. Track channels, find users, and discover conversations.
                 </p>
+            </div>
+
+            <!-- Statistics -->
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-4" data-testid="statistics-section">
+                <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700 text-center">
+                    <div class="text-3xl font-bold text-twitch-purple" data-testid="stat-messages">{{formatNumber .TotalMessages}}</div>
+                    <div class="text-sm text-gray-400 mt-1">Messages Archived</div>
+                </div>
+                <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700 text-center">
+                    <div class="text-3xl font-bold text-twitch-purple" data-testid="stat-channels">{{.TotalChannels}}</div>
+                    <div class="text-sm text-gray-400 mt-1">Total Channels</div>
+                </div>
+                <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700 text-center">
+                    <div class="text-3xl font-bold text-green-400" data-testid="stat-enabled">{{.EnabledChannels}}</div>
+                    <div class="text-sm text-gray-400 mt-1">Active Channels</div>
+                </div>
+                <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700 text-center">
+                    <div class="text-3xl font-bold text-twitch-purple" data-testid="stat-users">{{formatNumber .TotalUsers}}</div>
+                    <div class="text-sm text-gray-400 mt-1">Unique Users</div>
+                </div>
             </div>
 
             <!-- Quick Actions -->
@@ -102,44 +122,47 @@
                 </a>
             </div>
 
-            <!-- Features -->
-            <div class="bg-twitch-gray rounded-lg p-6 border border-gray-700">
-                <h2 class="text-xl font-bold text-white mb-4">Features</h2>
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <div class="flex items-start">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
+            <!-- Latest Messages -->
+            <div class="bg-twitch-gray rounded-lg border border-gray-700" data-testid="latest-messages-section">
+                <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-white">Latest Messages</h2>
+                    <a href="/search/messages" class="text-sm text-twitch-purple hover:text-twitch-light transition-colors">View all</a>
+                </div>
+                <div class="divide-y divide-gray-700 max-h-96 overflow-y-auto">
+                    {{if .RecentMessages}}
+                        {{range .RecentMessages}}
+                        <div class="px-6 py-3 hover:bg-gray-800/50 transition-colors" data-testid="message-row">
+                            <div class="flex items-start space-x-3">
+                                <span class="text-gray-500 text-xs shrink-0 tabular-nums mt-0.5" title="{{.SentAt.Format "2006-01-02 15:04:05 MST"}}">
+                                    {{.SentAt.Format "15:04:05"}}
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center space-x-2 text-sm">
+                                        <a href="/users/{{.Username}}" class="font-medium text-twitch-purple hover:underline shrink-0">
+                                            {{if .DisplayName}}{{.DisplayName}}{{else}}{{.Username}}{{end}}
+                                        </a>
+                                        <span class="text-gray-500">in</span>
+                                        <a href="/channels/{{.ChannelName}}/view" class="text-gray-400 hover:text-twitch-purple hover:underline shrink-0">
+                                            #{{.ChannelName}}
+                                        </a>
+                                    </div>
+                                    <p class="text-twitch-light text-sm mt-1 break-words">{{.Text}}</p>
+                                </div>
+                            </div>
                         </div>
-                        <p class="ml-2 text-sm text-gray-300">Real-time chat archiving</p>
-                    </div>
-                    <div class="flex items-start">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        {{end}}
+                    {{else}}
+                        <div class="px-6 py-12 text-center text-gray-500">
+                            <svg class="h-12 w-12 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                             </svg>
+                            <p>No messages yet</p>
+                            <p class="text-sm mt-1">Messages will appear here once channels start being tracked</p>
                         </div>
-                        <p class="ml-2 text-sm text-gray-300">Full-text message search</p>
-                    </div>
-                    <div class="flex items-start">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                        </div>
-                        <p class="ml-2 text-sm text-gray-300">User profile tracking</p>
-                    </div>
-                    <div class="flex items-start">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                        </div>
-                        <p class="ml-2 text-sm text-gray-300">Live chat view with streaming</p>
-                    </div>
+                    {{end}}
                 </div>
             </div>
+
         </div>
     </main>
     <footer class="bg-twitch-gray border-t border-gray-700 mt-auto">

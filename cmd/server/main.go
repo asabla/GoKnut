@@ -136,6 +136,7 @@ func run() error {
 		SearchService:  searchService,
 		ChannelRepo:    channelRepo,
 		MessageRepo:    messageRepo,
+		UserRepo:       userRepo,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create HTTP server: %w", err)
