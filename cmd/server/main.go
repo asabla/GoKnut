@@ -16,6 +16,7 @@ import (
 	"github.com/asabla/goknut/internal/irc"
 	"github.com/asabla/goknut/internal/observability"
 	"github.com/asabla/goknut/internal/repository"
+	"github.com/asabla/goknut/internal/search"
 	"github.com/asabla/goknut/internal/services"
 )
 
@@ -122,11 +123,17 @@ func run() error {
 		metrics,
 	)
 
+	// Create search repository and service
+	searchRepo := search.NewSearchRepository(db, cfg.EnableFTS)
+	searchService := services.NewSearchService(searchRepo, logger, metrics)
+
 	// Create HTTP server
 	httpServer, err := gohttp.NewServer(gohttp.ServerConfig{
-		Addr:    cfg.HTTPAddr,
-		Logger:  logger,
-		Metrics: metrics,
+		Addr:           cfg.HTTPAddr,
+		Logger:         logger,
+		Metrics:        metrics,
+		ChannelService: channelService,
+		SearchService:  searchService,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create HTTP server: %w", err)

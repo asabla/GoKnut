@@ -82,9 +82,9 @@ func (h *ChannelHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.isHTMXRequest(r) {
-		h.templates.ExecuteTemplate(w, "channels/list.html", data)
+		h.templates.ExecuteTemplate(w, "list.html", data)
 	} else {
-		h.templates.ExecuteTemplate(w, "channels/index.html", data)
+		h.templates.ExecuteTemplate(w, "channels/index", data)
 	}
 }
 
@@ -145,7 +145,7 @@ func (h *ChannelHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 
 	// For HTMX, return the new row to append
 	if h.isHTMXRequest(r) {
-		h.templates.ExecuteTemplate(w, "channels/row.html", channelDTO)
+		h.templates.ExecuteTemplate(w, "row.html", channelDTO)
 		return
 	}
 
@@ -191,7 +191,7 @@ func (h *ChannelHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.templates.ExecuteTemplate(w, "channels/detail.html", channelDTO)
+	h.templates.ExecuteTemplate(w, "channels/detail", channelDTO)
 }
 
 func (h *ChannelHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
@@ -256,7 +256,7 @@ func (h *ChannelHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// For HTMX, return the updated row
 	if h.isHTMXRequest(r) {
-		h.templates.ExecuteTemplate(w, "channels/row.html", channelDTO)
+		h.templates.ExecuteTemplate(w, "row.html", channelDTO)
 		return
 	}
 
@@ -316,7 +316,7 @@ func (h *ChannelHandler) renderError(w http.ResponseWriter, r *http.Request, mes
 	}
 
 	w.WriteHeader(status)
-	h.templates.ExecuteTemplate(w, "partials/error.html", map[string]any{
+	h.templates.ExecuteTemplate(w, "error.html", map[string]any{
 		"Title":   http.StatusText(status),
 		"Message": message,
 	})

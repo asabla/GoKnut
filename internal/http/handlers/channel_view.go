@@ -306,7 +306,7 @@ func (h *ChannelViewHandler) renderError(w http.ResponseWriter, r *http.Request,
 	}
 
 	w.WriteHeader(status)
-	h.templates.ExecuteTemplate(w, "partials/error.html", map[string]any{
+	h.templates.ExecuteTemplate(w, "error.html", map[string]any{
 		"Title":   http.StatusText(status),
 		"Message": message,
 	})

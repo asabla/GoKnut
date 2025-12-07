@@ -1,7 +1,7 @@
 {{define "live/messages.html"}}
 {{/* Paginated message list fragment */}}
 {{if .IsEmpty}}
-    {{template "partials/empty.html" (dict "Message" "No more messages")}}
+    {{template "empty" (dict "Message" "No more messages")}}
 {{else}}
     {{range .Messages}}
         {{template "live/message.html" .}}
