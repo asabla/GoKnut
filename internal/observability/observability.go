@@ -79,11 +79,20 @@ type Metrics struct {
 	streamPollRequests int64
 	streamLatencySum   time.Duration
 	streamPollCount    int64
+
+	// SSE metrics
+	sseConnections       int64
+	sseDisconnections    int64
+	sseBackpressure      int64
+	sseEventsSent        int64
+	sseConnectionsByView map[string]int64
 }
 
 // NewMetrics creates a new Metrics instance.
 func NewMetrics() *Metrics {
-	return &Metrics{}
+	return &Metrics{
+		sseConnectionsByView: make(map[string]int64),
+	}
 }
 
 // RecordIRCConnection records an IRC connection event.
@@ -217,4 +226,64 @@ func (m *Metrics) RecordStreamPoll(latency time.Duration, messageCount int) {
 	m.streamPollRequests++
 	m.streamLatencySum += latency
 	m.streamPollCount++
+}
+
+// RecordSSEConnect records an SSE connection event.
+func (m *Metrics) RecordSSEConnect(view string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.sseConnections++
+	if m.sseConnectionsByView == nil {
+		m.sseConnectionsByView = make(map[string]int64)
+	}
+	m.sseConnectionsByView[view]++
+}
+
+// RecordSSEDisconnect records an SSE disconnection event.
+func (m *Metrics) RecordSSEDisconnect(view string, reason string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.sseDisconnections++
+}
+
+// RecordSSEBackpressure records an SSE backpressure event (buffer full).
+func (m *Metrics) RecordSSEBackpressure(view string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.sseBackpressure++
+}
+
+// RecordSSEEventSent records an SSE event sent.
+func (m *Metrics) RecordSSEEventSent() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.sseEventsSent++
+}
+
+// SSEStats returns SSE-specific metrics.
+func (m *Metrics) SSEStats() SSEMetricsSnapshot {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	viewCounts := make(map[string]int64)
+	for k, v := range m.sseConnectionsByView {
+		viewCounts[k] = v
+	}
+
+	return SSEMetricsSnapshot{
+		Connections:       m.sseConnections,
+		Disconnections:    m.sseDisconnections,
+		Backpressure:      m.sseBackpressure,
+		EventsSent:        m.sseEventsSent,
+		ConnectionsByView: viewCounts,
+	}
+}
+
+// SSEMetricsSnapshot is a point-in-time snapshot of SSE metrics.
+type SSEMetricsSnapshot struct {
+	Connections       int64
+	Disconnections    int64
+	Backpressure      int64
+	EventsSent        int64
+	ConnectionsByView map[string]int64
 }

@@ -1,0 +1,151 @@
+{{define "sse-status"}}
+<!-- SSE Connection Status Indicator -->
+<div id="sse-status" class="fixed bottom-4 right-4 z-50 transition-all duration-300" data-testid="sse-status">
+    <!-- Connected State (hidden by default, shown via JS) -->
+    <div id="sse-connected" class="hidden items-center space-x-2 bg-green-900/90 text-green-300 px-3 py-2 rounded-lg shadow-lg border border-green-700">
+        <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+        </span>
+        <span class="text-sm font-medium">Live</span>
+    </div>
+    
+    <!-- Idle State -->
+    <div id="sse-idle" class="hidden items-center space-x-2 bg-gray-800/90 text-gray-400 px-3 py-2 rounded-lg shadow-lg border border-gray-700">
+        <span class="relative flex h-2 w-2">
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-gray-500"></span>
+        </span>
+        <span class="text-sm font-medium">Idle</span>
+    </div>
+    
+    <!-- Reconnecting State -->
+    <div id="sse-reconnecting" class="hidden items-center space-x-2 bg-yellow-900/90 text-yellow-300 px-3 py-2 rounded-lg shadow-lg border border-yellow-700">
+        <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="text-sm font-medium">Reconnecting...</span>
+    </div>
+    
+    <!-- Fallback State -->
+    <div id="sse-fallback" class="hidden items-center space-x-2 bg-orange-900/90 text-orange-300 px-3 py-2 rounded-lg shadow-lg border border-orange-700">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        <span class="text-sm font-medium">Polling mode</span>
+    </div>
+    
+    <!-- Error State -->
+    <div id="sse-error" class="hidden items-center space-x-2 bg-red-900/90 text-red-300 px-3 py-2 rounded-lg shadow-lg border border-red-700">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span class="text-sm font-medium">Connection lost</span>
+        <button onclick="window.sseReconnect && window.sseReconnect()" class="ml-2 text-xs underline hover:no-underline">Retry</button>
+    </div>
+</div>
+
+<script>
+// SSE Status Manager
+window.SSEStatus = {
+    states: ['connected', 'idle', 'reconnecting', 'fallback', 'error'],
+    
+    show: function(state) {
+        // Hide all states
+        this.states.forEach(function(s) {
+            var el = document.getElementById('sse-' + s);
+            if (el) {
+                el.classList.add('hidden');
+                el.classList.remove('flex');
+            }
+        });
+        
+        // Show requested state
+        var el = document.getElementById('sse-' + state);
+        if (el) {
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+        }
+    },
+    
+    hide: function() {
+        this.states.forEach(function(s) {
+            var el = document.getElementById('sse-' + s);
+            if (el) {
+                el.classList.add('hidden');
+                el.classList.remove('flex');
+            }
+        });
+    }
+};
+</script>
+{{end}}
+
+{{define "sse-status-inline"}}
+<!-- Inline SSE Status (for use within page content) -->
+<span id="sse-status-inline" class="inline-flex items-center" data-testid="sse-status-inline">
+    <span id="sse-inline-connected" class="hidden items-center text-green-400 text-xs">
+        <span class="relative flex h-1.5 w-1.5 mr-1">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+        </span>
+        Live
+    </span>
+    <span id="sse-inline-idle" class="hidden items-center text-gray-500 text-xs">
+        <span class="h-1.5 w-1.5 rounded-full bg-gray-500 mr-1"></span>
+        Idle
+    </span>
+    <span id="sse-inline-reconnecting" class="hidden items-center text-yellow-400 text-xs">
+        <svg class="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        Reconnecting
+    </span>
+    <span id="sse-inline-fallback" class="hidden items-center text-orange-400 text-xs">
+        <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        Polling
+    </span>
+    <span id="sse-inline-error" class="hidden items-center text-red-400 text-xs">
+        <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Disconnected
+    </span>
+</span>
+
+<script>
+// Inline SSE Status Manager
+window.SSEStatusInline = {
+    states: ['connected', 'idle', 'reconnecting', 'fallback', 'error'],
+    
+    show: function(state) {
+        this.states.forEach(function(s) {
+            var el = document.getElementById('sse-inline-' + s);
+            if (el) {
+                el.classList.add('hidden');
+                el.classList.remove('inline-flex');
+            }
+        });
+        
+        var el = document.getElementById('sse-inline-' + state);
+        if (el) {
+            el.classList.remove('hidden');
+            el.classList.add('inline-flex');
+        }
+    },
+    
+    hide: function() {
+        this.states.forEach(function(s) {
+            var el = document.getElementById('sse-inline-' + s);
+            if (el) {
+                el.classList.add('hidden');
+                el.classList.remove('inline-flex');
+            }
+        });
+    }
+};
+</script>
+{{end}}

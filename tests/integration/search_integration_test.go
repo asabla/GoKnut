@@ -1,11 +1,18 @@
 package integration
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/asabla/goknut/internal/http/handlers"
+	"github.com/asabla/goknut/internal/observability"
 	"github.com/asabla/goknut/internal/repository"
 	"github.com/asabla/goknut/internal/search"
 )
@@ -569,5 +576,131 @@ func TestUserProfileData(t *testing.T) {
 	// Verify channels list includes both channels
 	if len(profile.Channels) != 2 {
 		t.Errorf("expected 2 channels, got %d", len(profile.Channels))
+	}
+}
+
+// TestUsersSSEStream tests the SSE stream for the users view.
+// This test verifies:
+// - SSE connection is established successfully with view=users
+// - Status event is received on connect
+func TestUsersSSEStream(t *testing.T) {
+	ctx := context.Background()
+
+	// Set up test database
+	db, err := repository.Open(repository.DBConfig{
+		Path:      ":memory:",
+		EnableFTS: true,
+	})
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	defer db.Close()
+
+	if err := db.Migrate(ctx); err != nil {
+		t.Fatalf("failed to migrate database: %v", err)
+	}
+
+	// Create repositories
+	channelRepo := repository.NewChannelRepository(db)
+	messageRepo := repository.NewMessageRepository(db)
+	userRepo := repository.NewUserRepository(db)
+
+	// Create test users with messages
+	channel := &repository.Channel{
+		Name:        "testchannel",
+		DisplayName: "TestChannel",
+		Enabled:     true,
+	}
+	if err := channelRepo.Create(ctx, channel); err != nil {
+		t.Fatalf("failed to create channel: %v", err)
+	}
+
+	// Create 3 users with different message counts
+	users := []struct {
+		username    string
+		displayName string
+		msgCount    int
+	}{
+		{"user1", "User One", 10},
+		{"user2", "User Two", 5},
+		{"user3", "User Three", 2},
+	}
+
+	for _, u := range users {
+		user, err := userRepo.GetOrCreate(ctx, u.username, u.displayName)
+		if err != nil {
+			t.Fatalf("failed to create user: %v", err)
+		}
+		for i := 0; i < u.msgCount; i++ {
+			msg := &repository.Message{
+				ChannelID: channel.ID,
+				UserID:    user.ID,
+				Text:      "Test message",
+				SentAt:    time.Now(),
+			}
+			if err := messageRepo.Create(ctx, msg); err != nil {
+				t.Fatalf("failed to create message: %v", err)
+			}
+		}
+	}
+
+	// Create SSE handler
+	logger := observability.NewLogger("test")
+	metrics := observability.NewMetrics()
+	sseHandler := handlers.NewSSEHandler(channelRepo, messageRepo, userRepo, nil, logger, metrics)
+
+	// Create test server
+	mux := http.NewServeMux()
+	sseHandler.RegisterRoutes(mux)
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	// Connect to SSE stream for users view
+	req, err := http.NewRequestWithContext(ctx, "GET", server.URL+"/live?view=users", nil)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+	req.Header.Set("Accept", "text/event-stream")
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("failed to connect to SSE: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Verify SSE headers
+	if ct := resp.Header.Get("Content-Type"); ct != "text/event-stream" {
+		t.Errorf("expected Content-Type text/event-stream, got %s", ct)
+	}
+
+	// Read status event
+	scanner := bufio.NewScanner(resp.Body)
+	timeout := time.After(3 * time.Second)
+	gotStatus := false
+
+	for !gotStatus {
+		select {
+		case <-timeout:
+			t.Fatal("timeout waiting for status event")
+		default:
+			if scanner.Scan() {
+				line := scanner.Text()
+				if strings.HasPrefix(line, "data: ") {
+					data := strings.TrimPrefix(line, "data: ")
+					var event map[string]any
+					if err := json.Unmarshal([]byte(data), &event); err != nil {
+						continue
+					}
+					if event["type"] == "status" && event["state"] == "connected" {
+						gotStatus = true
+					}
+				}
+			}
+		}
+	}
+
+	if !gotStatus {
+		t.Error("expected to receive status event")
 	}
 }

@@ -27,6 +27,8 @@
         @layer utilities {
             .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
             .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { opacity: 1; }
+            .sse-updated { animation: highlight-fade 2s ease-out; }
+            @keyframes highlight-fade { from { background-color: rgba(145, 70, 255, 0.2); } to { background-color: transparent; } }
         }
     </style>
 </head>
@@ -41,6 +43,35 @@
                         <a href="/users" class="text-white bg-twitch-purple/20 border border-twitch-purple/50 px-3 py-2 rounded-md text-sm font-medium">Users</a>
                         <a href="/messages" class="text-gray-300 hover:text-white hover:bg-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">Messages</a>
                     </div>
+                </div>
+                <!-- SSE Status Indicator -->
+                <div class="flex items-center space-x-2">
+                    <span id="sse-status-users" class="inline-flex items-center text-xs" data-testid="sse-status-users">
+                        <span id="sse-users-connected" class="hidden items-center text-green-400">
+                            <span class="relative flex h-1.5 w-1.5 mr-1">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                            </span>
+                            Live
+                        </span>
+                        <span id="sse-users-idle" class="hidden items-center text-gray-500">
+                            <span class="h-1.5 w-1.5 rounded-full bg-gray-500 mr-1"></span>
+                            Idle
+                        </span>
+                        <span id="sse-users-reconnecting" class="hidden items-center text-yellow-400">
+                            <svg class="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            Reconnecting
+                        </span>
+                        <span id="sse-users-error" class="hidden items-center text-red-400">
+                            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Offline
+                        </span>
+                    </span>
                 </div>
             </div>
         </div>
@@ -82,6 +113,138 @@
             <p class="text-center text-gray-500 text-sm">Twitch Chat Archiver & Explorer</p>
         </div>
     </footer>
+
+    <!-- SSE Client Script for Users View -->
+    <script>
+    (function() {
+        'use strict';
+        
+        var eventSource = null;
+        var reconnectAttempts = 0;
+        var maxReconnectAttempts = 10;
+        var baseReconnectDelay = 1000;
+        var maxReconnectDelay = 30000;
+        var isConnected = false;
+        
+        // Status indicator management
+        function showStatus(state) {
+            var states = ['connected', 'idle', 'reconnecting', 'error'];
+            states.forEach(function(s) {
+                var el = document.getElementById('sse-users-' + s);
+                if (el) {
+                    el.classList.add('hidden');
+                    el.classList.remove('inline-flex');
+                }
+            });
+            var el = document.getElementById('sse-users-' + state);
+            if (el) {
+                el.classList.remove('hidden');
+                el.classList.add('inline-flex');
+            }
+        }
+        
+        // Update user count in table
+        function updateUserCount(data) {
+            var username = data.username;
+            var row = document.querySelector('[data-username="' + username + '"]');
+            if (!row) return;
+            
+            // Update message count
+            var countCell = row.querySelector('[data-sse-target="message-count"]');
+            if (countCell) {
+                var oldValue = countCell.textContent.trim();
+                var newValue = data.total_messages.toString();
+                if (oldValue !== newValue) {
+                    countCell.textContent = newValue;
+                    countCell.classList.add('sse-updated');
+                    setTimeout(function() {
+                        countCell.classList.remove('sse-updated');
+                    }, 2000);
+                }
+            }
+            
+            // Update last seen
+            var lastSeenCell = row.querySelector('[data-sse-target="last-seen"]');
+            if (lastSeenCell && data.last_seen_at) {
+                var date = new Date(data.last_seen_at);
+                lastSeenCell.textContent = date.toLocaleDateString('en-US', { 
+                    month: 'short', day: '2-digit', year: 'numeric', 
+                    hour: '2-digit', minute: '2-digit', hour12: false 
+                });
+            }
+        }
+        
+        // Handle SSE message
+        function handleMessage(event) {
+            try {
+                var data = JSON.parse(event.data);
+                
+                switch (data.type) {
+                    case 'status':
+                        if (data.state === 'connected') {
+                            showStatus('connected');
+                            isConnected = true;
+                            reconnectAttempts = 0;
+                        } else if (data.state === 'idle') {
+                            showStatus('idle');
+                        } else if (data.state === 'error' || data.state === 'fallback') {
+                            showStatus('error');
+                        }
+                        break;
+                        
+                    case 'user_count':
+                        updateUserCount(data);
+                        break;
+                }
+            } catch (e) {
+                console.error('Failed to parse SSE event:', e);
+            }
+        }
+        
+        // Connect to SSE
+        function connect() {
+            if (eventSource) {
+                eventSource.close();
+            }
+            
+            showStatus('reconnecting');
+            
+            eventSource = new EventSource('/live?view=users');
+            
+            eventSource.onopen = function() {
+                console.log('SSE connected to users');
+            };
+            
+            eventSource.onmessage = handleMessage;
+            
+            eventSource.onerror = function(e) {
+                console.error('SSE error:', e);
+                isConnected = false;
+                showStatus('error');
+                eventSource.close();
+                
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    var delay = Math.min(baseReconnectDelay * Math.pow(2, reconnectAttempts), maxReconnectDelay);
+                    reconnectAttempts++;
+                    console.log('Reconnecting in ' + delay + 'ms (attempt ' + reconnectAttempts + ')');
+                    setTimeout(connect, delay);
+                }
+            };
+        }
+        
+        // Start connection
+        if (typeof EventSource !== 'undefined') {
+            connect();
+        } else {
+            showStatus('error');
+        }
+        
+        // Cleanup
+        window.addEventListener('beforeunload', function() {
+            if (eventSource) eventSource.close();
+        });
+    })();
+    </script>
 </body>
 </html>
 {{end}}
