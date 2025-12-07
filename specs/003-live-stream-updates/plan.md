@@ -1,37 +1,33 @@
 # Implementation Plan: Live Stream Updates
 
 **Branch**: `[003-live-stream-updates]` | **Date**: 2025-12-07 | **Spec**: `specs/003-live-stream-updates/spec.md`
-**Input**: Feature specification from `/specs/003-live-stream-updates/spec.md`
-
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
+**Input**: Feature specification from `specs/003-live-stream-updates/spec.md`
 
 ## Summary
 
-Deliver live streaming for home metrics, latest messages, `/messages`, `/channels`, `/users`, and `/users/<user-name>` using the existing Go 1.22 + HTMX + SQLite stack, adding a WebSocket transport for near-real-time updates with graceful degradation and clear status handling.
+Deliver live updates for home, messages, channels, users, and user profile views using Server-Sent Events (SSE) for read-only streams with graceful degradation to existing manual refresh/polling. Preserve ordering/deduplication via `messages.id` cursor, keep pages responsive during bursts, and surface status on disconnect/reconnect.
 
 ## Technical Context
 
-**Language/Version**: Go 1.22 (single binary)
-**Primary Dependencies**: `net/http`, `html/template`, HTMX (templates), `modernc.org/sqlite`, `nhooyr.io/websocket` for WebSocket transport
-**Storage**: SQLite (WAL) with messages table + FTS5 virtual table
-**Testing**: `go test` with unit, integration, and contract suites
-**Target Platform**: Server-rendered web UI on Linux/macOS; HTTP + WebSocket endpoints
-**Project Type**: Single backend binary with server-side templates and HTMX partials
-**Performance Goals**: Backend p95≤250ms/p99≤500ms; live delivery target 95% of updates visible <2s (SC-001); avoid duplicate rendering
-**Constraints**: Graceful degradation when WebSocket unavailable; reconnection with backoff; fan-out must not block ingestion; bounded in-memory queues; accessibility for status/idle states
-**Scale/Scope**: Single instance serving home/messages/channels/users views; multiple concurrent WebSocket listeners per view
+**Language/Version**: Go 1.22 (single binary)  
+**Primary Dependencies**: Go stdlib (`net/http`, `html/template`), HTMX (server-rendered), SSE event streams; `modernc.org/sqlite`  
+**Storage**: SQLite (WAL) using existing tables and triggers; no new migrations  
+**Testing**: `go test ./...` with unit, integration, and contract suites; failing-first coverage for live handlers and templates  
+**Target Platform**: Server-rendered web app on Linux/macOS (single HTTP binary)  
+**Project Type**: Web backend with server-rendered templates + HTMX progressive enhancement  
+**Performance Goals**: Backend p95 ≤250ms/p99 ≤500ms; live delivery shows 95% of events in ≤2s (normal load); frontend critical render/interaction ≤2s  
+**Constraints**: SSE-only for read-only live updates; bounded per-connection buffers and backfill; graceful fallback to polling/manual refresh on failure  
+**Scale/Scope**: Moderate traffic with burst tolerance; thousands of messages/minute per session with bounded replay (≤500 events or ~5s backlog)  
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- **Quality**: Lint/format clean, cohesive scope, documentation updated with behavior changes.
-- **Testing**: Failing-first unit/integration/contract/regression coverage for new or changed behavior.
-- **UX**: Design system usage, accessibility (WCAG 2.1 AA), and loading/empty/error states documented and validated.
-- **Performance**: Budgets declared; defaults backend p95≤250ms/p99≤500ms, frontend critical render/interaction ≤2s; validation or planned measurement recorded.
-- **Observability**: Structured logs/metrics/traces defined for new paths and failure modes, with review evidence noted.
-
-Status: PASS (no planned violations).
+- **Quality**: Plan keeps scope cohesive; docs updated alongside behavior changes. **Status: PASS**
+- **Testing**: Failing-first coverage required for new live handlers, reconnect/backfill, and template behaviors. **Status: PASS**
+- **UX**: Uses existing design system; documents loading/empty/error/disconnected states and accessibility. **Status: PASS**
+- **Performance**: Budgets declared (backend p95≤250ms/p99≤500ms; live ≤2s delivery); backlog capped. **Status: PASS**
+- **Observability**: Logs/metrics for connect/disconnect/errors/backpressure; traces optional for handler path. **Status: PASS**
 
 ## Project Structure
 
@@ -39,57 +35,41 @@ Status: PASS (no planned violations).
 
 ```text
 specs/003-live-stream-updates/
-├── plan.md              # This file (/speckit.plan command output)
-├── research.md          # Phase 0 output (/speckit.plan command)
-├── data-model.md        # Phase 1 output (/speckit.plan command)
-├── quickstart.md        # Phase 1 output (/speckit.plan command)
-├── contracts/           # Phase 1 output (/speckit.plan command)
-└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+├── plan.md              # This file (/speckit.plan output)
+├── research.md          # Phase 0 output
+├── data-model.md        # Phase 1 output
+├── quickstart.md        # Phase 1 output
+├── contracts/           # Phase 1 output
+└── tasks.md             # Phase 2 output (not created here)
 ```
 
 ### Source Code (repository root)
 
 ```text
-cmd/
-└── server/main.go
+cmd/server/
 internal/
-├── http/                # handlers, templates, server wiring
-│   ├── handlers/
-│   ├── templates/
-│   └── server.go
-├── ingestion/           # ingestion pipeline, processor
-├── services/            # channel/search services
-├── repository/          # SQLite repositories, migrations
-└── observability/       # logging, metrics
-
+  config/
+  http/
+    handlers/
+    templates/
+  ingestion/
+  observability/
+  repository/
+  search/
+  services/
 tests/
-├── contract/
-├── integration/
-└── unit/
+  contract/
+  integration/
+  unit/
+specs/003-live-stream-updates/
 ```
 
-**Structure Decision**: Single backend binary serving server-rendered HTML + HTMX partials; WebSocket endpoint added under `internal/http` with fan-out to existing views.
+**Structure Decision**: Single Go backend binary with server-rendered templates and existing test suites; live SSE handlers and template hooks land under `internal/http`, with supporting services in `internal/services` and repository reads in `internal/repository`.
 
 ## Complexity Tracking
 
-> **Fill ONLY if Constitution Check has violations that must be justified**
+> No constitutional violations requiring justification at this time.
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| None | N/A | N/A |
-
-## Phase 0 – Outline & Research
-
-- Extracted clarifications: WebSocket transport choice; fan-out model per view; ordering/dedup + backpressure; reconnect/idle UX; HTMX integration approach.
-- Resolved in `research.md` with decisions, rationale, and alternatives.
-
-## Phase 1 – Design & Contracts
-
-- Data model updates captured in `data-model.md` (LiveEvent, MetricSummary, ChannelSummary, UserSummary, Message stream envelope).
-- API contracts and WebSocket message schema captured in `contracts/`.
-- Quickstart instructions for running server and exercising WebSocket stream in `quickstart.md`.
-- Agent context updated via `.specify/scripts/bash/update-agent-context.sh opencode` to record WebSocket addition.
-
-## Post-Design Constitution Check
-
-- Reaffirmed gates: no deviations planned; performance budget and observability hooks documented for streaming path.
+| None | n/a | n/a |
