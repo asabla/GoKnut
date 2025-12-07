@@ -55,8 +55,8 @@
                     <div class="flex space-x-4">
                         <div class="flex-1">
                             <label for="q" class="sr-only">Search messages</label>
-                            <input type="text" name="q" id="q" value="{{.Query}}" placeholder="Search message content..." minlength="2" required aria-required="true" aria-describedby="search-hint" class="block w-full rounded-md bg-twitch-dark border-gray-600 text-white shadow-sm focus:border-twitch-purple focus:ring-twitch-purple sm:text-sm px-4 py-3">
-                            <p id="search-hint" class="sr-only">Enter at least 2 characters to search</p>
+                            <input type="text" name="q" id="q" value="{{.Query}}" placeholder="Search message content (or leave empty for latest)" aria-describedby="search-hint" class="block w-full rounded-md bg-twitch-dark border-gray-600 text-white shadow-sm focus:border-twitch-purple focus:ring-twitch-purple sm:text-sm px-4 py-3">
+                            <p id="search-hint" class="sr-only">Leave empty to see latest messages, or enter at least 2 characters to search</p>
                         </div>
                         <button type="submit" class="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-twitch-purple hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-twitch-purple" aria-label="Submit search">
                             <span class="htmx-indicator" id="search-indicator" aria-hidden="true">
