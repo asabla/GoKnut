@@ -221,7 +221,11 @@ func (h *SearchHandler) handleUserMessages(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	h.templates.ExecuteTemplate(w, "user_messages.html", data)
+	if h.isHTMXRequest(r) {
+		h.templates.ExecuteTemplate(w, "user_messages.html", data)
+	} else {
+		h.templates.ExecuteTemplate(w, "search/user_messages", data)
+	}
 }
 
 func (h *SearchHandler) handleSearchMessages(w http.ResponseWriter, r *http.Request) {

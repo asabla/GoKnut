@@ -21,8 +21,7 @@
             <div class="flex items-start justify-between">
                 <div class="flex items-center space-x-2 text-sm">
                     <a href="/channels/{{.ChannelName}}/view" 
-                       class="text-twitch-purple hover:text-purple-400 font-medium"
-                       hx-boost="true">
+                       class="text-twitch-purple hover:text-purple-400 font-medium">
                         #{{if .ChannelName}}{{.ChannelName}}{{else}}{{.ChannelID}}{{end}}
                     </a>
                     <span class="text-gray-600">&middot;</span>
