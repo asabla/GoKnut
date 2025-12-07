@@ -142,22 +142,29 @@ type PaginatedResponse[T any] struct {
 
 // SearchMessagesRequest is the request for searching messages.
 type SearchMessagesRequest struct {
-	Query     string     `json:"q"`
-	ChannelID *int64     `json:"channel_id,omitempty"`
-	UserID    *int64     `json:"user_id,omitempty"`
-	StartTime *time.Time `json:"start,omitempty"`
-	EndTime   *time.Time `json:"end,omitempty"`
+	Query       string     `json:"q"`
+	ChannelName *string    `json:"channel,omitempty"`
+	Username    *string    `json:"username,omitempty"`
+	StartTime   *time.Time `json:"start,omitempty"`
+	EndTime     *time.Time `json:"end,omitempty"`
 	PaginationRequest
 }
 
 // Validate validates the search messages request.
 func (r *SearchMessagesRequest) Validate() error {
 	r.Query = strings.TrimSpace(r.Query)
-	if len(r.Query) < 2 {
-		return ErrSearchQueryTooShort
-	}
-	if len(r.Query) > 100 {
-		return ErrSearchQueryTooLong
+	// Query is required only if no other filters are set
+	hasFilters := r.ChannelName != nil || r.Username != nil || r.StartTime != nil || r.EndTime != nil
+	if r.Query != "" {
+		if len(r.Query) < 2 {
+			return ErrSearchQueryTooShort
+		}
+		if len(r.Query) > 100 {
+			return ErrSearchQueryTooLong
+		}
+	} else if !hasFilters {
+		// No query and no filters - this shouldn't be validated (used for recent messages)
+		return nil
 	}
 	// Validate time range: end must be on or after start
 	if r.StartTime != nil && r.EndTime != nil {
