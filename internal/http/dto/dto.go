@@ -21,6 +21,7 @@ var (
 	ErrPageSizeInvalid     = errors.New("page size must be between 1 and 100")
 	ErrSearchQueryTooShort = errors.New("search query must be at least 2 characters")
 	ErrSearchQueryTooLong  = errors.New("search query is too long (max 100 characters)")
+	ErrTimeRangeInvalid    = errors.New("end date must be on or after start date")
 )
 
 // Validation patterns
@@ -157,6 +158,12 @@ func (r *SearchMessagesRequest) Validate() error {
 	}
 	if len(r.Query) > 100 {
 		return ErrSearchQueryTooLong
+	}
+	// Validate time range: end must be on or after start
+	if r.StartTime != nil && r.EndTime != nil {
+		if r.EndTime.Before(*r.StartTime) {
+			return ErrTimeRangeInvalid
+		}
 	}
 	return r.PaginationRequest.Validate()
 }

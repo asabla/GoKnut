@@ -2,6 +2,7 @@ package unit
 
 import (
 	"testing"
+	"time"
 
 	"github.com/asabla/goknut/internal/http/dto"
 	"github.com/asabla/goknut/internal/search"
@@ -330,5 +331,71 @@ func TestTimeRangeFilter(t *testing.T) {
 	}
 	if req.EndTime != nil {
 		t.Error("expected EndTime to be nil by default")
+	}
+}
+
+func TestTimeRangeValidation(t *testing.T) {
+	now := time.Now()
+	yesterday := now.Add(-24 * time.Hour)
+	tomorrow := now.Add(24 * time.Hour)
+
+	tests := []struct {
+		name      string
+		startTime *time.Time
+		endTime   *time.Time
+		wantErr   error
+	}{
+		{
+			name:      "no time range",
+			startTime: nil,
+			endTime:   nil,
+			wantErr:   nil,
+		},
+		{
+			name:      "only start time",
+			startTime: &yesterday,
+			endTime:   nil,
+			wantErr:   nil,
+		},
+		{
+			name:      "only end time",
+			startTime: nil,
+			endTime:   &tomorrow,
+			wantErr:   nil,
+		},
+		{
+			name:      "valid range (start before end)",
+			startTime: &yesterday,
+			endTime:   &tomorrow,
+			wantErr:   nil,
+		},
+		{
+			name:      "same day (start equals end)",
+			startTime: &now,
+			endTime:   &now,
+			wantErr:   nil,
+		},
+		{
+			name:      "invalid range (end before start)",
+			startTime: &tomorrow,
+			endTime:   &yesterday,
+			wantErr:   dto.ErrTimeRangeInvalid,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := dto.SearchMessagesRequest{
+				Query:             "test",
+				StartTime:         tt.startTime,
+				EndTime:           tt.endTime,
+				PaginationRequest: dto.PaginationRequest{Page: 1, PageSize: 20},
+			}
+
+			err := req.Validate()
+			if err != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }

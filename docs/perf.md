@@ -130,22 +130,40 @@ done | sort -n | awk '
 # Message search with term
 curl "http://localhost:8080/search/messages?q=hello&page=1&page_size=50"
 
+# Message search with filters
+curl "http://localhost:8080/search/messages?q=hello&channel_id=1&user_id=2"
+
+# Message search with time range
+curl "http://localhost:8080/search/messages?q=hello&start=2025-01-01&end=2025-12-31"
+
 # User search
 curl "http://localhost:8080/users?q=user&page=1&page_size=50"
-
-# Filtered search
-curl "http://localhost:8080/search/messages?q=test&channel_id=1"
 ```
 
 **Metrics**:
 - Query execution time
 - Result count
 - FTS vs LIKE path used
+- Filter combinations applied
 
 **Pass Criteria**:
 - FTS queries: < 100ms for 1M messages
 - LIKE queries: < 250ms for 100K messages
+- Filtered queries: < 150ms (additional filter processing)
 - Empty result queries: < 50ms
+
+**Observability**:
+Search operations emit structured logs with the following fields:
+- `query`: Search term
+- `channel_id`, `user_id`: Applied filters
+- `results`: Number of results returned
+- `total`: Total matching results
+- `latency_ms`: Query execution time
+
+Example log entry:
+```json
+{"level":"info","msg":"message search completed","query":"hello","channel_id":1,"results":20,"total":156,"latency_ms":45}
+```
 
 ### 5. Memory Stability Test
 
