@@ -95,7 +95,7 @@ func TestUserProfileGET(t *testing.T) {
 	srv := httptest.NewServer(nil) // TODO: Wire up actual server
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/users/1")
+	resp, err := http.Get(srv.URL + "/users/testuser")
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
@@ -117,7 +117,7 @@ func TestUserProfileNotFound(t *testing.T) {
 	srv := httptest.NewServer(nil) // TODO: Wire up actual server
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/users/999999")
+	resp, err := http.Get(srv.URL + "/users/nonexistentuser999")
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
@@ -135,7 +135,7 @@ func TestUserProfileMessages(t *testing.T) {
 	defer srv.Close()
 
 	// Get user messages with filters
-	resp, err := http.Get(srv.URL + "/users/1/messages?channel_id=1&page=1&page_size=20")
+	resp, err := http.Get(srv.URL + "/users/testuser/messages?channel=testchannel&page=1&page_size=20")
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"html/template"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/asabla/goknut/internal/http/dto"
@@ -37,9 +36,9 @@ func NewChannelHandler(
 func (h *ChannelHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /channels", h.handleList)
 	mux.HandleFunc("POST /channels", h.handleCreate)
-	mux.HandleFunc("GET /channels/{id}", h.handleGet)
-	mux.HandleFunc("POST /channels/{id}", h.handleUpdate)
-	mux.HandleFunc("POST /channels/{id}/delete", h.handleDelete)
+	mux.HandleFunc("GET /channels/{name}", h.handleGet)
+	mux.HandleFunc("POST /channels/{name}", h.handleUpdate)
+	mux.HandleFunc("POST /channels/{name}/delete", h.handleDelete)
 }
 
 func (h *ChannelHandler) handleList(w http.ResponseWriter, r *http.Request) {
@@ -156,20 +155,20 @@ func (h *ChannelHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 func (h *ChannelHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		h.renderError(w, r, "Invalid channel ID", http.StatusBadRequest)
+	name := r.PathValue("name")
+	if name == "" {
+		h.renderError(w, r, "Invalid channel name", http.StatusBadRequest)
 		return
 	}
 
-	ch, err := h.service.Get(ctx, id)
+	ch, err := h.service.GetByName(ctx, name)
 	if err != nil {
-		if err == services.ErrChannelNotFound {
-			h.renderError(w, r, "Channel not found", http.StatusNotFound)
-			return
-		}
 		h.logger.Error("failed to get channel", "error", err)
 		h.renderError(w, r, "Failed to load channel", http.StatusInternalServerError)
+		return
+	}
+	if ch == nil {
+		h.renderError(w, r, "Channel not found", http.StatusNotFound)
 		return
 	}
 
@@ -197,9 +196,21 @@ func (h *ChannelHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 func (h *ChannelHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	name := r.PathValue("name")
+	if name == "" {
+		h.renderError(w, r, "Invalid channel name", http.StatusBadRequest)
+		return
+	}
+
+	// First get the channel by name to get the ID
+	ch, err := h.service.GetByName(ctx, name)
 	if err != nil {
-		h.renderError(w, r, "Invalid channel ID", http.StatusBadRequest)
+		h.logger.Error("failed to get channel", "error", err)
+		h.renderError(w, r, "Failed to load channel", http.StatusInternalServerError)
+		return
+	}
+	if ch == nil {
+		h.renderError(w, r, "Channel not found", http.StatusNotFound)
 		return
 	}
 
@@ -225,7 +236,7 @@ func (h *ChannelHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ch, err := h.service.Update(ctx, id, req.DisplayName, req.Enabled, req.RetainHistoryOnDelete)
+	ch, err = h.service.Update(ctx, ch.ID, req.DisplayName, req.Enabled, req.RetainHistoryOnDelete)
 	if err != nil {
 		if err == services.ErrChannelNotFound {
 			h.renderError(w, r, "Channel not found", http.StatusNotFound)
@@ -266,9 +277,21 @@ func (h *ChannelHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 func (h *ChannelHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	name := r.PathValue("name")
+	if name == "" {
+		h.renderError(w, r, "Invalid channel name", http.StatusBadRequest)
+		return
+	}
+
+	// First get the channel by name to get the ID
+	ch, err := h.service.GetByName(ctx, name)
 	if err != nil {
-		h.renderError(w, r, "Invalid channel ID", http.StatusBadRequest)
+		h.logger.Error("failed to get channel", "error", err)
+		h.renderError(w, r, "Failed to load channel", http.StatusInternalServerError)
+		return
+	}
+	if ch == nil {
+		h.renderError(w, r, "Channel not found", http.StatusNotFound)
 		return
 	}
 
@@ -281,7 +304,7 @@ func (h *ChannelHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
 		req.RetainHistory = r.FormValue("retain_history") == "on" || r.FormValue("retain_history") == "true"
 	}
 
-	err = h.service.Delete(ctx, id, req.RetainHistory)
+	err = h.service.Delete(ctx, ch.ID, req.RetainHistory)
 	if err != nil {
 		if err == services.ErrChannelNotFound {
 			h.renderError(w, r, "Channel not found", http.StatusNotFound)

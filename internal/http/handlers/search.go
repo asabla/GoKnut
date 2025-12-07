@@ -38,8 +38,8 @@ func NewSearchHandler(
 func (h *SearchHandler) RegisterRoutes(mux *http.ServeMux) {
 	// User search and profiles
 	mux.HandleFunc("GET /users", h.handleSearchUsers)
-	mux.HandleFunc("GET /users/{id}", h.handleUserProfile)
-	mux.HandleFunc("GET /users/{id}/messages", h.handleUserMessages)
+	mux.HandleFunc("GET /users/{username}", h.handleUserProfile)
+	mux.HandleFunc("GET /users/{username}/messages", h.handleUserMessages)
 
 	// Message search
 	mux.HandleFunc("GET /search/messages", h.handleSearchMessages)
@@ -122,19 +122,19 @@ func (h *SearchHandler) renderSearchUsersPage(w http.ResponseWriter, r *http.Req
 func (h *SearchHandler) handleUserProfile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		h.renderError(w, r, "Invalid user ID", http.StatusBadRequest)
+	username := r.PathValue("username")
+	if username == "" {
+		h.renderError(w, r, "Invalid username", http.StatusBadRequest)
 		return
 	}
 
-	profile, err := h.service.GetUserProfile(ctx, id)
+	profile, err := h.service.GetUserProfileByUsername(ctx, username)
 	if err != nil {
 		if err == services.ErrUserNotFound {
 			h.renderError(w, r, "User not found", http.StatusNotFound)
 			return
 		}
-		h.logger.Error("failed to get user profile", "user_id", id, "error", err)
+		h.logger.Error("failed to get user profile", "username", username, "error", err)
 		h.renderError(w, r, "Failed to load user profile", http.StatusInternalServerError)
 		return
 	}
@@ -164,26 +164,24 @@ func (h *SearchHandler) handleUserProfile(w http.ResponseWriter, r *http.Request
 func (h *SearchHandler) handleUserMessages(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	userID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		h.renderError(w, r, "Invalid user ID", http.StatusBadRequest)
+	username := r.PathValue("username")
+	if username == "" {
+		h.renderError(w, r, "Invalid username", http.StatusBadRequest)
 		return
 	}
 
-	var channelID *int64
-	if chID := r.URL.Query().Get("channel_id"); chID != "" {
-		id, err := strconv.ParseInt(chID, 10, 64)
-		if err == nil {
-			channelID = &id
-		}
+	// Channel filter by name instead of ID
+	var channelName *string
+	if chName := r.URL.Query().Get("channel"); chName != "" {
+		channelName = &chName
 	}
 
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
 
-	result, err := h.service.GetUserMessages(ctx, userID, channelID, page, pageSize)
+	result, err := h.service.GetUserMessagesByUsername(ctx, username, channelName, page, pageSize)
 	if err != nil {
-		h.logger.Error("failed to get user messages", "user_id", userID, "error", err)
+		h.logger.Error("failed to get user messages", "username", username, "error", err)
 		h.renderError(w, r, "Failed to load messages", http.StatusInternalServerError)
 		return
 	}
@@ -203,17 +201,17 @@ func (h *SearchHandler) handleUserMessages(w http.ResponseWriter, r *http.Reques
 	}
 
 	data := map[string]any{
-		"Messages":   messages,
-		"IsEmpty":    len(messages) == 0,
-		"Page":       result.Page,
-		"TotalPages": result.TotalPages,
-		"TotalCount": result.TotalCount,
-		"HasNext":    result.HasNext,
-		"HasPrev":    result.HasPrev,
-		"NextPage":   result.Page + 1,
-		"PrevPage":   result.Page - 1,
-		"UserID":     userID,
-		"ChannelID":  channelID,
+		"Messages":    messages,
+		"IsEmpty":     len(messages) == 0,
+		"Page":        result.Page,
+		"TotalPages":  result.TotalPages,
+		"TotalCount":  result.TotalCount,
+		"HasNext":     result.HasNext,
+		"HasPrev":     result.HasPrev,
+		"NextPage":    result.Page + 1,
+		"PrevPage":    result.Page - 1,
+		"Username":    username,
+		"ChannelName": channelName,
 	}
 
 	if h.wantsJSON(r) {

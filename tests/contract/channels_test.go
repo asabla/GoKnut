@@ -119,7 +119,7 @@ func TestChannelsUpdatePOST(t *testing.T) {
 
 	// Then update it
 	updateBody := `{"enabled": false}`
-	resp, err := http.Post(srv.URL+"/channels/1", "application/json", strings.NewReader(updateBody))
+	resp, err := http.Post(srv.URL+"/channels/testchannel", "application/json", strings.NewReader(updateBody))
 	if err != nil {
 		t.Fatalf("update request failed: %v", err)
 	}
@@ -146,7 +146,7 @@ func TestChannelsDeletePOST(t *testing.T) {
 
 	// Then delete it
 	deleteBody := `{"retain_history": false}`
-	resp, err := http.Post(srv.URL+"/channels/1/delete", "application/json", strings.NewReader(deleteBody))
+	resp, err := http.Post(srv.URL+"/channels/testchannel/delete", "application/json", strings.NewReader(deleteBody))
 	if err != nil {
 		t.Fatalf("delete request failed: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestChannelsDeleteRetainsHistory(t *testing.T) {
 
 	// Delete with history retention
 	deleteBody := `{"retain_history": true}`
-	resp, err := http.Post(srv.URL+"/channels/1/delete", "application/json", strings.NewReader(deleteBody))
+	resp, err := http.Post(srv.URL+"/channels/testchannel/delete", "application/json", strings.NewReader(deleteBody))
 	if err != nil {
 		t.Fatalf("delete request failed: %v", err)
 	}

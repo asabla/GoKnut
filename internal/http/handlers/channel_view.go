@@ -42,9 +42,9 @@ func NewChannelViewHandler(
 
 // RegisterRoutes registers channel view routes on the mux.
 func (h *ChannelViewHandler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /channels/{id}/view", h.handleChannelView)
-	mux.HandleFunc("GET /channels/{id}/messages", h.handleMessages)
-	mux.HandleFunc("GET /channels/{id}/messages/stream", h.handleMessageStream)
+	mux.HandleFunc("GET /channels/{name}/view", h.handleChannelView)
+	mux.HandleFunc("GET /channels/{name}/messages", h.handleMessages)
+	mux.HandleFunc("GET /channels/{name}/messages/stream", h.handleMessageStream)
 }
 
 // handleChannelView renders the main channel view page with recent messages.
@@ -52,16 +52,16 @@ func (h *ChannelViewHandler) handleChannelView(w http.ResponseWriter, r *http.Re
 	ctx := r.Context()
 	start := time.Now()
 
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		h.renderError(w, r, "Invalid channel ID", http.StatusBadRequest)
+	name := r.PathValue("name")
+	if name == "" {
+		h.renderError(w, r, "Invalid channel name", http.StatusBadRequest)
 		return
 	}
 
 	// Get channel
-	channel, err := h.channelRepo.GetByID(ctx, id)
+	channel, err := h.channelRepo.GetByName(ctx, name)
 	if err != nil {
-		h.logger.Error("failed to get channel", "id", id, "error", err)
+		h.logger.Error("failed to get channel", "name", name, "error", err)
 		h.renderError(w, r, "Failed to load channel", http.StatusInternalServerError)
 		return
 	}
@@ -71,15 +71,15 @@ func (h *ChannelViewHandler) handleChannelView(w http.ResponseWriter, r *http.Re
 	}
 
 	// Get recent messages
-	messages, err := h.messageRepo.GetRecent(ctx, id, 50)
+	messages, err := h.messageRepo.GetRecent(ctx, channel.ID, 50)
 	if err != nil {
-		h.logger.Error("failed to get messages", "channel_id", id, "error", err)
+		h.logger.Error("failed to get messages", "channel_id", channel.ID, "error", err)
 		h.renderError(w, r, "Failed to load messages", http.StatusInternalServerError)
 		return
 	}
 
 	// Get latest message ID for streaming
-	latestID, _ := h.messageRepo.GetLatestID(ctx, id)
+	latestID, _ := h.messageRepo.GetLatestID(ctx, channel.ID)
 
 	// Convert to DTOs
 	channelDTO := h.channelToDTO(channel)
@@ -114,9 +114,21 @@ func (h *ChannelViewHandler) handleMessages(w http.ResponseWriter, r *http.Reque
 	ctx := r.Context()
 	start := time.Now()
 
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	name := r.PathValue("name")
+	if name == "" {
+		h.renderError(w, r, "Invalid channel name", http.StatusBadRequest)
+		return
+	}
+
+	// Get channel to get its ID
+	channel, err := h.channelRepo.GetByName(ctx, name)
 	if err != nil {
-		h.renderError(w, r, "Invalid channel ID", http.StatusBadRequest)
+		h.logger.Error("failed to get channel", "name", name, "error", err)
+		h.renderError(w, r, "Failed to load channel", http.StatusInternalServerError)
+		return
+	}
+	if channel == nil {
+		h.renderError(w, r, "Channel not found", http.StatusNotFound)
 		return
 	}
 
@@ -129,17 +141,17 @@ func (h *ChannelViewHandler) handleMessages(w http.ResponseWriter, r *http.Reque
 
 	if beforeID > 0 {
 		// Cursor-based pagination
-		messages, err = h.messageRepo.GetBeforeID(ctx, id, beforeID, pageSize)
+		messages, err = h.messageRepo.GetBeforeID(ctx, channel.ID, beforeID, pageSize)
 		if err != nil {
-			h.logger.Error("failed to get messages", "channel_id", id, "error", err)
+			h.logger.Error("failed to get messages", "channel_id", channel.ID, "error", err)
 			h.renderError(w, r, "Failed to load messages", http.StatusInternalServerError)
 			return
 		}
 	} else {
 		// Page-based pagination
-		messages, totalCount, err = h.messageRepo.GetPaginated(ctx, id, page, pageSize)
+		messages, totalCount, err = h.messageRepo.GetPaginated(ctx, channel.ID, page, pageSize)
 		if err != nil {
-			h.logger.Error("failed to get messages", "channel_id", id, "error", err)
+			h.logger.Error("failed to get messages", "channel_id", channel.ID, "error", err)
 			h.renderError(w, r, "Failed to load messages", http.StatusInternalServerError)
 			return
 		}
@@ -181,15 +193,15 @@ func (h *ChannelViewHandler) handleMessages(w http.ResponseWriter, r *http.Reque
 
 	// For HTMX requests, render message list fragment
 	data := map[string]any{
-		"Messages":   messageDTOs,
-		"IsEmpty":    len(messageDTOs) == 0,
-		"Page":       page,
-		"TotalCount": totalCount,
-		"HasNext":    beforeID == 0 && page < (totalCount+pageSize-1)/pageSize,
-		"HasPrev":    page > 1 || (beforeID > 0 && len(messageDTOs) > 0),
-		"NextPage":   page + 1,
-		"PrevPage":   page - 1,
-		"ChannelID":  id,
+		"Messages":    messageDTOs,
+		"IsEmpty":     len(messageDTOs) == 0,
+		"Page":        page,
+		"TotalCount":  totalCount,
+		"HasNext":     beforeID == 0 && page < (totalCount+pageSize-1)/pageSize,
+		"HasPrev":     page > 1 || (beforeID > 0 && len(messageDTOs) > 0),
+		"NextPage":    page + 1,
+		"PrevPage":    page - 1,
+		"ChannelName": channel.Name,
 	}
 
 	// If there are messages and cursor pagination, set next before_id
@@ -205,18 +217,30 @@ func (h *ChannelViewHandler) handleMessageStream(w http.ResponseWriter, r *http.
 	ctx := r.Context()
 	start := time.Now()
 
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	name := r.PathValue("name")
+	if name == "" {
+		h.renderError(w, r, "Invalid channel name", http.StatusBadRequest)
+		return
+	}
+
+	// Get channel to get its ID
+	channel, err := h.channelRepo.GetByName(ctx, name)
 	if err != nil {
-		h.renderError(w, r, "Invalid channel ID", http.StatusBadRequest)
+		h.logger.Error("failed to get channel", "name", name, "error", err)
+		h.renderError(w, r, "Failed to load channel", http.StatusInternalServerError)
+		return
+	}
+	if channel == nil {
+		h.renderError(w, r, "Channel not found", http.StatusNotFound)
 		return
 	}
 
 	afterID, _ := strconv.ParseInt(r.URL.Query().Get("after_id"), 10, 64)
 
 	// Get new messages
-	messages, err := h.messageRepo.GetAfterID(ctx, id, afterID, 50)
+	messages, err := h.messageRepo.GetAfterID(ctx, channel.ID, afterID, 50)
 	if err != nil {
-		h.logger.Error("failed to get stream messages", "channel_id", id, "error", err)
+		h.logger.Error("failed to get stream messages", "channel_id", channel.ID, "error", err)
 		h.renderError(w, r, "Failed to load messages", http.StatusInternalServerError)
 		return
 	}
@@ -243,10 +267,10 @@ func (h *ChannelViewHandler) handleMessageStream(w http.ResponseWriter, r *http.
 
 	// Render stream fragment for HTMX
 	data := map[string]any{
-		"Messages":  messageDTOs,
-		"LatestID":  newLatestID,
-		"IsEmpty":   len(messageDTOs) == 0,
-		"ChannelID": id,
+		"Messages":    messageDTOs,
+		"LatestID":    newLatestID,
+		"IsEmpty":     len(messageDTOs) == 0,
+		"ChannelName": channel.Name,
 	}
 
 	h.templates.ExecuteTemplate(w, "live/stream.html", data)
