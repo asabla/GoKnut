@@ -1,6 +1,7 @@
 {{define "home"}}
 <!DOCTYPE html>
 <html lang="en" class="h-full">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -30,41 +31,38 @@
         }
     </style>
 </head>
-<body class="h-full bg-twitch-dark text-twitch-light">
+
+<body class="min-h-screen flex flex-col bg-twitch-dark text-twitch-light">
     <nav class="bg-twitch-gray border-b border-gray-700">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
-                    <a href="/" class="flex-shrink-0"><span class="text-twitch-purple font-bold text-xl">GoKnut</span></a>
+                    <a href="/" class="flex-shrink-0"><span
+                            class="text-twitch-purple font-bold text-xl">GoKnut</span></a>
                     <div class="ml-10 flex items-baseline space-x-4">
-                        <a href="/channels" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Channels</a>
-                        <a href="/users" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Users</a>
-                        <a href="/search/messages" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Search</a>
+                        <a href="/channels"
+                            class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Channels</a>
+                        <a href="/users"
+                            class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Users</a>
+                        <a href="/search/messages"
+                            class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Search</a>
                     </div>
                 </div>
             </div>
         </div>
     </nav>
-    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex-1">
         <div class="space-y-8">
-            <!-- Hero Section -->
-            <div class="text-center py-8">
-                <h1 class="text-4xl font-bold text-white mb-4">
-                    <span class="text-twitch-purple">GoKnut</span> - Twitch Chat Archiver
-                </h1>
-                <p class="text-xl text-gray-400 max-w-2xl mx-auto">
-                    Archive, search, and explore Twitch chat messages. Track channels, find users, and discover conversations.
-                </p>
-            </div>
-
             <!-- Statistics -->
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-4" data-testid="statistics-section">
                 <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700 text-center">
-                    <div class="text-3xl font-bold text-twitch-purple" data-testid="stat-messages">{{formatNumber .TotalMessages}}</div>
+                    <div class="text-3xl font-bold text-twitch-purple" data-testid="stat-messages">{{formatNumber
+                        .TotalMessages}}</div>
                     <div class="text-sm text-gray-400 mt-1">Messages Archived</div>
                 </div>
                 <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700 text-center">
-                    <div class="text-3xl font-bold text-twitch-purple" data-testid="stat-channels">{{.TotalChannels}}</div>
+                    <div class="text-3xl font-bold text-twitch-purple" data-testid="stat-channels">{{.TotalChannels}}
+                    </div>
                     <div class="text-sm text-gray-400 mt-1">Total Channels</div>
                 </div>
                 <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700 text-center">
@@ -72,50 +70,66 @@
                     <div class="text-sm text-gray-400 mt-1">Active Channels</div>
                 </div>
                 <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700 text-center">
-                    <div class="text-3xl font-bold text-twitch-purple" data-testid="stat-users">{{formatNumber .TotalUsers}}</div>
+                    <div class="text-3xl font-bold text-twitch-purple" data-testid="stat-users">{{formatNumber
+                        .TotalUsers}}</div>
                     <div class="text-sm text-gray-400 mt-1">Unique Users</div>
                 </div>
             </div>
 
             <!-- Quick Actions -->
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
-                <a href="/channels" class="bg-twitch-gray rounded-lg p-6 border border-gray-700 hover:border-twitch-purple transition-colors group">
+                <a href="/channels"
+                    class="bg-twitch-gray rounded-lg p-6 border border-gray-700 hover:border-twitch-purple transition-colors group">
                     <div class="flex items-center">
-                        <div class="flex-shrink-0 h-12 w-12 rounded-full bg-twitch-purple/20 flex items-center justify-center group-hover:bg-twitch-purple/30 transition-colors">
-                            <svg class="h-6 w-6 text-twitch-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10m-9 0v14a2 2 0 002 2h6a2 2 0 002-2V4m-9 0H5a2 2 0 00-2 2v12a2 2 0 002 2h2"/>
+                        <div
+                            class="flex-shrink-0 h-12 w-12 rounded-full bg-twitch-purple/20 flex items-center justify-center group-hover:bg-twitch-purple/30 transition-colors">
+                            <svg class="h-6 w-6 text-twitch-purple" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10m-9 0v14a2 2 0 002 2h6a2 2 0 002-2V4m-9 0H5a2 2 0 00-2 2v12a2 2 0 002 2h2" />
                             </svg>
                         </div>
                         <div class="ml-4">
-                            <h2 class="text-lg font-medium text-white group-hover:text-twitch-purple transition-colors">Channels</h2>
+                            <h2 class="text-lg font-medium text-white group-hover:text-twitch-purple transition-colors">
+                                Channels</h2>
                             <p class="text-sm text-gray-400">Manage tracked Twitch channels</p>
                         </div>
                     </div>
                 </a>
 
-                <a href="/users" class="bg-twitch-gray rounded-lg p-6 border border-gray-700 hover:border-twitch-purple transition-colors group">
+                <a href="/users"
+                    class="bg-twitch-gray rounded-lg p-6 border border-gray-700 hover:border-twitch-purple transition-colors group">
                     <div class="flex items-center">
-                        <div class="flex-shrink-0 h-12 w-12 rounded-full bg-twitch-purple/20 flex items-center justify-center group-hover:bg-twitch-purple/30 transition-colors">
-                            <svg class="h-6 w-6 text-twitch-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        <div
+                            class="flex-shrink-0 h-12 w-12 rounded-full bg-twitch-purple/20 flex items-center justify-center group-hover:bg-twitch-purple/30 transition-colors">
+                            <svg class="h-6 w-6 text-twitch-purple" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                             </svg>
                         </div>
                         <div class="ml-4">
-                            <h2 class="text-lg font-medium text-white group-hover:text-twitch-purple transition-colors">Users</h2>
+                            <h2 class="text-lg font-medium text-white group-hover:text-twitch-purple transition-colors">
+                                Users</h2>
                             <p class="text-sm text-gray-400">Search and explore user profiles</p>
                         </div>
                     </div>
                 </a>
 
-                <a href="/search/messages" class="bg-twitch-gray rounded-lg p-6 border border-gray-700 hover:border-twitch-purple transition-colors group">
+                <a href="/search/messages"
+                    class="bg-twitch-gray rounded-lg p-6 border border-gray-700 hover:border-twitch-purple transition-colors group">
                     <div class="flex items-center">
-                        <div class="flex-shrink-0 h-12 w-12 rounded-full bg-twitch-purple/20 flex items-center justify-center group-hover:bg-twitch-purple/30 transition-colors">
-                            <svg class="h-6 w-6 text-twitch-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        <div
+                            class="flex-shrink-0 h-12 w-12 rounded-full bg-twitch-purple/20 flex items-center justify-center group-hover:bg-twitch-purple/30 transition-colors">
+                            <svg class="h-6 w-6 text-twitch-purple" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         </div>
                         <div class="ml-4">
-                            <h2 class="text-lg font-medium text-white group-hover:text-twitch-purple transition-colors">Search</h2>
+                            <h2 class="text-lg font-medium text-white group-hover:text-twitch-purple transition-colors">
+                                Search</h2>
                             <p class="text-sm text-gray-400">Find messages across all channels</p>
                         </div>
                     </div>
@@ -126,39 +140,45 @@
             <div class="bg-twitch-gray rounded-lg border border-gray-700" data-testid="latest-messages-section">
                 <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
                     <h2 class="text-xl font-bold text-white">Latest Messages</h2>
-                    <a href="/search/messages" class="text-sm text-twitch-purple hover:text-twitch-light transition-colors">View all</a>
+                    <a href="/search/messages"
+                        class="text-sm text-twitch-purple hover:text-twitch-light transition-colors">View all</a>
                 </div>
                 <div class="divide-y divide-gray-700 max-h-96 overflow-y-auto">
                     {{if .RecentMessages}}
-                        {{range .RecentMessages}}
-                        <div class="px-6 py-3 hover:bg-gray-800/50 transition-colors" data-testid="message-row">
-                            <div class="flex items-start space-x-3">
-                                <span class="text-gray-500 text-xs shrink-0 tabular-nums mt-0.5" title="{{.SentAt.Format "2006-01-02 15:04:05 MST"}}">
-                                    {{.SentAt.Format "15:04:05"}}
-                                </span>
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex items-center space-x-2 text-sm">
-                                        <a href="/users/{{.Username}}" class="font-medium text-twitch-purple hover:underline shrink-0">
-                                            {{if .DisplayName}}{{.DisplayName}}{{else}}{{.Username}}{{end}}
-                                        </a>
-                                        <span class="text-gray-500">in</span>
-                                        <a href="/channels/{{.ChannelName}}/view" class="text-gray-400 hover:text-twitch-purple hover:underline shrink-0">
-                                            #{{.ChannelName}}
-                                        </a>
-                                    </div>
-                                    <p class="text-twitch-light text-sm mt-1 break-words">{{.Text}}</p>
+                    {{range .RecentMessages}}
+                    <div class="px-6 py-3 hover:bg-gray-800/50 transition-colors" data-testid="message-row">
+                        <div class="flex items-start space-x-3">
+                            <span class="text-gray-500 text-xs shrink-0 tabular-nums mt-0.5"
+                                title='{{.SentAt.Format `2006-01-02 15:04:05 MST`}}'>
+                                {{.SentAt.Format "15:04:05"}}
+                            </span>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center space-x-2 text-sm">
+                                    <a href="/users/{{.Username}}"
+                                        class="font-medium text-twitch-purple hover:underline shrink-0">
+                                        {{if .DisplayName}}{{.DisplayName}}{{else}}{{.Username}}{{end}}
+                                    </a>
+                                    <span class="text-gray-500">in</span>
+                                    <a href="/channels/{{.ChannelName}}/view"
+                                        class="text-gray-400 hover:text-twitch-purple hover:underline shrink-0">
+                                        #{{.ChannelName}}
+                                    </a>
                                 </div>
+                                <p class="text-twitch-light text-sm mt-1 break-words">{{.Text}}</p>
                             </div>
                         </div>
-                        {{end}}
+                    </div>
+                    {{end}}
                     {{else}}
-                        <div class="px-6 py-12 text-center text-gray-500">
-                            <svg class="h-12 w-12 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                            </svg>
-                            <p>No messages yet</p>
-                            <p class="text-sm mt-1">Messages will appear here once channels start being tracked</p>
-                        </div>
+                    <div class="px-6 py-12 text-center text-gray-500">
+                        <svg class="h-12 w-12 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        <p>No messages yet</p>
+                        <p class="text-sm mt-1">Messages will appear here once channels start being tracked</p>
+                    </div>
                     {{end}}
                 </div>
             </div>
@@ -171,5 +191,6 @@
         </div>
     </footer>
 </body>
+
 </html>
 {{end}}
