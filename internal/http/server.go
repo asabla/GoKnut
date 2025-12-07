@@ -4,9 +4,11 @@ package http
 import (
 	"context"
 	"embed"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/asabla/goknut/internal/observability"
@@ -32,6 +34,49 @@ type ServerConfig struct {
 	Metrics *observability.Metrics
 }
 
+// templateFuncs returns the custom template functions.
+func templateFuncs() template.FuncMap {
+	return template.FuncMap{
+		"upper": strings.ToUpper,
+		"lower": strings.ToLower,
+		"formatNumber": func(n int64) string {
+			if n < 1000 {
+				return fmt.Sprintf("%d", n)
+			}
+			if n < 1000000 {
+				return fmt.Sprintf("%.1fK", float64(n)/1000)
+			}
+			return fmt.Sprintf("%.1fM", float64(n)/1000000)
+		},
+		"formatDate": func(t time.Time) string {
+			if t.IsZero() {
+				return "Never"
+			}
+			return t.Format("Jan 2, 2006")
+		},
+		"formatTime": func(t *time.Time) string {
+			if t == nil || t.IsZero() {
+				return "Never"
+			}
+			return t.Format("Jan 2, 2006 3:04 PM")
+		},
+		"dict": func(values ...any) map[string]any {
+			if len(values)%2 != 0 {
+				return nil
+			}
+			m := make(map[string]any, len(values)/2)
+			for i := 0; i < len(values); i += 2 {
+				key, ok := values[i].(string)
+				if !ok {
+					continue
+				}
+				m[key] = values[i+1]
+			}
+			return m
+		},
+	}
+}
+
 // NewServer creates a new HTTP server.
 func NewServer(cfg ServerConfig) (*Server, error) {
 	s := &Server{
@@ -41,13 +86,13 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 		metrics: cfg.Metrics,
 	}
 
-	// Parse templates
+	// Parse templates with custom functions
 	tmplFS, err := fs.Sub(templatesFS, "templates")
 	if err != nil {
 		return nil, err
 	}
 
-	s.templates, err = template.ParseFS(tmplFS, "*.html", "*/*.html")
+	s.templates, err = template.New("").Funcs(templateFuncs()).ParseFS(tmplFS, "*.html", "*/*.html")
 	if err != nil {
 		return nil, err
 	}
