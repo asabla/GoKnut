@@ -113,9 +113,9 @@ func (h *SearchHandler) renderSearchUsersPage(w http.ResponseWriter, r *http.Req
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if h.isHTMXRequest(r) {
-		h.templates.ExecuteTemplate(w, "search/users_results.html", data)
+		h.templates.ExecuteTemplate(w, "users_results.html", data)
 	} else {
-		h.templates.ExecuteTemplate(w, "search/users.html", data)
+		h.templates.ExecuteTemplate(w, "search/users", data)
 	}
 }
 
@@ -158,7 +158,7 @@ func (h *SearchHandler) handleUserProfile(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	h.templates.ExecuteTemplate(w, "search/user_profile.html", data)
+	h.templates.ExecuteTemplate(w, "search/user_profile", data)
 }
 
 func (h *SearchHandler) handleUserMessages(w http.ResponseWriter, r *http.Request) {
@@ -223,7 +223,7 @@ func (h *SearchHandler) handleUserMessages(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	h.templates.ExecuteTemplate(w, "search/user_messages.html", data)
+	h.templates.ExecuteTemplate(w, "user_messages.html", data)
 }
 
 func (h *SearchHandler) handleSearchMessages(w http.ResponseWriter, r *http.Request) {
@@ -358,9 +358,9 @@ func (h *SearchHandler) renderSearchMessagesPage(w http.ResponseWriter, r *http.
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if h.isHTMXRequest(r) {
-		h.templates.ExecuteTemplate(w, "search/messages_results.html", data)
+		h.templates.ExecuteTemplate(w, "messages_results.html", data)
 	} else {
-		h.templates.ExecuteTemplate(w, "search/messages.html", data)
+		h.templates.ExecuteTemplate(w, "search/messages", data)
 	}
 }
 
@@ -379,7 +379,7 @@ func (h *SearchHandler) renderError(w http.ResponseWriter, r *http.Request, mess
 	}
 
 	w.WriteHeader(status)
-	h.templates.ExecuteTemplate(w, "partials/error.html", map[string]any{
+	h.templates.ExecuteTemplate(w, "error.html", map[string]any{
 		"Title":   http.StatusText(status),
 		"Message": message,
 	})

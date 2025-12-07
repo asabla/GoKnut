@@ -1,47 +1,84 @@
-{{template "layout.html" .}}
-
-{{define "title"}}Search Users - GoKnut{{end}}
-
-{{define "content"}}
-<div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-white">Search Users</h1>
-    </div>
-
-    <!-- Search Form -->
-    <div class="bg-twitch-gray rounded-lg p-6 border border-gray-700">
-        <form hx-get="/users" 
-              hx-target="#search-results" 
-              hx-swap="innerHTML"
-              hx-indicator="#search-indicator"
-              class="space-y-4">
-            <div class="flex space-x-4">
-                <div class="flex-1">
-                    <label for="q" class="sr-only">Search username</label>
-                    <input type="text" 
-                           name="q" 
-                           id="q" 
-                           value="{{.Query}}"
-                           placeholder="Search by username..."
-                           class="block w-full rounded-md bg-twitch-dark border-gray-600 text-white shadow-sm focus:border-twitch-purple focus:ring-twitch-purple sm:text-sm px-4 py-3">
+{{define "search/users"}}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Users - GoKnut</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        twitch: {
+                            purple: '#9146FF',
+                            dark: '#18181B',
+                            gray: '#1F1F23',
+                            light: '#EFEFF1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
+            .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="h-full bg-twitch-dark text-twitch-light">
+    <nav class="bg-twitch-gray border-b border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="flex-shrink-0"><span class="text-twitch-purple font-bold text-xl">GoKnut</span></a>
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="/channels" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Channels</a>
+                        <a href="/users" class="text-white bg-twitch-gray px-3 py-2 rounded-md text-sm font-medium">Users</a>
+                        <a href="/search/messages" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Search</a>
+                    </div>
                 </div>
-                <button type="submit" 
-                        class="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-twitch-purple hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-twitch-purple">
-                    <span class="htmx-indicator" id="search-indicator">
-                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                    </span>
-                    Search
-                </button>
             </div>
-        </form>
-    </div>
-
-    <!-- Search Results -->
-    <div id="search-results">
-        {{template "search/users_results.html" .}}
-    </div>
-</div>
+        </div>
+    </nav>
+    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <div class="space-y-6">
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-white">Search Users</h1>
+            </div>
+            <div class="bg-twitch-gray rounded-lg p-6 border border-gray-700">
+                <form hx-get="/users" hx-target="#search-results" hx-swap="innerHTML" hx-indicator="#search-indicator" class="space-y-4">
+                    <div class="flex space-x-4">
+                        <div class="flex-1">
+                            <label for="q" class="sr-only">Search username</label>
+                            <input type="text" name="q" id="q" value="{{.Query}}" placeholder="Search by username..." class="block w-full rounded-md bg-twitch-dark border-gray-600 text-white shadow-sm focus:border-twitch-purple focus:ring-twitch-purple sm:text-sm px-4 py-3">
+                        </div>
+                        <button type="submit" class="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-twitch-purple hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-twitch-purple">
+                            <span class="htmx-indicator" id="search-indicator">
+                                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </span>
+                            Search
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div id="search-results">
+                {{template "users_results.html" .}}
+            </div>
+        </div>
+    </main>
+    <footer class="bg-twitch-gray border-t border-gray-700 mt-auto">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+            <p class="text-center text-gray-500 text-sm">Twitch Chat Archiver & Explorer</p>
+        </div>
+    </footer>
+</body>
+</html>
 {{end}}

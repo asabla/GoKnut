@@ -11,7 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/asabla/goknut/internal/http/handlers"
 	"github.com/asabla/goknut/internal/observability"
+	"github.com/asabla/goknut/internal/services"
 )
 
 //go:embed templates
@@ -19,19 +21,23 @@ var templatesFS embed.FS
 
 // Server is the HTTP server for the web UI.
 type Server struct {
-	addr      string
-	server    *http.Server
-	mux       *http.ServeMux
-	templates *template.Template
-	logger    *observability.Logger
-	metrics   *observability.Metrics
+	addr           string
+	server         *http.Server
+	mux            *http.ServeMux
+	templates      *template.Template
+	logger         *observability.Logger
+	metrics        *observability.Metrics
+	channelService *services.ChannelService
+	searchService  *services.SearchService
 }
 
 // ServerConfig holds HTTP server configuration.
 type ServerConfig struct {
-	Addr    string
-	Logger  *observability.Logger
-	Metrics *observability.Metrics
+	Addr           string
+	Logger         *observability.Logger
+	Metrics        *observability.Metrics
+	ChannelService *services.ChannelService
+	SearchService  *services.SearchService
 }
 
 // templateFuncs returns the custom template functions.
@@ -80,10 +86,12 @@ func templateFuncs() template.FuncMap {
 // NewServer creates a new HTTP server.
 func NewServer(cfg ServerConfig) (*Server, error) {
 	s := &Server{
-		addr:    cfg.Addr,
-		mux:     http.NewServeMux(),
-		logger:  cfg.Logger,
-		metrics: cfg.Metrics,
+		addr:           cfg.Addr,
+		mux:            http.NewServeMux(),
+		logger:         cfg.Logger,
+		metrics:        cfg.Metrics,
+		channelService: cfg.ChannelService,
+		searchService:  cfg.SearchService,
 	}
 
 	// Parse templates with custom functions
@@ -130,10 +138,17 @@ func (s *Server) registerRoutes() {
 	// Home
 	s.mux.HandleFunc("GET /", s.handleHome)
 
-	// Static placeholder routes - will be implemented with handlers
-	s.mux.HandleFunc("GET /channels", s.handleNotImplemented)
-	s.mux.HandleFunc("GET /users", s.handleNotImplemented)
-	s.mux.HandleFunc("GET /search/messages", s.handleNotImplemented)
+	// Register channel handler routes
+	if s.channelService != nil {
+		channelHandler := handlers.NewChannelHandler(s.channelService, s.templates, s.logger)
+		channelHandler.RegisterRoutes(s.mux)
+	}
+
+	// Register search handler routes
+	if s.searchService != nil {
+		searchHandler := handlers.NewSearchHandler(s.searchService, s.templates, s.logger)
+		searchHandler.RegisterRoutes(s.mux)
+	}
 }
 
 func (s *Server) middleware(next http.Handler) http.Handler {
@@ -174,10 +189,6 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	s.templates.ExecuteTemplate(w, "layout.html", nil)
-}
-
-func (s *Server) handleNotImplemented(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "Not implemented", http.StatusNotImplemented)
 }
 
 type responseWriter struct {
