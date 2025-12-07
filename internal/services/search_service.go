@@ -177,13 +177,13 @@ func (s *SearchService) SearchMessages(ctx context.Context, req dto.SearchMessag
 	}
 
 	params := search.MessageSearchParams{
-		Query:     req.Query,
-		ChannelID: req.ChannelID,
-		UserID:    req.UserID,
-		StartTime: req.StartTime,
-		EndTime:   req.EndTime,
-		Page:      req.Page,
-		PageSize:  req.PageSize,
+		Query:       req.Query,
+		ChannelName: req.ChannelName,
+		Username:    req.Username,
+		StartTime:   req.StartTime,
+		EndTime:     req.EndTime,
+		Page:        req.Page,
+		PageSize:    req.PageSize,
 	}
 
 	messages, totalCount, err := s.repo.SearchMessages(ctx, params)
@@ -209,7 +209,8 @@ func (s *SearchService) SearchMessages(ctx context.Context, req dto.SearchMessag
 
 	s.logger.Search("message search completed",
 		"query", req.Query,
-		"channel_id", req.ChannelID,
+		"channel", req.ChannelName,
+		"username", req.Username,
 		"results", len(messages),
 		"total", totalCount,
 		"latency_ms", time.Since(start).Milliseconds(),

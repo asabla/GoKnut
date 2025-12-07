@@ -16,13 +16,13 @@ import (
 
 // MessageSearchParams defines parameters for message search.
 type MessageSearchParams struct {
-	Query     string
-	ChannelID *int64
-	UserID    *int64
-	StartTime *time.Time
-	EndTime   *time.Time
-	Page      int
-	PageSize  int
+	Query       string
+	ChannelName *string
+	Username    *string
+	StartTime   *time.Time
+	EndTime     *time.Time
+	Page        int
+	PageSize    int
 }
 
 // UserSearchParams defines parameters for user search.
@@ -251,22 +251,24 @@ func (r *SearchRepository) SearchMessages(ctx context.Context, params MessageSea
 
 // searchMessagesFTS performs FTS5-based message search.
 func (r *SearchRepository) searchMessagesFTS(ctx context.Context, params MessageSearchParams, offset int) ([]MessageSearchResult, int, error) {
-	ftsQuery := BuildFTSQuery(params.Query)
-
 	// Build WHERE clauses for filters
 	var conditions []string
 	var args []any
 
-	conditions = append(conditions, "f.content MATCH ?")
-	args = append(args, ftsQuery)
-
-	if params.ChannelID != nil {
-		conditions = append(conditions, "m.channel_id = ?")
-		args = append(args, *params.ChannelID)
+	// FTS query is optional when using filters
+	if params.Query != "" {
+		ftsQuery := BuildFTSQuery(params.Query)
+		conditions = append(conditions, "f.content MATCH ?")
+		args = append(args, ftsQuery)
 	}
-	if params.UserID != nil {
-		conditions = append(conditions, "m.user_id = ?")
-		args = append(args, *params.UserID)
+
+	if params.ChannelName != nil {
+		conditions = append(conditions, "c.name = ?")
+		args = append(args, *params.ChannelName)
+	}
+	if params.Username != nil {
+		conditions = append(conditions, "u.username = ?")
+		args = append(args, *params.Username)
 	}
 	if params.StartTime != nil {
 		conditions = append(conditions, "m.sent_at >= ?")
@@ -277,15 +279,31 @@ func (r *SearchRepository) searchMessagesFTS(ctx context.Context, params Message
 		args = append(args, params.EndTime.Format(time.RFC3339))
 	}
 
-	whereClause := strings.Join(conditions, " AND ")
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = "WHERE " + strings.Join(conditions, " AND ")
+	}
 
-	// Count query
-	countQuery := fmt.Sprintf(`
-		SELECT COUNT(*)
-		FROM messages_fts f
-		JOIN messages m ON f.rowid = m.id
-		WHERE %s
-	`, whereClause)
+	// Count query - need to join tables for name-based filtering
+	var countQuery string
+	if params.Query != "" {
+		countQuery = fmt.Sprintf(`
+			SELECT COUNT(*)
+			FROM messages_fts f
+			JOIN messages m ON f.rowid = m.id
+			JOIN channels c ON m.channel_id = c.id
+			JOIN users u ON m.user_id = u.id
+			%s
+		`, whereClause)
+	} else {
+		countQuery = fmt.Sprintf(`
+			SELECT COUNT(*)
+			FROM messages m
+			JOIN channels c ON m.channel_id = c.id
+			JOIN users u ON m.user_id = u.id
+			%s
+		`, whereClause)
+	}
 
 	var totalCount int
 	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalCount); err != nil {
@@ -293,18 +311,33 @@ func (r *SearchRepository) searchMessagesFTS(ctx context.Context, params Message
 	}
 
 	// Main query
-	query := fmt.Sprintf(`
-		SELECT 
-			m.id, m.channel_id, c.name, m.user_id, u.username, u.display_name,
-			m.text, m.sent_at, m.tags
-		FROM messages_fts f
-		JOIN messages m ON f.rowid = m.id
-		JOIN channels c ON m.channel_id = c.id
-		JOIN users u ON m.user_id = u.id
-		WHERE %s
-		ORDER BY m.sent_at DESC, m.id DESC
-		LIMIT ? OFFSET ?
-	`, whereClause)
+	var query string
+	if params.Query != "" {
+		query = fmt.Sprintf(`
+			SELECT 
+				m.id, m.channel_id, c.name, m.user_id, u.username, u.display_name,
+				m.text, m.sent_at, m.tags
+			FROM messages_fts f
+			JOIN messages m ON f.rowid = m.id
+			JOIN channels c ON m.channel_id = c.id
+			JOIN users u ON m.user_id = u.id
+			%s
+			ORDER BY m.sent_at DESC, m.id DESC
+			LIMIT ? OFFSET ?
+		`, whereClause)
+	} else {
+		query = fmt.Sprintf(`
+			SELECT 
+				m.id, m.channel_id, c.name, m.user_id, u.username, u.display_name,
+				m.text, m.sent_at, m.tags
+			FROM messages m
+			JOIN channels c ON m.channel_id = c.id
+			JOIN users u ON m.user_id = u.id
+			%s
+			ORDER BY m.sent_at DESC, m.id DESC
+			LIMIT ? OFFSET ?
+		`, whereClause)
+	}
 
 	args = append(args, params.PageSize, offset)
 
@@ -319,22 +352,24 @@ func (r *SearchRepository) searchMessagesFTS(ctx context.Context, params Message
 
 // searchMessagesLIKE performs LIKE-based message search (fallback).
 func (r *SearchRepository) searchMessagesLIKE(ctx context.Context, params MessageSearchParams, offset int) ([]MessageSearchResult, int, error) {
-	pattern := BuildLIKEPattern(params.Query)
-
 	// Build WHERE clauses for filters
 	var conditions []string
 	var args []any
 
-	conditions = append(conditions, "m.text LIKE ? ESCAPE '\\'")
-	args = append(args, pattern)
-
-	if params.ChannelID != nil {
-		conditions = append(conditions, "m.channel_id = ?")
-		args = append(args, *params.ChannelID)
+	// Text search is optional when using filters
+	if params.Query != "" {
+		pattern := BuildLIKEPattern(params.Query)
+		conditions = append(conditions, "m.text LIKE ? ESCAPE '\\'")
+		args = append(args, pattern)
 	}
-	if params.UserID != nil {
-		conditions = append(conditions, "m.user_id = ?")
-		args = append(args, *params.UserID)
+
+	if params.ChannelName != nil {
+		conditions = append(conditions, "c.name = ?")
+		args = append(args, *params.ChannelName)
+	}
+	if params.Username != nil {
+		conditions = append(conditions, "u.username = ?")
+		args = append(args, *params.Username)
 	}
 	if params.StartTime != nil {
 		conditions = append(conditions, "m.sent_at >= ?")
@@ -345,13 +380,18 @@ func (r *SearchRepository) searchMessagesLIKE(ctx context.Context, params Messag
 		args = append(args, params.EndTime.Format(time.RFC3339))
 	}
 
-	whereClause := strings.Join(conditions, " AND ")
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = "WHERE " + strings.Join(conditions, " AND ")
+	}
 
 	// Count query
 	countQuery := fmt.Sprintf(`
 		SELECT COUNT(*)
 		FROM messages m
-		WHERE %s
+		JOIN channels c ON m.channel_id = c.id
+		JOIN users u ON m.user_id = u.id
+		%s
 	`, whereClause)
 
 	var totalCount int
@@ -367,7 +407,7 @@ func (r *SearchRepository) searchMessagesLIKE(ctx context.Context, params Messag
 		FROM messages m
 		JOIN channels c ON m.channel_id = c.id
 		JOIN users u ON m.user_id = u.id
-		WHERE %s
+		%s
 		ORDER BY m.sent_at DESC, m.id DESC
 		LIMIT ? OFFSET ?
 	`, whereClause)

@@ -257,22 +257,19 @@ func (h *SearchHandler) handleMessages(w http.ResponseWriter, r *http.Request) {
 	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
 
 	// Parse optional filters (always parse to preserve in form)
-	var channelID, userID *int64
+	var channelName, username *string
 	var startTime, endTime *time.Time
 	var startStr, endStr string
+	var channelStr, usernameStr string
 
-	if chID := r.URL.Query().Get("channel_id"); chID != "" {
-		id, err := strconv.ParseInt(chID, 10, 64)
-		if err == nil {
-			channelID = &id
-		}
+	if ch := strings.TrimSpace(r.URL.Query().Get("channel")); ch != "" {
+		channelName = &ch
+		channelStr = ch
 	}
 
-	if uID := r.URL.Query().Get("user_id"); uID != "" {
-		id, err := strconv.ParseInt(uID, 10, 64)
-		if err == nil {
-			userID = &id
-		}
+	if u := strings.TrimSpace(r.URL.Query().Get("username")); u != "" {
+		username = &u
+		usernameStr = u
 	}
 
 	if start := r.URL.Query().Get("start"); start != "" {
@@ -291,26 +288,27 @@ func (h *SearchHandler) handleMessages(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// If no query, show recent messages
-	if query == "" {
-		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-		pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+	// Check if any filters are set (besides query)
+	hasFilters := channelName != nil || username != nil || startTime != nil || endTime != nil
+
+	// If no query and no filters, show recent messages
+	if query == "" && !hasFilters {
 		result, err := h.service.GetRecentMessages(ctx, page, pageSize)
 		if err != nil {
 			h.logger.Error("failed to get recent messages", "error", err)
-			h.renderMessagesPage(w, r, nil, query, channelID, userID, startStr, endStr, "Failed to load recent messages. Please try again.")
+			h.renderMessagesPage(w, r, nil, query, channelStr, usernameStr, startStr, endStr, "Failed to load recent messages. Please try again.")
 			return
 		}
-		h.renderMessagesPage(w, r, result, query, channelID, userID, startStr, endStr, "")
+		h.renderMessagesPage(w, r, result, query, channelStr, usernameStr, startStr, endStr, "")
 		return
 	}
 
 	req := dto.SearchMessagesRequest{
-		Query:     query,
-		ChannelID: channelID,
-		UserID:    userID,
-		StartTime: startTime,
-		EndTime:   endTime,
+		Query:       query,
+		ChannelName: channelName,
+		Username:    username,
+		StartTime:   startTime,
+		EndTime:     endTime,
 		PaginationRequest: dto.PaginationRequest{
 			Page:     page,
 			PageSize: pageSize,
@@ -319,21 +317,21 @@ func (h *SearchHandler) handleMessages(w http.ResponseWriter, r *http.Request) {
 
 	// Validate request (includes query length and time range validation)
 	if err := req.Validate(); err != nil {
-		h.renderMessagesPage(w, r, nil, query, channelID, userID, startStr, endStr, err.Error())
+		h.renderMessagesPage(w, r, nil, query, channelStr, usernameStr, startStr, endStr, err.Error())
 		return
 	}
 
 	result, err := h.service.SearchMessages(ctx, req)
 	if err != nil {
 		h.logger.Error("failed to search messages", "query", query, "error", err)
-		h.renderMessagesPage(w, r, nil, query, channelID, userID, startStr, endStr, "Failed to search messages. Please try again.")
+		h.renderMessagesPage(w, r, nil, query, channelStr, usernameStr, startStr, endStr, "Failed to search messages. Please try again.")
 		return
 	}
 
-	h.renderMessagesPage(w, r, result, query, channelID, userID, startStr, endStr, "")
+	h.renderMessagesPage(w, r, result, query, channelStr, usernameStr, startStr, endStr, "")
 }
 
-func (h *SearchHandler) renderMessagesPage(w http.ResponseWriter, r *http.Request, result *services.MessageSearchResult, query string, channelID, userID *int64, startStr, endStr string, errorMsg string) {
+func (h *SearchHandler) renderMessagesPage(w http.ResponseWriter, r *http.Request, result *services.MessageSearchResult, query string, channel, username, startStr, endStr string, errorMsg string) {
 	var messages []MessageWithHighlight
 	if result != nil {
 		for _, m := range result.Messages {
@@ -369,7 +367,7 @@ func (h *SearchHandler) renderMessagesPage(w http.ResponseWriter, r *http.Reques
 	data := map[string]any{
 		"Query":      query,
 		"Messages":   messages,
-		"IsEmpty":    len(messages) == 0 && query != "" && errorMsg == "",
+		"IsEmpty":    len(messages) == 0 && (query != "" || channel != "" || username != "") && errorMsg == "",
 		"HasQuery":   query != "",
 		"Page":       page,
 		"TotalPages": totalPages,
@@ -378,8 +376,8 @@ func (h *SearchHandler) renderMessagesPage(w http.ResponseWriter, r *http.Reques
 		"HasPrev":    hasPrev,
 		"NextPage":   page + 1,
 		"PrevPage":   page - 1,
-		"ChannelID":  channelID,
-		"UserID":     userID,
+		"Channel":    channel,
+		"Username":   username,
 		"StartStr":   startStr,
 		"EndStr":     endStr,
 		"Error":      errorMsg,
