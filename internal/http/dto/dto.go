@@ -152,6 +152,7 @@ type SearchMessagesRequest struct {
 
 // Validate validates the search messages request.
 func (r *SearchMessagesRequest) Validate() error {
+	originalQuery := r.Query
 	r.Query = strings.TrimSpace(r.Query)
 	// Query is required only if no other filters are set
 	hasFilters := r.ChannelName != nil || r.Username != nil || r.StartTime != nil || r.EndTime != nil
@@ -162,6 +163,9 @@ func (r *SearchMessagesRequest) Validate() error {
 		if len(r.Query) > 100 {
 			return ErrSearchQueryTooLong
 		}
+	} else if originalQuery != "" {
+		// User provided input but it was only whitespace - treat as too short
+		return ErrSearchQueryTooShort
 	} else if !hasFilters {
 		// No query and no filters - this shouldn't be validated (used for recent messages)
 		return nil
