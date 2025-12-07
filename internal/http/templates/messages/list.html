@@ -52,7 +52,7 @@
             </thead>
             <tbody class="divide-y divide-gray-700">
                 {{range $idx, $msg := .Messages}}
-                <tr class="hover:bg-gray-700/50 transition-colors group cursor-pointer" onclick="toggleRow({{$idx}})">
+                <tr class="hover:bg-gray-700/50 transition-colors group cursor-pointer" onclick="toggleRow({{$idx}})" data-message-id="{{$msg.Message.ID}}">
                     <td class="px-6 py-4 whitespace-nowrap">
                         <a href="/users/{{$msg.Message.Username}}" 
                            class="font-medium text-twitch-purple hover:text-purple-400"
@@ -89,7 +89,7 @@
                     </td>
                 </tr>
                 <!-- Expandable row for full message text -->
-                <tr id="expanded-row-{{$idx}}" class="hidden bg-gray-800/50">
+                <tr id="expanded-row-{{$idx}}" class="hidden bg-gray-800/50" data-expanded-for="{{$msg.Message.ID}}">
                     <td colspan="5" class="px-6 py-4">
                         <div class="space-y-2">
                             <div class="flex items-center text-xs text-gray-500">
