@@ -291,9 +291,17 @@ func (h *SearchHandler) handleMessages(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// If no query, show empty search form with preserved filters
+	// If no query, show recent messages
 	if query == "" {
-		h.renderMessagesPage(w, r, nil, query, channelID, userID, startStr, endStr, "")
+		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+		pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+		result, err := h.service.GetRecentMessages(ctx, page, pageSize)
+		if err != nil {
+			h.logger.Error("failed to get recent messages", "error", err)
+			h.renderMessagesPage(w, r, nil, query, channelID, userID, startStr, endStr, "Failed to load recent messages. Please try again.")
+			return
+		}
+		h.renderMessagesPage(w, r, result, query, channelID, userID, startStr, endStr, "")
 		return
 	}
 

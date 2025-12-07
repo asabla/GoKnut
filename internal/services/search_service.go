@@ -325,6 +325,53 @@ func (s *SearchService) GetUserMessages(ctx context.Context, userID int64, chann
 	return result, nil
 }
 
+// GetRecentMessages returns the most recent messages across all channels.
+func (s *SearchService) GetRecentMessages(ctx context.Context, page, pageSize int) (*MessageSearchResult, error) {
+	start := time.Now()
+	defer func() {
+		latency := time.Since(start)
+		if s.metrics != nil {
+			s.metrics.RecordSearchRequest("recent_messages", latency)
+		}
+	}()
+
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	messages, totalCount, err := s.repo.GetRecentMessages(ctx, page, pageSize)
+	if err != nil {
+		s.logger.Error("failed to get recent messages", "error", err)
+		return nil, err
+	}
+
+	totalPages := (totalCount + pageSize - 1) / pageSize
+	if totalPages < 1 {
+		totalPages = 1
+	}
+
+	result := &MessageSearchResult{
+		Messages:   messages,
+		TotalCount: totalCount,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalPages: totalPages,
+		HasNext:    page < totalPages,
+		HasPrev:    page > 1,
+	}
+
+	s.logger.Search("recent messages fetched",
+		"results", len(messages),
+		"total", totalCount,
+		"latency_ms", time.Since(start).Milliseconds(),
+	)
+
+	return result, nil
+}
+
 // GetUserMessagesByUsername returns paginated messages for a user by username.
 func (s *SearchService) GetUserMessagesByUsername(ctx context.Context, username string, channelName *string, page, pageSize int) (*MessageSearchResult, error) {
 	start := time.Now()

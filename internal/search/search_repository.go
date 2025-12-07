@@ -757,3 +757,66 @@ func HighlightTerm(text, term string) string {
 	reg := regexp.MustCompile(`(?i)(` + regexp.QuoteMeta(escapedTerm) + `)`)
 	return reg.ReplaceAllString(escaped, "<mark>$1</mark>")
 }
+
+// GetRecentMessages returns the most recent messages across all channels with pagination.
+func (r *SearchRepository) GetRecentMessages(ctx context.Context, page, pageSize int) ([]MessageSearchResult, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+	offset := (page - 1) * pageSize
+
+	// Count query
+	countQuery := `SELECT COUNT(*) FROM messages`
+	var totalCount int
+	if err := r.db.QueryRowContext(ctx, countQuery).Scan(&totalCount); err != nil {
+		return nil, 0, fmt.Errorf("failed to count messages: %w", err)
+	}
+
+	// Main query
+	query := `
+		SELECT 
+			m.id, m.channel_id, c.name, m.user_id, u.username, u.display_name,
+			m.text, m.sent_at, m.tags
+		FROM messages m
+		JOIN channels c ON m.channel_id = c.id
+		JOIN users u ON m.user_id = u.id
+		ORDER BY m.sent_at DESC, m.id DESC
+		LIMIT ? OFFSET ?
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, pageSize, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get recent messages: %w", err)
+	}
+	defer rows.Close()
+
+	var results []MessageSearchResult
+	for rows.Next() {
+		var m MessageSearchResult
+		var sentAt string
+		var displayName, tagsJSON sql.NullString
+
+		if err := rows.Scan(
+			&m.ID, &m.ChannelID, &m.ChannelName, &m.UserID, &m.Username, &displayName,
+			&m.Text, &sentAt, &tagsJSON,
+		); err != nil {
+			return nil, 0, fmt.Errorf("failed to scan message: %w", err)
+		}
+
+		m.SentAt, _ = repository.ParseSQLiteDatetime(sentAt)
+		if displayName.Valid {
+			m.DisplayName = displayName.String
+		}
+		if tagsJSON.Valid && tagsJSON.String != "" {
+			_ = json.Unmarshal([]byte(tagsJSON.String), &m.Tags)
+		}
+		m.HighlightedText = html.EscapeString(m.Text) // No highlighting for recent messages
+
+		results = append(results, m)
+	}
+
+	return results, totalCount, rows.Err()
+}
