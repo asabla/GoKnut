@@ -42,12 +42,19 @@ type Metrics interface {
 	RecordDroppedMessages(count int)
 }
 
+// Logger provides logging for the pipeline.
+type Logger interface {
+	Error(msg string, keysAndValues ...any)
+	Warn(msg string, keysAndValues ...any)
+}
+
 // PipelineConfig holds ingestion pipeline configuration.
 type PipelineConfig struct {
 	BatchSize    int
 	FlushTimeout time.Duration
 	BufferSize   int
 	Metrics      Metrics
+	Logger       Logger
 }
 
 // DefaultPipelineConfig returns default pipeline configuration.
@@ -137,6 +144,12 @@ func (p *Pipeline) Ingest(msg Message) {
 	case p.messages <- msg:
 	default:
 		// Buffer full, drop message and record metric
+		if p.cfg.Logger != nil {
+			p.cfg.Logger.Warn("ingestion buffer full, dropping message",
+				"channel", msg.ChannelName,
+				"username", msg.Username,
+			)
+		}
 		if p.cfg.Metrics != nil {
 			p.cfg.Metrics.RecordDroppedMessages(1)
 		}
@@ -188,7 +201,16 @@ func (p *Pipeline) flush(ctx context.Context) {
 
 	if err := p.store.StoreBatch(ctx, batch); err != nil {
 		// Log error - messages are lost
-		// In a production system, we might want to retry or dead-letter
+		if p.cfg.Logger != nil {
+			p.cfg.Logger.Error("failed to store message batch",
+				"batch_size", len(batch),
+				"error", err,
+			)
+		}
+		// Record dropped messages metric
+		if p.cfg.Metrics != nil {
+			p.cfg.Metrics.RecordDroppedMessages(len(batch))
+		}
 		return
 	}
 

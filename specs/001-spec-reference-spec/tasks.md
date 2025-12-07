@@ -141,6 +141,35 @@ description: "Task list for Twitch Chat Archiver & Explorer"
 
 ---
 
+## Phase 7: Code Review Fixes
+
+**Purpose**: Address issues identified during code review (see `review.md`)
+
+### Must Fix (Before Production)
+
+- [ ] T049 Fix `go.mod` version from 1.24.0 to 1.22 in `go.mod`
+- [ ] T050 Enable or remove skipped unit tests in `tests/unit/search_service_test.go`
+- [ ] T051 Add error handling for template execution in `internal/http/server.go` and handlers
+
+### Should Fix (Near-term)
+
+- [ ] T052 Add LRU cache or TTL eviction for caches in `internal/ingestion/processor.go`
+- [ ] T053 Make ingestion buffer size configurable via config in `internal/config/config.go`
+- [ ] T054 Add proper logging for batch storage failures in `internal/ingestion/pipeline.go`
+- [ ] T055 Fix duplicate metrics recording between handlers and middleware in `internal/http/`
+
+### Nice to Have (Future)
+
+- [ ] T056 [P] Add health check endpoint for IRC connection status in `internal/http/server.go`
+- [ ] T057 [P] Add Prometheus-compatible metrics endpoint in `internal/http/server.go`
+- [ ] T058 [P] Add rate limiting for search endpoints in `internal/http/handlers/search.go`
+- [ ] T059 Remove redundant custom `min()` function in `internal/irc/client.go` (use built-in)
+- [ ] T060 Add `.gitignore` entries for `*.db`, `*.db-wal`, `*.db-shm`, `.env`
+
+**Checkpoint**: All code review issues addressed
+
+---
+
 ## Dependencies & Execution Order
 
 - Setup (Phase 1): No dependencies - start immediately

@@ -36,6 +36,7 @@ type Config struct {
 	// Ingestion
 	BatchSize    int
 	FlushTimeout int // milliseconds
+	BufferSize   int // ingestion buffer size
 
 	// Feature flags
 	EnableFTS bool
@@ -49,6 +50,7 @@ func DefaultConfig() *Config {
 		TwitchAuthMode: AuthModeAuthenticated, // Default to authenticated
 		BatchSize:      100,
 		FlushTimeout:   100,
+		BufferSize:     10000,
 		EnableFTS:      true,
 	}
 }
@@ -63,6 +65,7 @@ func Load() (*Config, error) {
 	flag.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP server listen address")
 	flag.IntVar(&cfg.BatchSize, "batch-size", cfg.BatchSize, "Message batch size for ingestion")
 	flag.IntVar(&cfg.FlushTimeout, "flush-timeout", cfg.FlushTimeout, "Batch flush timeout in milliseconds")
+	flag.IntVar(&cfg.BufferSize, "buffer-size", cfg.BufferSize, "Ingestion buffer size")
 	flag.BoolVar(&cfg.EnableFTS, "enable-fts", cfg.EnableFTS, "Enable FTS5 full-text search")
 
 	flag.Parse()
@@ -97,6 +100,12 @@ func Load() (*Config, error) {
 		var timeout int
 		if _, err := fmt.Sscanf(v, "%d", &timeout); err == nil && timeout > 0 {
 			cfg.FlushTimeout = timeout
+		}
+	}
+	if v := os.Getenv("BUFFER_SIZE"); v != "" {
+		var size int
+		if _, err := fmt.Sscanf(v, "%d", &size); err == nil && size > 0 {
+			cfg.BufferSize = size
 		}
 	}
 	if v := os.Getenv("ENABLE_FTS"); v != "" {
@@ -164,6 +173,9 @@ func (c *Config) Validate() error {
 	}
 	if c.FlushTimeout <= 0 {
 		errs = append(errs, "flush-timeout must be positive")
+	}
+	if c.BufferSize <= 0 {
+		errs = append(errs, "buffer-size must be positive")
 	}
 
 	if len(errs) > 0 {

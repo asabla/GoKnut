@@ -50,7 +50,6 @@ func (h *ChannelViewHandler) RegisterRoutes(mux *http.ServeMux) {
 // handleChannelView renders the main channel view page with recent messages.
 func (h *ChannelViewHandler) handleChannelView(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	start := time.Now()
 
 	name := r.PathValue("name")
 	if name == "" {
@@ -98,21 +97,20 @@ func (h *ChannelViewHandler) handleChannelView(w http.ResponseWriter, r *http.Re
 		"PollDelay": 1000, // 1 second polling interval
 	}
 
-	h.recordLatency(start)
-
 	if h.wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(data)
 		return
 	}
 
-	h.templates.ExecuteTemplate(w, "live/channel.html", data)
+	if err := h.templates.ExecuteTemplate(w, "live/channel.html", data); err != nil {
+		h.logger.Error("failed to render channel view template", "error", err)
+	}
 }
 
 // handleMessages returns paginated messages as HTML fragment or JSON.
 func (h *ChannelViewHandler) handleMessages(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	start := time.Now()
 
 	name := r.PathValue("name")
 	if name == "" {
@@ -159,8 +157,6 @@ func (h *ChannelViewHandler) handleMessages(w http.ResponseWriter, r *http.Reque
 
 	// Convert to DTOs
 	messageDTOs := h.messagesToDTOs(messages)
-
-	h.recordLatency(start)
 
 	if h.wantsJSON(r) {
 		totalPages := 0
@@ -209,7 +205,9 @@ func (h *ChannelViewHandler) handleMessages(w http.ResponseWriter, r *http.Reque
 		data["NextBeforeID"] = messageDTOs[len(messageDTOs)-1].ID
 	}
 
-	h.templates.ExecuteTemplate(w, "live/messages.html", data)
+	if err := h.templates.ExecuteTemplate(w, "live/messages.html", data); err != nil {
+		h.logger.Error("failed to render messages template", "error", err)
+	}
 }
 
 // handleMessageStream returns new messages since the given ID for live polling.
@@ -273,7 +271,9 @@ func (h *ChannelViewHandler) handleMessageStream(w http.ResponseWriter, r *http.
 		"ChannelName": channel.Name,
 	}
 
-	h.templates.ExecuteTemplate(w, "live/stream.html", data)
+	if err := h.templates.ExecuteTemplate(w, "live/stream.html", data); err != nil {
+		h.logger.Error("failed to render stream template", "error", err)
+	}
 }
 
 func (h *ChannelViewHandler) parsePagination(r *http.Request) (page, pageSize int) {
@@ -330,21 +330,17 @@ func (h *ChannelViewHandler) renderError(w http.ResponseWriter, r *http.Request,
 	}
 
 	w.WriteHeader(status)
-	h.templates.ExecuteTemplate(w, "error.html", map[string]any{
+	if err := h.templates.ExecuteTemplate(w, "error.html", map[string]any{
 		"Title":   http.StatusText(status),
 		"Message": message,
-	})
+	}); err != nil {
+		h.logger.Error("failed to render error template", "error", err)
+	}
 }
 
 func (h *ChannelViewHandler) wantsJSON(r *http.Request) bool {
 	accept := r.Header.Get("Accept")
 	return strings.Contains(accept, "application/json")
-}
-
-func (h *ChannelViewHandler) recordLatency(start time.Time) {
-	if h.metrics != nil {
-		h.metrics.RecordHTTPRequest(time.Since(start))
-	}
 }
 
 func (h *ChannelViewHandler) recordStreamPoll(start time.Time, messageCount int) {

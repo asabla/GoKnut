@@ -25,6 +25,7 @@ func TestConfigValidation(t *testing.T) {
 				TwitchOAuthToken: "oauth:token",
 				BatchSize:        100,
 				FlushTimeout:     100,
+				BufferSize:       10000,
 			},
 			wantErr: false,
 		},
@@ -36,6 +37,7 @@ func TestConfigValidation(t *testing.T) {
 				TwitchAuthMode: config.AuthModeAnonymous,
 				BatchSize:      100,
 				FlushTimeout:   100,
+				BufferSize:     10000,
 			},
 			wantErr: false,
 		},
@@ -48,6 +50,7 @@ func TestConfigValidation(t *testing.T) {
 				TwitchUsername: "justinfan12345",
 				BatchSize:      100,
 				FlushTimeout:   100,
+				BufferSize:     10000,
 			},
 			wantErr: false,
 		},
@@ -60,6 +63,7 @@ func TestConfigValidation(t *testing.T) {
 				TwitchOAuthToken: "oauth:token",
 				BatchSize:        100,
 				FlushTimeout:     100,
+				BufferSize:       10000,
 			},
 			wantErr: true,
 		},
@@ -72,6 +76,7 @@ func TestConfigValidation(t *testing.T) {
 				TwitchUsername: "testuser",
 				BatchSize:      100,
 				FlushTimeout:   100,
+				BufferSize:     10000,
 			},
 			wantErr: true,
 		},
@@ -84,6 +89,7 @@ func TestConfigValidation(t *testing.T) {
 				TwitchOAuthToken: "oauth:token",
 				BatchSize:        100,
 				FlushTimeout:     100,
+				BufferSize:       10000,
 			},
 			wantErr: true,
 		},
@@ -97,6 +103,7 @@ func TestConfigValidation(t *testing.T) {
 				TwitchOAuthToken: "invalidtoken",
 				BatchSize:        100,
 				FlushTimeout:     100,
+				BufferSize:       10000,
 			},
 			wantErr: true,
 		},
@@ -110,6 +117,7 @@ func TestConfigValidation(t *testing.T) {
 				TwitchOAuthToken: "oauth:token",
 				BatchSize:        100,
 				FlushTimeout:     100,
+				BufferSize:       10000,
 			},
 			wantErr: true,
 		},
@@ -123,6 +131,7 @@ func TestConfigValidation(t *testing.T) {
 				TwitchOAuthToken: "oauth:token",
 				BatchSize:        100,
 				FlushTimeout:     100,
+				BufferSize:       10000,
 			},
 			wantErr: true,
 		},
@@ -136,6 +145,7 @@ func TestConfigValidation(t *testing.T) {
 				TwitchOAuthToken: "oauth:token",
 				BatchSize:        0,
 				FlushTimeout:     100,
+				BufferSize:       10000,
 			},
 			wantErr: true,
 		},
@@ -149,6 +159,7 @@ func TestConfigValidation(t *testing.T) {
 				TwitchOAuthToken: "oauth:token",
 				BatchSize:        -1,
 				FlushTimeout:     100,
+				BufferSize:       10000,
 			},
 			wantErr: true,
 		},
@@ -162,6 +173,7 @@ func TestConfigValidation(t *testing.T) {
 				TwitchOAuthToken: "oauth:token",
 				BatchSize:        100,
 				FlushTimeout:     0,
+				BufferSize:       10000,
 			},
 			wantErr: true,
 		},
@@ -199,6 +211,9 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.FlushTimeout != 100 {
 		t.Errorf("expected default FlushTimeout 100, got %d", cfg.FlushTimeout)
 	}
+	if cfg.BufferSize != 10000 {
+		t.Errorf("expected default BufferSize 10000, got %d", cfg.BufferSize)
+	}
 	if !cfg.EnableFTS {
 		t.Error("expected default EnableFTS to be true")
 	}
@@ -211,6 +226,7 @@ func TestConfigEnvOverrides(t *testing.T) {
 	origHTTPAddr := os.Getenv("HTTP_ADDR")
 	origUsername := os.Getenv("TWITCH_USERNAME")
 	origToken := os.Getenv("TWITCH_OAUTH_TOKEN")
+	origAuthMode := os.Getenv("TWITCH_AUTH_MODE")
 
 	// Restore after test
 	defer func() {
@@ -218,13 +234,15 @@ func TestConfigEnvOverrides(t *testing.T) {
 		os.Setenv("HTTP_ADDR", origHTTPAddr)
 		os.Setenv("TWITCH_USERNAME", origUsername)
 		os.Setenv("TWITCH_OAUTH_TOKEN", origToken)
+		os.Setenv("TWITCH_AUTH_MODE", origAuthMode)
 	}()
 
-	// Set test values
+	// Set test values - explicitly set authenticated mode since we're providing credentials
 	os.Setenv("DB_PATH", "/custom/path.db")
 	os.Setenv("HTTP_ADDR", ":9090")
 	os.Setenv("TWITCH_USERNAME", "envuser")
 	os.Setenv("TWITCH_OAUTH_TOKEN", "oauth:envtoken")
+	os.Setenv("TWITCH_AUTH_MODE", "authenticated")
 
 	cfg, err := config.Load()
 	if err != nil {

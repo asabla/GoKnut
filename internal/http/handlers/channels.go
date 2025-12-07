@@ -81,9 +81,15 @@ func (h *ChannelHandler) handleList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.isHTMXRequest(r) {
-		h.templates.ExecuteTemplate(w, "list.html", data)
+		if err := h.templates.ExecuteTemplate(w, "list.html", data); err != nil {
+			h.logger.Error("failed to execute list template", "error", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
 	} else {
-		h.templates.ExecuteTemplate(w, "channels/index", data)
+		if err := h.templates.ExecuteTemplate(w, "channels/index", data); err != nil {
+			h.logger.Error("failed to execute channels/index template", "error", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
 	}
 }
 
@@ -144,7 +150,10 @@ func (h *ChannelHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 
 	// For HTMX, return the new row to append
 	if h.isHTMXRequest(r) {
-		h.templates.ExecuteTemplate(w, "row.html", channelDTO)
+		if err := h.templates.ExecuteTemplate(w, "row.html", channelDTO); err != nil {
+			h.logger.Error("failed to execute row template", "error", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -190,7 +199,10 @@ func (h *ChannelHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.templates.ExecuteTemplate(w, "channels/detail", channelDTO)
+	if err := h.templates.ExecuteTemplate(w, "channels/detail", channelDTO); err != nil {
+		h.logger.Error("failed to execute channels/detail template", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
 }
 
 func (h *ChannelHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
@@ -267,7 +279,10 @@ func (h *ChannelHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// For HTMX, return the updated row
 	if h.isHTMXRequest(r) {
-		h.templates.ExecuteTemplate(w, "row.html", channelDTO)
+		if err := h.templates.ExecuteTemplate(w, "row.html", channelDTO); err != nil {
+			h.logger.Error("failed to execute row template", "error", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -339,10 +354,12 @@ func (h *ChannelHandler) renderError(w http.ResponseWriter, r *http.Request, mes
 	}
 
 	w.WriteHeader(status)
-	h.templates.ExecuteTemplate(w, "error.html", map[string]any{
+	if err := h.templates.ExecuteTemplate(w, "error.html", map[string]any{
 		"Title":   http.StatusText(status),
 		"Message": message,
-	})
+	}); err != nil {
+		h.logger.Error("failed to execute error template", "error", err)
+	}
 }
 
 func (h *ChannelHandler) wantsJSON(r *http.Request) bool {

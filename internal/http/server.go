@@ -202,7 +202,10 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	s.templates.ExecuteTemplate(w, "home", nil)
+	if err := s.templates.ExecuteTemplate(w, "home", nil); err != nil {
+		s.logger.Error("failed to execute home template", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
 }
 
 type responseWriter struct {
