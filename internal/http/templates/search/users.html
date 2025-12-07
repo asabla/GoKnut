@@ -30,22 +30,22 @@
         }
     </style>
 </head>
-<body class="h-full bg-twitch-dark text-twitch-light">
+<body class="min-h-screen flex flex-col bg-twitch-dark text-twitch-light">
     <nav class="bg-twitch-gray border-b border-gray-700">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
                     <a href="/" class="flex-shrink-0"><span class="text-twitch-purple font-bold text-xl">GoKnut</span></a>
-                    <div class="ml-10 flex items-baseline space-x-4">
-                        <a href="/channels" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Channels</a>
-                        <a href="/users" class="text-white bg-twitch-gray px-3 py-2 rounded-md text-sm font-medium">Users</a>
-                        <a href="/search/messages" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Search</a>
+                    <div class="ml-10 flex items-baseline space-x-1">
+                        <a href="/channels" class="text-gray-300 hover:text-white hover:bg-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">Channels</a>
+                        <a href="/users" class="text-white bg-twitch-purple/20 border border-twitch-purple/50 px-3 py-2 rounded-md text-sm font-medium">Users</a>
+                        <a href="/search/messages" class="text-gray-300 hover:text-white hover:bg-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">Search</a>
                     </div>
                 </div>
             </div>
         </div>
     </nav>
-    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <main class="flex-1 max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 w-full">
         <div class="space-y-6">
             <div class="flex items-center justify-between">
                 <h1 class="text-2xl font-bold text-white">Search Users</h1>
