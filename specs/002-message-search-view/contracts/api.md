@@ -2,7 +2,7 @@
 
 ## Endpoints
 
-### GET `/search/messages`
+### GET `/messages`
 - **Purpose**: Search messages by text with optional filters.
 - **Query Params**:
   - `q` (string, required, min 2 chars): text to search within message content.
@@ -17,6 +17,10 @@
   - `400 Bad Request`: invalid query (e.g., missing or too-short `q`, end before start).
   - `500 Internal Server Error`: unexpected errors.
 - **Notes**: HTMX partials used for progressive enhancement; preserves form values in responses.
+
+### GET `/search/messages` (Legacy - Redirects to `/messages`)
+- **Purpose**: Legacy route for backwards compatibility.
+- **Behavior**: Permanently redirects (301) to `/messages` with query params preserved.
 
 ### GET `/users/{username}/messages`
 - **Purpose**: View messages by user with optional channel filter.

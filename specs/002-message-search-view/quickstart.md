@@ -9,7 +9,7 @@ go run ./cmd/server
 - Ensure SQLite database is present/migrated (existing setup).
 
 2) **Access search UI**
-- Open `http://localhost:8080/search/messages` in your browser.
+- Open `http://localhost:8080/messages` in your browser.
 - Enter a keyword (min 2 chars) in the search box and press Enter or click Search.
 
 ## Features
@@ -27,7 +27,7 @@ Expand "Advanced Filters" to use:
 
 Example URL with all filters:
 ```
-/search/messages?q=hello&channel_id=1&user_id=2&start=2025-12-01&end=2025-12-07
+/messages?q=hello&channel_id=1&user_id=2&start=2025-12-01&end=2025-12-07
 ```
 
 ### Navigation
@@ -46,7 +46,7 @@ Example URL with all filters:
 Send GET requests with `Accept: application/json` header:
 ```bash
 curl -H "Accept: application/json" \
-  "http://localhost:8080/search/messages?q=hello&page=1&page_size=20"
+  "http://localhost:8080/messages?q=hello&page=1&page_size=20"
 ```
 
 Response includes:
