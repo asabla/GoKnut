@@ -176,6 +176,19 @@ func (r *SearchUsersRequest) Validate() error {
 	return r.PaginationRequest.Validate()
 }
 
+// ListUsersRequest is the request for listing users with optional filtering.
+type ListUsersRequest struct {
+	Query string `json:"q"` // Optional filter by username
+	PaginationRequest
+}
+
+// Validate validates the list users request.
+func (r *ListUsersRequest) Validate() error {
+	r.Query = strings.TrimSpace(strings.ToLower(r.Query))
+	// Query is optional for listing, so no required check
+	return r.PaginationRequest.Validate()
+}
+
 // ValidateUsername validates a username.
 func ValidateUsername(username string) error {
 	username = strings.TrimSpace(username)

@@ -296,7 +296,7 @@ func (r *MessageRepository) scanMessage(row *sql.Row) (*Message, error) {
 		return nil, fmt.Errorf("failed to scan message: %w", err)
 	}
 
-	msg.SentAt, _ = time.Parse(time.RFC3339, sentAt)
+	msg.SentAt, _ = ParseSQLiteDatetime(sentAt)
 
 	if tagsJSON.Valid && tagsJSON.String != "" {
 		if err := json.Unmarshal([]byte(tagsJSON.String), &msg.Tags); err != nil {
@@ -324,7 +324,7 @@ func (r *MessageRepository) scanMessages(rows *sql.Rows) ([]Message, error) {
 			return nil, fmt.Errorf("failed to scan message: %w", err)
 		}
 
-		msg.SentAt, _ = time.Parse(time.RFC3339, sentAt)
+		msg.SentAt, _ = ParseSQLiteDatetime(sentAt)
 
 		if tagsJSON.Valid && tagsJSON.String != "" {
 			if err := json.Unmarshal([]byte(tagsJSON.String), &msg.Tags); err != nil {
@@ -371,8 +371,8 @@ func (r *UserRepository) GetByID(ctx context.Context, id int64) (*User, error) {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	user.FirstSeenAt, _ = time.Parse(time.RFC3339, firstSeen)
-	user.LastSeenAt, _ = time.Parse(time.RFC3339, lastSeen)
+	user.FirstSeenAt, _ = ParseSQLiteDatetime(firstSeen)
+	user.LastSeenAt, _ = ParseSQLiteDatetime(lastSeen)
 	if displayName.Valid {
 		user.DisplayName = displayName.String
 	}
@@ -402,8 +402,8 @@ func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*U
 		return nil, fmt.Errorf("failed to get user by username: %w", err)
 	}
 
-	user.FirstSeenAt, _ = time.Parse(time.RFC3339, firstSeen)
-	user.LastSeenAt, _ = time.Parse(time.RFC3339, lastSeen)
+	user.FirstSeenAt, _ = ParseSQLiteDatetime(firstSeen)
+	user.LastSeenAt, _ = ParseSQLiteDatetime(lastSeen)
 	if displayName.Valid {
 		user.DisplayName = displayName.String
 	}

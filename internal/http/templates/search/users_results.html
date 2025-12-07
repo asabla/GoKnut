@@ -1,24 +1,26 @@
-<!-- User Search Results Fragment (for HTMX partial updates) -->
-{{if not .HasQuery}}
+<!-- User List Fragment (for HTMX partial updates) -->
+{{if .IsEmpty}}
 <div class="text-center py-12 text-gray-500">
     <svg class="mx-auto h-12 w-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
     </svg>
-    <p class="mt-4 text-lg">Enter a username to search</p>
-</div>
-{{else if .IsEmpty}}
-<div class="text-center py-12 text-gray-500">
-    <svg class="mx-auto h-12 w-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-    </svg>
-    <p class="mt-4 text-lg">No users found for "{{.Query}}"</p>
-    <p class="mt-1 text-sm">Try a different search term</p>
+    {{if .Query}}
+    <p class="mt-4 text-lg">No users found matching "{{.Query}}"</p>
+    <p class="mt-1 text-sm">Try a different filter</p>
+    {{else}}
+    <p class="mt-4 text-lg">No users found</p>
+    <p class="mt-1 text-sm">Users will appear here once they send messages in archived channels</p>
+    {{end}}
 </div>
 {{else}}
 <div class="space-y-4">
     <!-- Results count -->
     <div class="text-sm text-gray-400">
+        {{if .Query}}
         Found {{.TotalCount}} user{{if ne .TotalCount 1}}s{{end}} matching "{{.Query}}"
+        {{else}}
+        Showing {{.TotalCount}} user{{if ne .TotalCount 1}}s{{end}}
+        {{end}}
     </div>
 
     <!-- Results table -->
@@ -78,7 +80,7 @@
             {{if .HasPrev}}
             <a href="/users?q={{.Query}}&page={{.PrevPage}}"
                hx-get="/users?q={{.Query}}&page={{.PrevPage}}"
-               hx-target="#search-results"
+               hx-target="#users-list"
                hx-swap="innerHTML"
                class="relative inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-twitch-gray hover:bg-gray-700">
                 Previous
@@ -90,7 +92,7 @@
             {{if .HasNext}}
             <a href="/users?q={{.Query}}&page={{.NextPage}}"
                hx-get="/users?q={{.Query}}&page={{.NextPage}}"
-               hx-target="#search-results"
+               hx-target="#users-list"
                hx-swap="innerHTML"
                class="relative inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-twitch-gray hover:bg-gray-700">
                 Next

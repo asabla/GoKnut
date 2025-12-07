@@ -52,13 +52,8 @@ func (h *SearchHandler) handleSearchUsers(w http.ResponseWriter, r *http.Request
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
 
-	// If no query, show empty search form
-	if query == "" {
-		h.renderSearchUsersPage(w, r, nil, query, 0, 0, 0)
-		return
-	}
-
-	req := dto.SearchUsersRequest{
+	// Use ListUsers to get all users with optional filtering
+	req := dto.ListUsersRequest{
 		Query: query,
 		PaginationRequest: dto.PaginationRequest{
 			Page:     page,
@@ -66,10 +61,10 @@ func (h *SearchHandler) handleSearchUsers(w http.ResponseWriter, r *http.Request
 		},
 	}
 
-	result, err := h.service.SearchUsers(ctx, req)
+	result, err := h.service.ListUsers(ctx, req)
 	if err != nil {
-		h.logger.Error("failed to search users", "query", query, "error", err)
-		h.renderError(w, r, "Failed to search users", http.StatusInternalServerError)
+		h.logger.Error("failed to list users", "query", query, "error", err)
+		h.renderError(w, r, "Failed to list users", http.StatusInternalServerError)
 		return
 	}
 
@@ -94,8 +89,7 @@ func (h *SearchHandler) renderSearchUsersPage(w http.ResponseWriter, r *http.Req
 	data := map[string]any{
 		"Query":      query,
 		"Users":      users,
-		"IsEmpty":    len(users) == 0 && query != "",
-		"HasQuery":   query != "",
+		"IsEmpty":    len(users) == 0,
 		"Page":       page,
 		"TotalPages": totalPages,
 		"TotalCount": totalCount,

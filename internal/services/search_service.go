@@ -111,6 +111,57 @@ func (s *SearchService) SearchUsers(ctx context.Context, req dto.SearchUsersRequ
 	return result, nil
 }
 
+// ListUsers returns all users with optional filtering and pagination.
+func (s *SearchService) ListUsers(ctx context.Context, req dto.ListUsersRequest) (*UserSearchResult, error) {
+	start := time.Now()
+	defer func() {
+		latency := time.Since(start)
+		if s.metrics != nil {
+			s.metrics.RecordSearchRequest("list_users", latency)
+		}
+	}()
+
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	params := search.ListUsersParams{
+		Query:    req.Query,
+		Page:     req.Page,
+		PageSize: req.PageSize,
+	}
+
+	users, totalCount, err := s.repo.ListUsers(ctx, params)
+	if err != nil {
+		s.logger.Error("failed to list users", "query", req.Query, "error", err)
+		return nil, err
+	}
+
+	totalPages := (totalCount + req.PageSize - 1) / req.PageSize
+	if totalPages < 1 {
+		totalPages = 1
+	}
+
+	result := &UserSearchResult{
+		Users:      users,
+		TotalCount: totalCount,
+		Page:       req.Page,
+		PageSize:   req.PageSize,
+		TotalPages: totalPages,
+		HasNext:    req.Page < totalPages,
+		HasPrev:    req.Page > 1,
+	}
+
+	s.logger.Search("user list completed",
+		"filter", req.Query,
+		"results", len(users),
+		"total", totalCount,
+		"latency_ms", time.Since(start).Milliseconds(),
+	)
+
+	return result, nil
+}
+
 // SearchMessages searches for messages by text content.
 func (s *SearchService) SearchMessages(ctx context.Context, req dto.SearchMessagesRequest) (*MessageSearchResult, error) {
 	start := time.Now()
