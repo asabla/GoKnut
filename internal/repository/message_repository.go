@@ -280,6 +280,46 @@ func (r *MessageRepository) GetLatestID(ctx context.Context, channelID int64) (i
 	return latestID, nil
 }
 
+// GetRecentGlobal returns the most recent messages across all channels.
+func (r *MessageRepository) GetRecentGlobal(ctx context.Context, limit int) ([]Message, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	query := `
+		SELECT m.id, m.channel_id, m.user_id, m.text, m.sent_at, m.tags,
+		       u.username, u.display_name, c.name as channel_name
+		FROM messages m
+		JOIN users u ON m.user_id = u.id
+		JOIN channels c ON m.channel_id = c.id
+		ORDER BY m.sent_at DESC, m.id DESC
+		LIMIT ?
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query recent global messages: %w", err)
+	}
+	defer rows.Close()
+
+	return r.scanMessages(rows)
+}
+
+// GetTotalCount returns the total number of messages in the database.
+func (r *MessageRepository) GetTotalCount(ctx context.Context) (int64, error) {
+	query := `SELECT COUNT(*) FROM messages`
+
+	var count int64
+	if err := r.db.QueryRowContext(ctx, query).Scan(&count); err != nil {
+		return 0, fmt.Errorf("failed to count messages: %w", err)
+	}
+
+	return count, nil
+}
+
 func (r *MessageRepository) scanMessage(row *sql.Row) (*Message, error) {
 	var msg Message
 	var sentAt string
@@ -468,4 +508,16 @@ func (r *UserRepository) GetOrCreate(ctx context.Context, username, displayName 
 	}
 
 	return user, nil
+}
+
+// GetCount returns the total number of users in the database.
+func (r *UserRepository) GetCount(ctx context.Context) (int64, error) {
+	query := `SELECT COUNT(*) FROM users`
+
+	var count int64
+	if err := r.db.QueryRowContext(ctx, query).Scan(&count); err != nil {
+		return 0, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	return count, nil
 }

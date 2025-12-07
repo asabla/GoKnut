@@ -274,3 +274,27 @@ func (r *ChannelRepository) UpdateStats(ctx context.Context, id int64, totalMess
 
 	return nil
 }
+
+// GetCount returns the total number of channels.
+func (r *ChannelRepository) GetCount(ctx context.Context) (int64, error) {
+	query := `SELECT COUNT(*) FROM channels`
+
+	var count int64
+	if err := r.db.QueryRowContext(ctx, query).Scan(&count); err != nil {
+		return 0, fmt.Errorf("failed to count channels: %w", err)
+	}
+
+	return count, nil
+}
+
+// GetEnabledCount returns the number of enabled channels.
+func (r *ChannelRepository) GetEnabledCount(ctx context.Context) (int64, error) {
+	query := `SELECT COUNT(*) FROM channels WHERE enabled = 1`
+
+	var count int64
+	if err := r.db.QueryRowContext(ctx, query).Scan(&count); err != nil {
+		return 0, fmt.Errorf("failed to count enabled channels: %w", err)
+	}
+
+	return count, nil
+}

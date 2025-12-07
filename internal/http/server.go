@@ -32,6 +32,7 @@ type Server struct {
 	searchService  *services.SearchService
 	channelRepo    *repository.ChannelRepository
 	messageRepo    *repository.MessageRepository
+	userRepo       *repository.UserRepository
 }
 
 // ServerConfig holds HTTP server configuration.
@@ -43,6 +44,7 @@ type ServerConfig struct {
 	SearchService  *services.SearchService
 	ChannelRepo    *repository.ChannelRepository
 	MessageRepo    *repository.MessageRepository
+	UserRepo       *repository.UserRepository
 }
 
 // templateFuncs returns the custom template functions.
@@ -99,6 +101,7 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 		searchService:  cfg.SearchService,
 		channelRepo:    cfg.ChannelRepo,
 		messageRepo:    cfg.MessageRepo,
+		userRepo:       cfg.UserRepo,
 	}
 
 	// Parse templates with custom functions
@@ -201,8 +204,32 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx := r.Context()
+
+	// Prepare data for the template
+	data := struct {
+		TotalMessages   int64
+		TotalChannels   int64
+		EnabledChannels int64
+		TotalUsers      int64
+		RecentMessages  []repository.Message
+	}{}
+
+	// Fetch statistics (ignore errors, show 0 if unavailable)
+	if s.messageRepo != nil {
+		data.TotalMessages, _ = s.messageRepo.GetTotalCount(ctx)
+		data.RecentMessages, _ = s.messageRepo.GetRecentGlobal(ctx, 20)
+	}
+	if s.channelRepo != nil {
+		data.TotalChannels, _ = s.channelRepo.GetCount(ctx)
+		data.EnabledChannels, _ = s.channelRepo.GetEnabledCount(ctx)
+	}
+	if s.userRepo != nil {
+		data.TotalUsers, _ = s.userRepo.GetCount(ctx)
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := s.templates.ExecuteTemplate(w, "home", nil); err != nil {
+	if err := s.templates.ExecuteTemplate(w, "home", data); err != nil {
 		s.logger.Error("failed to execute home template", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
