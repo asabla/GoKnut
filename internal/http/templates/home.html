@@ -48,6 +48,35 @@
                             class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Messages</a>
                     </div>
                 </div>
+                <!-- SSE Status Indicator (inline) -->
+                <div class="flex items-center space-x-2">
+                    <span id="sse-status-home" class="inline-flex items-center text-xs" data-testid="sse-status-home">
+                        <span id="sse-home-connected" class="hidden items-center text-green-400">
+                            <span class="relative flex h-1.5 w-1.5 mr-1">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                            </span>
+                            Live
+                        </span>
+                        <span id="sse-home-idle" class="hidden items-center text-gray-500">
+                            <span class="h-1.5 w-1.5 rounded-full bg-gray-500 mr-1"></span>
+                            Idle
+                        </span>
+                        <span id="sse-home-reconnecting" class="hidden items-center text-yellow-400">
+                            <svg class="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            Reconnecting
+                        </span>
+                        <span id="sse-home-error" class="hidden items-center text-red-400">
+                            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Offline
+                        </span>
+                    </span>
+                </div>
             </div>
         </div>
     </nav>
@@ -56,21 +85,21 @@
             <!-- Statistics -->
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-4" data-testid="statistics-section">
                 <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700 text-center">
-                    <div class="text-3xl font-bold text-twitch-purple" data-testid="stat-messages">{{formatNumber
+                    <div class="text-3xl font-bold text-twitch-purple" id="stat-messages" data-testid="stat-messages">{{formatNumber
                         .TotalMessages}}</div>
                     <div class="text-sm text-gray-400 mt-1">Messages Archived</div>
                 </div>
                 <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700 text-center">
-                    <div class="text-3xl font-bold text-twitch-purple" data-testid="stat-channels">{{.TotalChannels}}
+                    <div class="text-3xl font-bold text-twitch-purple" id="stat-channels" data-testid="stat-channels">{{.TotalChannels}}
                     </div>
                     <div class="text-sm text-gray-400 mt-1">Total Channels</div>
                 </div>
                 <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700 text-center">
-                    <div class="text-3xl font-bold text-green-400" data-testid="stat-enabled">{{.EnabledChannels}}</div>
+                    <div class="text-3xl font-bold text-green-400" id="stat-enabled" data-testid="stat-enabled">{{.EnabledChannels}}</div>
                     <div class="text-sm text-gray-400 mt-1">Active Channels</div>
                 </div>
                 <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700 text-center">
-                    <div class="text-3xl font-bold text-twitch-purple" data-testid="stat-users">{{formatNumber
+                    <div class="text-3xl font-bold text-twitch-purple" id="stat-users" data-testid="stat-users">{{formatNumber
                         .TotalUsers}}</div>
                     <div class="text-sm text-gray-400 mt-1">Unique Users</div>
                 </div>
@@ -143,10 +172,10 @@
                     <a href="/messages"
                         class="text-sm text-twitch-purple hover:text-twitch-light transition-colors">View all</a>
                 </div>
-                <div class="divide-y divide-gray-700 max-h-96 overflow-y-auto">
+                <div id="latest-messages-container" class="divide-y divide-gray-700 max-h-96 overflow-y-auto">
                     {{if .RecentMessages}}
                     {{range .RecentMessages}}
-                    <div class="px-6 py-3 hover:bg-gray-800/50 transition-colors" data-testid="message-row">
+                    <div class="px-6 py-3 hover:bg-gray-800/50 transition-colors message-row" data-testid="message-row" data-message-id="{{.ID}}">
                         <div class="flex items-start space-x-3">
                             <span class="text-gray-500 text-xs shrink-0 tabular-nums mt-0.5"
                                 title='{{.SentAt.Format `2006-01-02 15:04:05 MST`}}'>
@@ -170,7 +199,7 @@
                     </div>
                     {{end}}
                     {{else}}
-                    <div class="px-6 py-12 text-center text-gray-500">
+                    <div id="empty-messages" class="px-6 py-12 text-center text-gray-500">
                         <svg class="h-12 w-12 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -190,6 +219,205 @@
             <p class="text-center text-gray-500 text-sm">Twitch Chat Archiver & Explorer</p>
         </div>
     </footer>
+
+    <!-- SSE Client Script for Home View -->
+    <script>
+    (function() {
+        'use strict';
+        
+        var eventSource = null;
+        var reconnectAttempts = 0;
+        var maxReconnectAttempts = 10;
+        var baseReconnectDelay = 1000; // 1 second
+        var maxReconnectDelay = 30000; // 30 seconds
+        var lastCursor = 0;
+        var isConnected = false;
+        
+        // Status indicator management
+        function showStatus(state) {
+            var states = ['connected', 'idle', 'reconnecting', 'error'];
+            states.forEach(function(s) {
+                var el = document.getElementById('sse-home-' + s);
+                if (el) {
+                    el.classList.add('hidden');
+                    el.classList.remove('inline-flex');
+                }
+            });
+            var el = document.getElementById('sse-home-' + state);
+            if (el) {
+                el.classList.remove('hidden');
+                el.classList.add('inline-flex');
+            }
+        }
+        
+        // Format number for display
+        function formatNumber(n) {
+            if (n < 1000) return n.toString();
+            if (n < 1000000) return (n / 1000).toFixed(1) + 'K';
+            return (n / 1000000).toFixed(1) + 'M';
+        }
+        
+        // Update metrics display
+        function updateMetrics(data) {
+            var el = document.getElementById('stat-messages');
+            if (el) el.textContent = formatNumber(data.total_messages || 0);
+            
+            el = document.getElementById('stat-channels');
+            if (el) el.textContent = data.total_channels || 0;
+            
+            el = document.getElementById('stat-users');
+            if (el) el.textContent = formatNumber(data.total_users || 0);
+        }
+        
+        // Add new message to the list
+        function addMessage(msg) {
+            var container = document.getElementById('latest-messages-container');
+            if (!container) return;
+            
+            // Remove empty state if present
+            var emptyState = document.getElementById('empty-messages');
+            if (emptyState) emptyState.remove();
+            
+            // Check for duplicate
+            var existing = container.querySelector('[data-message-id="' + msg.id + '"]');
+            if (existing) return;
+            
+            // Create message element
+            var div = document.createElement('div');
+            div.className = 'px-6 py-3 hover:bg-gray-800/50 transition-colors message-row';
+            div.setAttribute('data-testid', 'message-row');
+            div.setAttribute('data-message-id', msg.id);
+            
+            var time = new Date(msg.sent_at);
+            var timeStr = time.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            div.innerHTML = '<div class="flex items-start space-x-3">' +
+                '<span class="text-gray-500 text-xs shrink-0 tabular-nums mt-0.5">' + timeStr + '</span>' +
+                '<div class="min-w-0 flex-1">' +
+                    '<div class="flex items-center space-x-2 text-sm">' +
+                        '<a href="/users/' + msg.username + '" class="font-medium text-twitch-purple hover:underline shrink-0">' +
+                            (msg.display_name || msg.username) + '</a>' +
+                        '<span class="text-gray-500">in</span>' +
+                        '<a href="/channels/' + msg.channel_name + '/view" class="text-gray-400 hover:text-twitch-purple hover:underline shrink-0">' +
+                            '#' + msg.channel_name + '</a>' +
+                    '</div>' +
+                    '<p class="text-twitch-light text-sm mt-1 break-words">' + escapeHtml(msg.text) + '</p>' +
+                '</div>' +
+            '</div>';
+            
+            // Insert at the top (newest first)
+            container.insertBefore(div, container.firstChild);
+            
+            // Limit to 20 messages
+            var messages = container.querySelectorAll('.message-row');
+            if (messages.length > 20) {
+                messages[messages.length - 1].remove();
+            }
+        }
+        
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Handle SSE message
+        function handleMessage(event) {
+            try {
+                var data = JSON.parse(event.data);
+                
+                // Update cursor for reconnection
+                if (data.cursor) lastCursor = data.cursor;
+                
+                switch (data.type) {
+                    case 'status':
+                        if (data.state === 'connected') {
+                            showStatus('connected');
+                            isConnected = true;
+                            reconnectAttempts = 0;
+                        } else if (data.state === 'idle') {
+                            showStatus('idle');
+                        } else if (data.state === 'error' || data.state === 'fallback') {
+                            showStatus('error');
+                            // If server suggests fallback, we could switch to polling
+                        }
+                        break;
+                        
+                    case 'metrics':
+                        updateMetrics(data);
+                        break;
+                        
+                    case 'message':
+                        addMessage(data);
+                        break;
+                }
+            } catch (e) {
+                console.error('Failed to parse SSE event:', e);
+            }
+        }
+        
+        // Connect to SSE
+        function connect() {
+            if (eventSource) {
+                eventSource.close();
+            }
+            
+            var url = '/live?view=home';
+            if (lastCursor > 0) {
+                url += '&after_id=' + lastCursor;
+            }
+            
+            showStatus('reconnecting');
+            
+            eventSource = new EventSource(url);
+            
+            eventSource.onopen = function() {
+                console.log('SSE connected');
+            };
+            
+            eventSource.onmessage = handleMessage;
+            
+            eventSource.onerror = function(e) {
+                console.error('SSE error:', e);
+                isConnected = false;
+                showStatus('error');
+                eventSource.close();
+                
+                // Exponential backoff reconnection
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    var delay = Math.min(baseReconnectDelay * Math.pow(2, reconnectAttempts), maxReconnectDelay);
+                    reconnectAttempts++;
+                    console.log('Reconnecting in ' + delay + 'ms (attempt ' + reconnectAttempts + ')');
+                    setTimeout(connect, delay);
+                } else {
+                    console.log('Max reconnect attempts reached');
+                }
+            };
+        }
+        
+        // Expose reconnect function globally for retry button
+        window.sseReconnect = function() {
+            reconnectAttempts = 0;
+            connect();
+        };
+        
+        // Start connection when page loads
+        if (typeof EventSource !== 'undefined') {
+            connect();
+        } else {
+            console.log('SSE not supported, falling back to polling');
+            showStatus('error');
+        }
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (eventSource) {
+                eventSource.close();
+            }
+        });
+    })();
+    </script>
 </body>
 
 </html>

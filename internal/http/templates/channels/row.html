@@ -1,5 +1,5 @@
 <!-- Channel Row Fragment -->
-<tr id="channel-{{.Name}}" class="hover:bg-gray-800">
+<tr id="channel-{{.Name}}" class="hover:bg-gray-800" data-channel-id="{{.ID}}" data-channel-name="{{.Name}}">
     <td class="px-6 py-4 whitespace-nowrap">
         <div class="flex items-center">
             <div class="flex-shrink-0 h-10 w-10 rounded-full bg-twitch-purple flex items-center justify-center">
@@ -23,10 +23,10 @@
         </span>
         {{end}}
     </td>
-    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300" data-sse-target="message-count">
         {{.TotalMessages | formatNumber}}
     </td>
-    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400" data-sse-target="last-activity">
         {{if .LastMessageAt}}
         {{.LastMessageAt | formatTime}}
         {{else}}

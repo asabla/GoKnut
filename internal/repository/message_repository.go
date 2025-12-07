@@ -320,6 +320,47 @@ func (r *MessageRepository) GetTotalCount(ctx context.Context) (int64, error) {
 	return count, nil
 }
 
+// GetGlobalAfterID returns messages after the given ID across all channels for backfill.
+func (r *MessageRepository) GetGlobalAfterID(ctx context.Context, afterID int64, limit int) ([]Message, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	query := `
+		SELECT m.id, m.channel_id, m.user_id, m.text, m.sent_at, m.tags,
+		       u.username, u.display_name, c.name as channel_name
+		FROM messages m
+		JOIN users u ON m.user_id = u.id
+		JOIN channels c ON m.channel_id = c.id
+		WHERE m.id > ?
+		ORDER BY m.id ASC
+		LIMIT ?
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, afterID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query global messages after ID: %w", err)
+	}
+	defer rows.Close()
+
+	return r.scanMessages(rows)
+}
+
+// GetGlobalLatestID returns the ID of the most recent message across all channels.
+func (r *MessageRepository) GetGlobalLatestID(ctx context.Context) (int64, error) {
+	query := `SELECT COALESCE(MAX(id), 0) FROM messages`
+
+	var latestID int64
+	if err := r.db.QueryRowContext(ctx, query).Scan(&latestID); err != nil {
+		return 0, fmt.Errorf("failed to get global latest message ID: %w", err)
+	}
+
+	return latestID, nil
+}
+
 func (r *MessageRepository) scanMessage(row *sql.Row) (*Message, error) {
 	var msg Message
 	var sentAt string

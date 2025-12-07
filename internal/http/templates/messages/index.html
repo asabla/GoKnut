@@ -27,6 +27,8 @@
         @layer utilities {
             .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
             .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { opacity: 1; }
+            .sse-new-message { animation: highlight-fade 2s ease-out; }
+            @keyframes highlight-fade { from { background-color: rgba(145, 70, 255, 0.2); } to { background-color: transparent; } }
         }
     </style>
 </head>
@@ -41,6 +43,35 @@
                         <a href="/users" class="text-gray-300 hover:text-white hover:bg-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">Users</a>
                         <a href="/messages" class="text-white bg-twitch-purple/20 border border-twitch-purple/50 px-3 py-2 rounded-md text-sm font-medium">Messages</a>
                     </div>
+                </div>
+                <!-- SSE Status Indicator -->
+                <div class="flex items-center space-x-2">
+                    <span id="sse-status-messages" class="inline-flex items-center text-xs" data-testid="sse-status-messages">
+                        <span id="sse-messages-connected" class="hidden items-center text-green-400">
+                            <span class="relative flex h-1.5 w-1.5 mr-1">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                            </span>
+                            Live
+                        </span>
+                        <span id="sse-messages-idle" class="hidden items-center text-gray-500">
+                            <span class="h-1.5 w-1.5 rounded-full bg-gray-500 mr-1"></span>
+                            Idle
+                        </span>
+                        <span id="sse-messages-reconnecting" class="hidden items-center text-yellow-400">
+                            <svg class="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            Reconnecting
+                        </span>
+                        <span id="sse-messages-error" class="hidden items-center text-red-400">
+                            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Offline
+                        </span>
+                    </span>
                 </div>
             </div>
         </div>
@@ -101,6 +132,293 @@
             <p class="text-center text-gray-500 text-sm">Twitch Chat Archiver & Explorer</p>
         </div>
     </footer>
+
+    <!-- SSE Client Script for Messages View -->
+    <script>
+    (function() {
+        'use strict';
+        
+        var eventSource = null;
+        var reconnectAttempts = 0;
+        var maxReconnectAttempts = 10;
+        var baseReconnectDelay = 1000; // 1 second
+        var maxReconnectDelay = 30000; // 30 seconds
+        var lastCursor = 0;
+        var isConnected = false;
+        var seenMessageIds = new Set();
+        var sseEnabled = true; // Can be toggled off during search
+        
+        // Status indicator management
+        function showStatus(state) {
+            var states = ['connected', 'idle', 'reconnecting', 'error'];
+            states.forEach(function(s) {
+                var el = document.getElementById('sse-messages-' + s);
+                if (el) {
+                    el.classList.add('hidden');
+                    el.classList.remove('inline-flex');
+                }
+            });
+            var el = document.getElementById('sse-messages-' + state);
+            if (el) {
+                el.classList.remove('hidden');
+                el.classList.add('inline-flex');
+            }
+        }
+        
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Format time for display
+        function formatTime(dateStr) {
+            var date = new Date(dateStr);
+            var month = date.toLocaleString('en-US', { month: 'short' });
+            var day = String(date.getDate()).padStart(2, '0');
+            var hours = String(date.getHours()).padStart(2, '0');
+            var minutes = String(date.getMinutes()).padStart(2, '0');
+            return month + ' ' + day + ', ' + hours + ':' + minutes;
+        }
+        
+        // Format full timestamp
+        function formatFullTime(dateStr) {
+            var date = new Date(dateStr);
+            return date.toISOString();
+        }
+        
+        // Create message row HTML
+        function createMessageRow(msg, idx) {
+            var displayName = msg.display_name || msg.username;
+            var time = formatTime(msg.sent_at);
+            var fullTime = formatFullTime(msg.sent_at);
+            
+            return '<tr class="hover:bg-gray-700/50 transition-colors group cursor-pointer sse-new-message" onclick="toggleRow(' + idx + ')" data-message-id="' + msg.id + '">' +
+                '<td class="px-6 py-4 whitespace-nowrap">' +
+                    '<a href="/users/' + escapeHtml(msg.username) + '" class="font-medium text-twitch-purple hover:text-purple-400" onclick="event.stopPropagation();">' +
+                        escapeHtml(displayName) + '</a>' +
+                '</td>' +
+                '<td class="px-6 py-4 whitespace-nowrap">' +
+                    '<a href="/channels/' + escapeHtml(msg.channel_name) + '/view" class="text-gray-400 hover:text-gray-300" onclick="event.stopPropagation();">' +
+                        '#' + escapeHtml(msg.channel_name) + '</a>' +
+                '</td>' +
+                '<td class="px-6 py-4">' +
+                    '<div class="text-gray-200 truncate max-w-md">' + escapeHtml(msg.text) + '</div>' +
+                '</td>' +
+                '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">' +
+                    '<time datetime="' + fullTime + '">' + time + '</time>' +
+                '</td>' +
+                '<td class="px-6 py-4 whitespace-nowrap text-right text-sm">' +
+                    '<button type="button" class="text-gray-400 hover:text-gray-300 expand-btn" aria-label="Expand message" onclick="event.stopPropagation(); toggleRow(' + idx + ');">' +
+                        '<svg class="h-5 w-5 transform transition-transform" id="expand-icon-' + idx + '" fill="none" viewBox="0 0 24 24" stroke="currentColor">' +
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>' +
+                        '</svg>' +
+                    '</button>' +
+                '</td>' +
+            '</tr>' +
+            '<tr id="expanded-row-' + idx + '" class="hidden bg-gray-800/50" data-expanded-for="' + msg.id + '">' +
+                '<td colspan="5" class="px-6 py-4">' +
+                    '<div class="space-y-2">' +
+                        '<div class="flex items-center text-xs text-gray-500">' +
+                            '<span class="font-medium">Full message:</span>' +
+                            '<time class="ml-auto" datetime="' + fullTime + '">' + 
+                                new Date(msg.sent_at).toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) +
+                            '</time>' +
+                        '</div>' +
+                        '<p class="text-gray-200 whitespace-pre-wrap break-words">' + escapeHtml(msg.text) + '</p>' +
+                    '</div>' +
+                '</td>' +
+            '</tr>';
+        }
+        
+        // Get next available row index
+        function getNextRowIndex() {
+            var tbody = document.querySelector('#messages-list tbody');
+            if (!tbody) return 0;
+            var rows = tbody.querySelectorAll('tr[data-message-id]');
+            return rows.length;
+        }
+        
+        // Add new message to the table (prepend)
+        function addMessage(msg) {
+            // Check for duplicate
+            if (seenMessageIds.has(msg.id)) return;
+            seenMessageIds.add(msg.id);
+            
+            // Only add if we're viewing the default list (no search active)
+            var searchInput = document.getElementById('q');
+            if (searchInput && searchInput.value.trim() !== '') return;
+            
+            var tbody = document.querySelector('#messages-list tbody');
+            if (!tbody) {
+                // Messages list might be empty state, need to create table
+                var container = document.getElementById('messages-list');
+                if (container) {
+                    // Check if we have the empty state
+                    var emptyState = container.querySelector('.text-center');
+                    if (emptyState) {
+                        // Replace empty state with table structure
+                        container.innerHTML = createTableStructure();
+                        tbody = container.querySelector('tbody');
+                    }
+                }
+            }
+            if (!tbody) return;
+            
+            // Update total count if present
+            var countEl = container ? container.querySelector('.text-gray-400') : null;
+            if (countEl && countEl.textContent.includes('total')) {
+                var match = countEl.textContent.match(/\((\d+) total\)/);
+                if (match) {
+                    var newCount = parseInt(match[1]) + 1;
+                    countEl.textContent = 'Showing latest messages (' + newCount + ' total)';
+                }
+            }
+            
+            // Create row with unique index
+            var idx = 'sse-' + msg.id;
+            var rowHtml = createMessageRow(msg, idx);
+            
+            // Insert at the top
+            tbody.insertAdjacentHTML('afterbegin', rowHtml);
+            
+            // Limit visible rows (remove from bottom)
+            var rows = tbody.querySelectorAll('tr[data-message-id]');
+            if (rows.length > 50) {
+                // Remove last 2 rows (data row + expanded row)
+                var lastRow = rows[rows.length - 1];
+                var expandedId = lastRow.getAttribute('data-message-id');
+                var expandedRow = tbody.querySelector('[data-expanded-for="' + expandedId + '"]');
+                if (expandedRow) expandedRow.remove();
+                lastRow.remove();
+            }
+        }
+        
+        // Create initial table structure when empty
+        function createTableStructure() {
+            return '<div class="space-y-4">' +
+                '<div class="text-sm text-gray-400">Showing latest messages (0 total)</div>' +
+                '<div class="bg-twitch-gray rounded-lg border border-gray-700 overflow-hidden">' +
+                    '<table class="min-w-full divide-y divide-gray-700">' +
+                        '<thead class="bg-gray-800">' +
+                            '<tr>' +
+                                '<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">User</th>' +
+                                '<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Channel</th>' +
+                                '<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Message</th>' +
+                                '<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Time</th>' +
+                                '<th scope="col" class="relative px-6 py-3"><span class="sr-only">Expand</span></th>' +
+                            '</tr>' +
+                        '</thead>' +
+                        '<tbody class="divide-y divide-gray-700"></tbody>' +
+                    '</table>' +
+                '</div>' +
+            '</div>';
+        }
+        
+        // Handle SSE message
+        function handleMessage(event) {
+            try {
+                var data = JSON.parse(event.data);
+                
+                // Update cursor for reconnection
+                if (data.cursor) lastCursor = data.cursor;
+                
+                switch (data.type) {
+                    case 'status':
+                        if (data.state === 'connected') {
+                            showStatus('connected');
+                            isConnected = true;
+                            reconnectAttempts = 0;
+                        } else if (data.state === 'idle') {
+                            showStatus('idle');
+                        } else if (data.state === 'error' || data.state === 'fallback') {
+                            showStatus('error');
+                        }
+                        break;
+                        
+                    case 'message':
+                        addMessage(data);
+                        break;
+                }
+            } catch (e) {
+                console.error('Failed to parse SSE event:', e);
+            }
+        }
+        
+        // Connect to SSE
+        function connect() {
+            if (!sseEnabled) return;
+            
+            if (eventSource) {
+                eventSource.close();
+            }
+            
+            var url = '/live?view=messages';
+            if (lastCursor > 0) {
+                url += '&after_id=' + lastCursor;
+            }
+            
+            showStatus('reconnecting');
+            
+            eventSource = new EventSource(url);
+            
+            eventSource.onopen = function() {
+                console.log('SSE connected to messages');
+            };
+            
+            eventSource.onmessage = handleMessage;
+            
+            eventSource.onerror = function(e) {
+                console.error('SSE error:', e);
+                isConnected = false;
+                showStatus('error');
+                eventSource.close();
+                
+                // Exponential backoff reconnection
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    var delay = Math.min(baseReconnectDelay * Math.pow(2, reconnectAttempts), maxReconnectDelay);
+                    reconnectAttempts++;
+                    console.log('Reconnecting in ' + delay + 'ms (attempt ' + reconnectAttempts + ')');
+                    setTimeout(connect, delay);
+                } else {
+                    console.log('Max reconnect attempts reached');
+                }
+            };
+        }
+        
+        // Initialize seen message IDs from existing rows
+        function initSeenIds() {
+            var rows = document.querySelectorAll('[data-message-id]');
+            rows.forEach(function(row) {
+                var id = parseInt(row.getAttribute('data-message-id'));
+                if (id) seenMessageIds.add(id);
+            });
+        }
+        
+        // Expose reconnect function globally for retry button
+        window.sseReconnect = function() {
+            reconnectAttempts = 0;
+            connect();
+        };
+        
+        // Start connection when page loads
+        if (typeof EventSource !== 'undefined') {
+            initSeenIds();
+            connect();
+        } else {
+            console.log('SSE not supported');
+            showStatus('error');
+        }
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (eventSource) {
+                eventSource.close();
+            }
+        });
+    })();
+    </script>
 </body>
 </html>
 {{end}}

@@ -40,6 +40,7 @@ type Config struct {
 
 	// Feature flags
 	EnableFTS bool
+	EnableSSE bool // Enable Server-Sent Events for live updates
 }
 
 // DefaultConfig returns a Config with default values.
@@ -52,6 +53,7 @@ func DefaultConfig() *Config {
 		FlushTimeout:   100,
 		BufferSize:     10000,
 		EnableFTS:      true,
+		EnableSSE:      true, // SSE enabled by default
 	}
 }
 
@@ -110,6 +112,9 @@ func Load() (*Config, error) {
 	}
 	if v := os.Getenv("ENABLE_FTS"); v != "" {
 		cfg.EnableFTS = strings.ToLower(v) == "true" || v == "1"
+	}
+	if v := os.Getenv("ENABLE_SSE"); v != "" {
+		cfg.EnableSSE = strings.ToLower(v) == "true" || v == "1"
 	}
 	if v := os.Getenv("TWITCH_AUTH_MODE"); v != "" {
 		switch strings.ToLower(v) {

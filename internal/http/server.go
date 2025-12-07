@@ -33,6 +33,8 @@ type Server struct {
 	channelRepo    *repository.ChannelRepository
 	messageRepo    *repository.MessageRepository
 	userRepo       *repository.UserRepository
+	enableSSE      bool
+	sseHandler     *handlers.SSEHandler
 }
 
 // ServerConfig holds HTTP server configuration.
@@ -45,6 +47,7 @@ type ServerConfig struct {
 	ChannelRepo    *repository.ChannelRepository
 	MessageRepo    *repository.MessageRepository
 	UserRepo       *repository.UserRepository
+	EnableSSE      bool
 }
 
 // templateFuncs returns the custom template functions.
@@ -102,6 +105,7 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 		channelRepo:    cfg.ChannelRepo,
 		messageRepo:    cfg.MessageRepo,
 		userRepo:       cfg.UserRepo,
+		enableSSE:      cfg.EnableSSE,
 	}
 
 	// Parse templates with custom functions
@@ -165,6 +169,14 @@ func (s *Server) registerRoutes() {
 	if s.searchService != nil {
 		searchHandler := handlers.NewSearchHandler(s.searchService, s.templates, s.logger)
 		searchHandler.RegisterRoutes(s.mux)
+	}
+
+	// Register SSE live updates handler
+	if s.enableSSE {
+		s.sseHandler = handlers.NewSSEHandler(
+			s.channelRepo, s.messageRepo, s.userRepo, s.templates, s.logger, s.metrics)
+		s.sseHandler.RegisterRoutes(s.mux)
+		s.logger.HTTP("SSE live updates enabled", "path", "/live")
 	}
 }
 

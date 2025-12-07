@@ -22,9 +22,9 @@ description: "Task list for live stream updates feature"
 
 **Purpose**: Baseline configuration and docs alignment for SSE delivery
 
-- [ ] T001 Add SSE feature toggle default-on in `internal/config/config.go`
-- [ ] T002 Wire SSE route placeholder in `internal/http/server.go`
-- [ ] T003 [P] Document local SSE run instructions in `specs/003-live-stream-updates/quickstart.md`
+- [X] T001 Add SSE feature toggle default-on in `internal/config/config.go`
+- [X] T002 Wire SSE route placeholder in `internal/http/server.go`
+- [X] T003 [P] Document local SSE run instructions in `specs/003-live-stream-updates/quickstart.md`
 
 ---
 
@@ -32,11 +32,11 @@ description: "Task list for live stream updates feature"
 
 **Purpose**: Core live infrastructure required before any user story
 
-- [ ] T004 Define shared SSE event envelopes and dispatcher in `internal/http/handlers/live_sse.go`
-- [ ] T005 [P] Add repository cursor/backfill helper using `messages.id` in `internal/repository/message_repository.go`
-- [ ] T006 [P] Add live observability counters/log fields for connect/disconnect/backpressure in `internal/observability/observability.go`
-- [ ] T007 Add SSE status/fallback partial for reuse in `internal/http/templates/partials/status.html`
-- [ ] T008 Align contracts to SSE transport in `specs/003-live-stream-updates/contracts/api.md`
+- [X] T004 Define shared SSE event envelopes and dispatcher in `internal/http/handlers/live_sse.go`
+- [X] T005 [P] Add repository cursor/backfill helper using `messages.id` in `internal/repository/message_repository.go`
+- [X] T006 [P] Add live observability counters/log fields for connect/disconnect/backpressure in `internal/observability/observability.go`
+- [X] T007 Add SSE status/fallback partial for reuse in `internal/http/templates/partials/status.html`
+- [X] T008 Align contracts to SSE transport in `specs/003-live-stream-updates/contracts/api.md`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -50,13 +50,13 @@ description: "Task list for live stream updates feature"
 
 ### Tests for User Story 1
 
-- [ ] T009 [P] [US1] Add integration test for home SSE stream in `tests/integration/live_view_integration_test.go`
+- [X] T009 [P] [US1] Add integration test for home SSE stream in `tests/integration/live_view_integration_test.go`
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Implement home SSE emission (metrics + latest messages) in `internal/http/handlers/live_sse.go`
-- [ ] T011 [P] [US1] Bind SSE to home template for metrics/messages in `internal/http/templates/home.html`
-- [ ] T012 [P] [US1] Add status/idle UI hook to home template in `internal/http/templates/home.html`
+- [X] T010 [US1] Implement home SSE emission (metrics + latest messages) in `internal/http/handlers/live_sse.go`
+- [X] T011 [P] [US1] Bind SSE to home template for metrics/messages in `internal/http/templates/home.html`
+- [X] T012 [P] [US1] Add status/idle UI hook to home template in `internal/http/templates/home.html`
 
 **Checkpoint**: User Story 1 independently testable
 
@@ -70,13 +70,13 @@ description: "Task list for live stream updates feature"
 
 ### Tests for User Story 2
 
-- [ ] T013 [P] [US2] Add integration test for `/messages` SSE ordering/dup avoidance in `tests/integration/live_view_integration_test.go`
+- [X] T013 [P] [US2] Add integration test for `/messages` SSE ordering/dup avoidance in `tests/integration/live_view_integration_test.go`
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Implement `/messages` SSE stream with cursor/backfill in `internal/http/handlers/live_sse.go`
-- [ ] T015 [P] [US2] Update messages list template to append SSE events in `internal/http/templates/messages/index.html`
-- [ ] T016 [P] [US2] Add loading/error/status indicators for `/messages` in `internal/http/templates/messages/index.html`
+- [X] T014 [US2] Implement `/messages` SSE stream with cursor/backfill in `internal/http/handlers/live_sse.go`
+- [X] T015 [P] [US2] Update messages list template to append SSE events in `internal/http/templates/messages/index.html`
+- [X] T016 [P] [US2] Add loading/error/status indicators for `/messages` in `internal/http/templates/messages/index.html`
 
 **Checkpoint**: User Story 2 independently testable
 
@@ -90,13 +90,13 @@ description: "Task list for live stream updates feature"
 
 ### Tests for User Story 3
 
-- [ ] T017 [P] [US3] Add contract/integration test for channel count SSE in `tests/contract/channels_test.go`
+- [X] T017 [P] [US3] Add contract/integration test for channel count SSE in `tests/contract/channels_test.go`
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] Emit `channel_count` SSE events per channel in `internal/http/handlers/live_sse.go`
-- [ ] T019 [P] [US3] Update channel row template to consume SSE counts in `internal/http/templates/channels/row.html`
-- [ ] T020 [P] [US3] Surface status/fallback indicator on channel list in `internal/http/templates/channels/index.html`
+- [X] T018 [US3] Emit `channel_count` SSE events per channel in `internal/http/handlers/live_sse.go`
+- [X] T019 [P] [US3] Update channel row template to consume SSE counts in `internal/http/templates/channels/row.html`
+- [X] T020 [P] [US3] Surface status/fallback indicator on channel list in `internal/http/templates/channels/index.html`
 
 **Checkpoint**: User Story 3 independently testable
 
@@ -110,13 +110,13 @@ description: "Task list for live stream updates feature"
 
 ### Tests for User Story 4
 
-- [ ] T021 [P] [US4] Add integration test for user count SSE in `tests/integration/search_integration_test.go`
+- [X] T021 [P] [US4] Add integration test for user count SSE in `tests/integration/search_integration_test.go`
 
 ### Implementation for User Story 4
 
-- [ ] T022 [US4] Emit `user_count` SSE events for users list in `internal/http/handlers/live_sse.go`
-- [ ] T023 [P] [US4] Update users list template to show live counts in `internal/http/templates/search/users.html`
-- [ ] T024 [P] [US4] Add status/fallback indicator to users list in `internal/http/templates/search/users.html`
+- [X] T022 [US4] Emit `user_count` SSE events for users list in `internal/http/handlers/live_sse.go`
+- [X] T023 [P] [US4] Update users list template to show live counts in `internal/http/templates/search/users.html`
+- [X] T024 [P] [US4] Add status/fallback indicator to users list in `internal/http/templates/search/users.html`
 
 **Checkpoint**: User Story 4 independently testable
 
@@ -130,13 +130,13 @@ description: "Task list for live stream updates feature"
 
 ### Tests for User Story 5
 
-- [ ] T025 [P] [US5] Add integration test for user profile SSE in `tests/integration/live_view_integration_test.go`
+- [X] T025 [P] [US5] Add integration test for user profile SSE in `tests/integration/live_view_integration_test.go`
 
 ### Implementation for User Story 5
 
-- [ ] T026 [US5] Emit `user_profile` SSE events for selected user in `internal/http/handlers/live_sse.go`
-- [ ] T027 [P] [US5] Update user profile template to bind SSE counts/messages in `internal/http/templates/search/user_profile.html`
-- [ ] T028 [P] [US5] Add status/fallback indicator to user profile in `internal/http/templates/search/user_profile.html`
+- [X] T026 [US5] Emit `user_profile` SSE events for selected user in `internal/http/handlers/live_sse.go`
+- [X] T027 [P] [US5] Update user profile template to bind SSE counts/messages in `internal/http/templates/search/user_profile.html`
+- [X] T028 [P] [US5] Add status/fallback indicator to user profile in `internal/http/templates/search/user_profile.html`
 
 **Checkpoint**: User Story 5 independently testable
 
@@ -146,10 +146,10 @@ description: "Task list for live stream updates feature"
 
 **Purpose**: Hardening, documentation, and performance/observability validation across stories
 
-- [ ] T029 [P] Refresh quickstart with final SSE + fallback steps in `specs/003-live-stream-updates/quickstart.md`
-- [ ] T030 Add live metrics/log fields coverage notes in `specs/003-live-stream-updates/plan.md`
-- [ ] T031 [P] Run gofmt and ensure lint cleanliness for changed files (`internal/http/handlers/live_sse.go`, templates)
-- [ ] T032 Execute full test suite `go test ./...` and record evidence in `specs/003-live-stream-updates/plan.md`
+- [X] T029 [P] Refresh quickstart with final SSE + fallback steps in `specs/003-live-stream-updates/quickstart.md`
+- [X] T030 Add live metrics/log fields coverage notes in `specs/003-live-stream-updates/plan.md`
+- [X] T031 [P] Run gofmt and ensure lint cleanliness for changed files (`internal/http/handlers/live_sse.go`, templates)
+- [X] T032 Execute full test suite `go test ./...` and record evidence in `specs/003-live-stream-updates/plan.md`
 
 ---
 

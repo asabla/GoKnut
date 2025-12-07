@@ -73,3 +73,43 @@ specs/003-live-stream-updates/
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
 | None | n/a | n/a |
+
+## Observability Coverage
+
+The SSE implementation includes the following observability features:
+
+### Log Fields
+- `client_id`: Unique identifier for each SSE client connection
+- `view`: The view type (home, messages, channels, users, user_profile)
+- `after_id`: Cursor position for backfill tracking
+- `reason`: Disconnect reason (context_done, client_gone, etc.)
+
+### Metrics (counters/gauges in observability package)
+- `sse_connections_total`: Total SSE connections
+- `sse_connections_active`: Current active connections
+- `sse_events_sent_total`: Total events emitted
+- `sse_backpressure_drops`: Events dropped due to client backpressure
+- `sse_reconnects_total`: Client reconnection attempts
+
+### Log Events
+- `SSE client connected` (INFO): New client connection with view/cursor
+- `SSE client disconnected` (INFO): Client disconnection with reason
+- `SSE backpressure` (WARN): Client buffer full, events dropped
+- `SSE heartbeat sent` (DEBUG): Periodic keepalive events
+
+## Test Evidence
+
+Full test suite executed successfully on 2025-12-07:
+```
+ok  	github.com/asabla/goknut/tests/contract	0.563s
+ok  	github.com/asabla/goknut/tests/integration	4.032s
+ok  	github.com/asabla/goknut/tests/unit	0.854s
+```
+
+All SSE-related tests pass:
+- `TestHomeSSEStream` - Home view SSE with metrics and messages
+- `TestMessagesSSEStream` - Messages view SSE with deduplication
+- `TestMessagesSSEStreamNoDuplicates` - No duplicate messages on backfill
+- `TestChannelsSSEStream` - Channel list SSE with counts
+- `TestUsersSSEStream` - Users list SSE with counts
+- `TestUserProfileSSEStream` - User profile SSE with stats
