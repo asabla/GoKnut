@@ -107,9 +107,13 @@ func (h *SearchHandler) renderSearchUsersPage(w http.ResponseWriter, r *http.Req
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if h.isHTMXRequest(r) {
-		h.templates.ExecuteTemplate(w, "users_results.html", data)
+		if err := h.templates.ExecuteTemplate(w, "users_results.html", data); err != nil {
+			h.logger.Error("failed to render users results template", "error", err)
+		}
 	} else {
-		h.templates.ExecuteTemplate(w, "search/users", data)
+		if err := h.templates.ExecuteTemplate(w, "search/users", data); err != nil {
+			h.logger.Error("failed to render users search template", "error", err)
+		}
 	}
 }
 
@@ -152,7 +156,9 @@ func (h *SearchHandler) handleUserProfile(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	h.templates.ExecuteTemplate(w, "search/user_profile", data)
+	if err := h.templates.ExecuteTemplate(w, "search/user_profile", data); err != nil {
+		h.logger.Error("failed to render user profile template", "error", err)
+	}
 }
 
 func (h *SearchHandler) handleUserMessages(w http.ResponseWriter, r *http.Request) {
@@ -216,9 +222,13 @@ func (h *SearchHandler) handleUserMessages(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if h.isHTMXRequest(r) {
-		h.templates.ExecuteTemplate(w, "user_messages.html", data)
+		if err := h.templates.ExecuteTemplate(w, "user_messages.html", data); err != nil {
+			h.logger.Error("failed to render user messages template", "error", err)
+		}
 	} else {
-		h.templates.ExecuteTemplate(w, "search/user_messages", data)
+		if err := h.templates.ExecuteTemplate(w, "search/user_messages", data); err != nil {
+			h.logger.Error("failed to render user messages page template", "error", err)
+		}
 	}
 }
 
@@ -354,9 +364,13 @@ func (h *SearchHandler) renderSearchMessagesPage(w http.ResponseWriter, r *http.
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if h.isHTMXRequest(r) {
-		h.templates.ExecuteTemplate(w, "messages_results.html", data)
+		if err := h.templates.ExecuteTemplate(w, "messages_results.html", data); err != nil {
+			h.logger.Error("failed to render messages results template", "error", err)
+		}
 	} else {
-		h.templates.ExecuteTemplate(w, "search/messages", data)
+		if err := h.templates.ExecuteTemplate(w, "search/messages", data); err != nil {
+			h.logger.Error("failed to render messages search template", "error", err)
+		}
 	}
 }
 
@@ -375,10 +389,12 @@ func (h *SearchHandler) renderError(w http.ResponseWriter, r *http.Request, mess
 	}
 
 	w.WriteHeader(status)
-	h.templates.ExecuteTemplate(w, "error.html", map[string]any{
+	if err := h.templates.ExecuteTemplate(w, "error.html", map[string]any{
 		"Title":   http.StatusText(status),
 		"Message": message,
-	})
+	}); err != nil {
+		h.logger.Error("failed to render error template", "error", err)
+	}
 }
 
 func (h *SearchHandler) wantsJSON(r *http.Request) bool {
