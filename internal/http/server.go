@@ -13,6 +13,7 @@ import (
 
 	"github.com/asabla/goknut/internal/http/handlers"
 	"github.com/asabla/goknut/internal/observability"
+	"github.com/asabla/goknut/internal/repository"
 	"github.com/asabla/goknut/internal/services"
 )
 
@@ -29,6 +30,8 @@ type Server struct {
 	metrics        *observability.Metrics
 	channelService *services.ChannelService
 	searchService  *services.SearchService
+	channelRepo    *repository.ChannelRepository
+	messageRepo    *repository.MessageRepository
 }
 
 // ServerConfig holds HTTP server configuration.
@@ -38,6 +41,8 @@ type ServerConfig struct {
 	Metrics        *observability.Metrics
 	ChannelService *services.ChannelService
 	SearchService  *services.SearchService
+	ChannelRepo    *repository.ChannelRepository
+	MessageRepo    *repository.MessageRepository
 }
 
 // templateFuncs returns the custom template functions.
@@ -92,6 +97,8 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 		metrics:        cfg.Metrics,
 		channelService: cfg.ChannelService,
 		searchService:  cfg.SearchService,
+		channelRepo:    cfg.ChannelRepo,
+		messageRepo:    cfg.MessageRepo,
 	}
 
 	// Parse templates with custom functions
@@ -144,6 +151,13 @@ func (s *Server) registerRoutes() {
 		channelHandler.RegisterRoutes(s.mux)
 	}
 
+	// Register channel view handler routes (live view)
+	if s.channelRepo != nil && s.messageRepo != nil {
+		channelViewHandler := handlers.NewChannelViewHandler(
+			s.channelRepo, s.messageRepo, s.templates, s.logger, s.metrics)
+		channelViewHandler.RegisterRoutes(s.mux)
+	}
+
 	// Register search handler routes
 	if s.searchService != nil {
 		searchHandler := handlers.NewSearchHandler(s.searchService, s.templates, s.logger)
@@ -188,7 +202,7 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	s.templates.ExecuteTemplate(w, "layout.html", nil)
+	s.templates.ExecuteTemplate(w, "home", nil)
 }
 
 type responseWriter struct {
