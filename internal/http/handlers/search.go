@@ -41,7 +41,9 @@ func (h *SearchHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /users/{username}", h.handleUserProfile)
 	mux.HandleFunc("GET /users/{username}/messages", h.handleUserMessages)
 
-	// Message search
+	// Message search - new primary route at /messages
+	mux.HandleFunc("GET /messages", h.handleMessages)
+	// Legacy route for backwards compatibility
 	mux.HandleFunc("GET /search/messages", h.handleSearchMessages)
 }
 
@@ -233,6 +235,21 @@ func (h *SearchHandler) handleUserMessages(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *SearchHandler) handleSearchMessages(w http.ResponseWriter, r *http.Request) {
+	// Redirect legacy /search/messages to /messages, preserving query params
+	newURL := "/messages"
+	if r.URL.RawQuery != "" {
+		newURL += "?" + r.URL.RawQuery
+	}
+	http.Redirect(w, r, newURL, http.StatusMovedPermanently)
+}
+
+// MessageWithHighlight wraps a message with its highlighted text.
+type MessageWithHighlight struct {
+	Message         dto.Message
+	HighlightedText template.HTML
+}
+
+func (h *SearchHandler) handleMessages(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
@@ -276,7 +293,7 @@ func (h *SearchHandler) handleSearchMessages(w http.ResponseWriter, r *http.Requ
 
 	// If no query, show empty search form with preserved filters
 	if query == "" {
-		h.renderSearchMessagesPage(w, r, nil, query, channelID, userID, startStr, endStr, "")
+		h.renderMessagesPage(w, r, nil, query, channelID, userID, startStr, endStr, "")
 		return
 	}
 
@@ -294,21 +311,21 @@ func (h *SearchHandler) handleSearchMessages(w http.ResponseWriter, r *http.Requ
 
 	// Validate request (includes query length and time range validation)
 	if err := req.Validate(); err != nil {
-		h.renderSearchMessagesPage(w, r, nil, query, channelID, userID, startStr, endStr, err.Error())
+		h.renderMessagesPage(w, r, nil, query, channelID, userID, startStr, endStr, err.Error())
 		return
 	}
 
 	result, err := h.service.SearchMessages(ctx, req)
 	if err != nil {
 		h.logger.Error("failed to search messages", "query", query, "error", err)
-		h.renderSearchMessagesPage(w, r, nil, query, channelID, userID, startStr, endStr, "Failed to search messages. Please try again.")
+		h.renderMessagesPage(w, r, nil, query, channelID, userID, startStr, endStr, "Failed to search messages. Please try again.")
 		return
 	}
 
-	h.renderSearchMessagesPage(w, r, result, query, channelID, userID, startStr, endStr, "")
+	h.renderMessagesPage(w, r, result, query, channelID, userID, startStr, endStr, "")
 }
 
-func (h *SearchHandler) renderSearchMessagesPage(w http.ResponseWriter, r *http.Request, result *services.MessageSearchResult, query string, channelID, userID *int64, startStr, endStr string, errorMsg string) {
+func (h *SearchHandler) renderMessagesPage(w http.ResponseWriter, r *http.Request, result *services.MessageSearchResult, query string, channelID, userID *int64, startStr, endStr string, errorMsg string) {
 	var messages []MessageWithHighlight
 	if result != nil {
 		for _, m := range result.Messages {
@@ -371,20 +388,14 @@ func (h *SearchHandler) renderSearchMessagesPage(w http.ResponseWriter, r *http.
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if h.isHTMXRequest(r) {
-		if err := h.templates.ExecuteTemplate(w, "messages_results.html", data); err != nil {
-			h.logger.Error("failed to render messages results template", "error", err)
+		if err := h.templates.ExecuteTemplate(w, "messages/list.html", data); err != nil {
+			h.logger.Error("failed to render messages list template", "error", err)
 		}
 	} else {
-		if err := h.templates.ExecuteTemplate(w, "search/messages", data); err != nil {
-			h.logger.Error("failed to render messages search template", "error", err)
+		if err := h.templates.ExecuteTemplate(w, "messages/index", data); err != nil {
+			h.logger.Error("failed to render messages index template", "error", err)
 		}
 	}
-}
-
-// MessageWithHighlight wraps a message with its highlighted text.
-type MessageWithHighlight struct {
-	Message         dto.Message
-	HighlightedText template.HTML
 }
 
 func (h *SearchHandler) renderError(w http.ResponseWriter, r *http.Request, message string, status int) {

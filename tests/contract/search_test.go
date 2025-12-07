@@ -152,7 +152,7 @@ func TestSearchMessagesGET(t *testing.T) {
 	srv := httptest.NewServer(nil) // TODO: Wire up actual server
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/search/messages?q=hello")
+	resp, err := http.Get(srv.URL + "/messages?q=hello")
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestSearchMessagesEmptyQuery(t *testing.T) {
 	defer srv.Close()
 
 	// Empty query should still return 200 with empty form
-	resp, err := http.Get(srv.URL + "/search/messages")
+	resp, err := http.Get(srv.URL + "/messages")
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestSearchMessagesQueryTooShort(t *testing.T) {
 	defer srv.Close()
 
 	// Single character query should return error
-	resp, err := http.Get(srv.URL + "/search/messages?q=a")
+	resp, err := http.Get(srv.URL + "/messages?q=a")
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
@@ -211,7 +211,7 @@ func TestSearchMessagesWithFilters(t *testing.T) {
 	defer srv.Close()
 
 	// Search with all filters
-	resp, err := http.Get(srv.URL + "/search/messages?q=hello&channel_id=1&user_id=1&start=2024-01-01&end=2024-12-31")
+	resp, err := http.Get(srv.URL + "/messages?q=hello&channel_id=1&user_id=1&start=2024-01-01&end=2024-12-31")
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
@@ -229,7 +229,7 @@ func TestSearchMessagesPagination(t *testing.T) {
 	defer srv.Close()
 
 	// Search with pagination
-	resp, err := http.Get(srv.URL + "/search/messages?q=hello&page=2&page_size=10")
+	resp, err := http.Get(srv.URL + "/messages?q=hello&page=2&page_size=10")
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
@@ -261,7 +261,7 @@ func TestSearchMessagesHTMXFragment(t *testing.T) {
 	defer srv.Close()
 
 	// Request with HX-Request header should return fragment
-	req, err := http.NewRequest("GET", srv.URL+"/search/messages?q=hello", nil)
+	req, err := http.NewRequest("GET", srv.URL+"/messages?q=hello", nil)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
