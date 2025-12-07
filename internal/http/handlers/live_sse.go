@@ -138,6 +138,10 @@ type SSEHandler struct {
 	// Client management
 	mu      sync.RWMutex
 	clients map[string]*SSEClient
+
+	// Shutdown management
+	shutdownOnce sync.Once
+	shutdownCh   chan struct{}
 }
 
 // NewSSEHandler creates a new SSE handler.
@@ -157,12 +161,21 @@ func NewSSEHandler(
 		logger:      logger,
 		metrics:     metrics,
 		clients:     make(map[string]*SSEClient),
+		shutdownCh:  make(chan struct{}),
 	}
 }
 
 // RegisterRoutes registers SSE routes on the mux.
 func (h *SSEHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /live", h.HandleSSE)
+}
+
+// Shutdown gracefully closes all SSE client connections.
+func (h *SSEHandler) Shutdown() {
+	h.shutdownOnce.Do(func() {
+		h.logger.HTTP("shutting down SSE handler", "clients", h.GetClientCount())
+		close(h.shutdownCh)
+	})
 }
 
 // HandleSSE handles SSE connections for live updates.
@@ -261,6 +274,14 @@ func (h *SSEHandler) HandleSSE(w http.ResponseWriter, r *http.Request) {
 			h.logger.HTTP("SSE client disconnected", "client_id", clientID, "reason", "context_done")
 			if h.metrics != nil {
 				h.metrics.RecordSSEDisconnect(view, "context_done")
+			}
+			return
+
+		case <-h.shutdownCh:
+			// Server shutting down
+			h.logger.HTTP("SSE client disconnected", "client_id", clientID, "reason", "server_shutdown")
+			if h.metrics != nil {
+				h.metrics.RecordSSEDisconnect(view, "server_shutdown")
 			}
 			return
 
