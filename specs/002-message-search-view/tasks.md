@@ -1,6 +1,6 @@
 ---
-
 description: "Task list for Message Search View feature"
+status: Complete
 ---
 
 # Tasks: Message Search View

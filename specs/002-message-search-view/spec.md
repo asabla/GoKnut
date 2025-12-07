@@ -2,7 +2,7 @@
 
 **Feature Branch**: `[002-message-search-view]`  
 **Created**: 2025-12-07  
-**Status**: Draft  
+**Status**: Complete  
 **Input**: User description: "refactor search view to become a view for messages instead. The goal is to give users the ability to filter, search and find messages containing specific words, or made by a specific user or in a specific channel. Should also be able to filter based on time ingested.
 
 This is the second spec added so use 002 and not 001"
