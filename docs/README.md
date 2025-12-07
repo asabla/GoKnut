@@ -78,6 +78,24 @@ export TWITCH_AUTH_MODE=anonymous
 
 ## Running
 
+### Using Makefile (recommended)
+
+```bash
+# Build binary to bin/goknut
+make build
+
+# Run directly without building
+make run
+
+# Run tests
+make test
+
+# Cross-compile artifact to dist/goknut-<os>-<arch>
+make publish
+```
+
+Access the UI at `http://localhost:8080`.
+
 ### Authenticated Mode (Recommended)
 
 ```bash
