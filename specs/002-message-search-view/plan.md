@@ -74,6 +74,15 @@ tests/
 |-----------|------------|---------------------------------------|
 | None | N/A | N/A |
 
+## UX Refactor Plan (Routes, Templates, Layout)
+
+- **Routes**: Move message search entry from `/search/messages` to `/messages` to free `/search` for future use.
+- **Templates**: Relocate message search templates to `internal/http/templates/messages/` with `index.html` (full page) and `list.html` (HTMX partial). Replace legacy `search/messages*.html`.
+- **Layout**: Use table layout (matching users/channels) with expandable rows to show full message text; keep highlighted snippets in preview row.
+- **Navigation**: Update all nav bars to link to `/messages` (rename "Search" tab to "Messages") across channels, users, live, home templates.
+- **Pagination/Filters**: Ensure pagination URLs and HTMX targets point to `/messages` and preserve filters (channel, user, date range).
+- **Tests/Docs**: Update contract test URLs and docs to reflect `/messages` entrypoint and new template paths/UX.
+
 ## Constitution Check (Post-Design)
 
 - Re-evaluated after Phase 1 design artifacts. **Status: PENDING**
