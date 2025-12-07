@@ -22,8 +22,8 @@ description: "Task list for Message Search View feature"
 
 **Purpose**: Ensure routing and templates baseline for search view.
 
-- [ ] T001 Confirm `/search/messages` route and HTMX handlers are registered in `internal/http/server.go` and `internal/http/handlers/search.go`
-- [ ] T002 [P] Ensure search templates directory exists and is referenced in `internal/http/templates/search/messages.html`
+- [X] T001 Confirm `/search/messages` route and HTMX handlers are registered in `internal/http/server.go` and `internal/http/handlers/search.go`
+- [X] T002 [P] Ensure search templates directory exists and is referenced in `internal/http/templates/search/messages.html`
 
 ---
 
@@ -33,8 +33,8 @@ description: "Task list for Message Search View feature"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T003 Add base query validation (min length, pagination defaults) in `internal/http/handlers/search.go`
-- [ ] T004 [P] Confirm search repository supports FTS query with pagination defaults in `internal/search/search_repository.go`
+- [X] T003 Add base query validation (min length, pagination defaults) in `internal/http/handlers/search.go`
+- [X] T004 [P] Confirm search repository supports FTS query with pagination defaults in `internal/search/search_repository.go`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel.
 
@@ -48,15 +48,15 @@ description: "Task list for Message Search View feature"
 
 ### Tests for User Story 1 (required per spec)
 
-- [ ] T005 [P] [US1] Add contract test for GET `/search/messages` text query in `tests/contract/search_test.go`
-- [ ] T006 [P] [US1] Add integration test for text search results in `tests/integration/search_integration_test.go`
+- [X] T005 [P] [US1] Add contract test for GET `/search/messages` text query in `tests/contract/search_test.go`
+- [X] T006 [P] [US1] Add integration test for text search results in `tests/integration/search_integration_test.go`
 
 ### Implementation for User Story 1
 
-- [ ] T007 [P] [US1] Ensure search service performs text search and returns context fields in `internal/services/search_service.go`
-- [ ] T008 [P] [US1] Render message search results (list and empty state) in `internal/http/templates/search/messages.html`
-- [ ] T009 [US1] Handle HTMX request flow and preserve inputs in `internal/http/handlers/search.go`
-- [ ] T010 [US1] Include navigation links from results to channel/message view in `internal/http/templates/search/messages.html`
+- [X] T007 [P] [US1] Ensure search service performs text search and returns context fields in `internal/services/search_service.go`
+- [X] T008 [P] [US1] Render message search results (list and empty state) in `internal/http/templates/search/messages.html`
+- [X] T009 [US1] Handle HTMX request flow and preserve inputs in `internal/http/handlers/search.go`
+- [X] T010 [US1] Include navigation links from results to channel/message view in `internal/http/templates/search/messages.html`
 
 **Checkpoint**: User Story 1 fully functional and independently testable.
 
@@ -70,14 +70,14 @@ description: "Task list for Message Search View feature"
 
 ### Tests for User Story 2 (required per spec)
 
-- [ ] T011 [P] [US2] Add contract test for author/channel filters on `/search/messages` in `tests/contract/search_test.go`
-- [ ] T012 [P] [US2] Add integration test covering author/channel filters in `tests/integration/search_integration_test.go`
+- [X] T011 [P] [US2] Add contract test for author/channel filters on `/search/messages` in `tests/contract/search_test.go`
+- [X] T012 [P] [US2] Add integration test covering author/channel filters in `tests/integration/search_integration_test.go`
 
 ### Implementation for User Story 2
 
-- [ ] T013 [P] [US2] Parse author/channel filters and validate IDs in `internal/http/handlers/search.go`
-- [ ] T014 [P] [US2] Apply author/channel filters in search service and repository in `internal/services/search_service.go` and `internal/search/search_repository.go`
-- [ ] T015 [US2] Update search form UI to display and persist author/channel filters in `internal/http/templates/search/messages.html`
+- [X] T013 [P] [US2] Parse author/channel filters and validate IDs in `internal/http/handlers/search.go`
+- [X] T014 [P] [US2] Apply author/channel filters in search service and repository in `internal/services/search_service.go` and `internal/search/search_repository.go`
+- [X] T015 [US2] Update search form UI to display and persist author/channel filters in `internal/http/templates/search/messages.html`
 
 **Checkpoint**: User Stories 1 and 2 independently functional.
 
@@ -91,14 +91,14 @@ description: "Task list for Message Search View feature"
 
 ### Tests for User Story 3 (required per spec)
 
-- [ ] T016 [P] [US3] Add contract test for time-range filter on `/search/messages` in `tests/contract/search_test.go`
-- [ ] T017 [P] [US3] Add integration test for time-range filtering in `tests/integration/search_integration_test.go`
+- [X] T016 [P] [US3] Add contract test for time-range filter on `/search/messages` in `tests/contract/search_test.go`
+- [X] T017 [P] [US3] Add integration test for time-range filtering in `tests/integration/search_integration_test.go`
 
 ### Implementation for User Story 3
 
-- [ ] T018 [P] [US3] Parse and validate start/end date inputs in `internal/http/handlers/search.go`
-- [ ] T019 [P] [US3] Apply time-range filtering and end-of-day expansion in `internal/services/search_service.go` and `internal/search/search_repository.go`
-- [ ] T020 [US3] Show time filter fields and validation errors in `internal/http/templates/search/messages.html`
+- [X] T018 [P] [US3] Parse and validate start/end date inputs in `internal/http/handlers/search.go`
+- [X] T019 [P] [US3] Apply time-range filtering and end-of-day expansion in `internal/services/search_service.go` and `internal/search/search_repository.go`
+- [X] T020 [US3] Show time filter fields and validation errors in `internal/http/templates/search/messages.html`
 
 **Checkpoint**: All user stories independently functional.
 
@@ -108,9 +108,9 @@ description: "Task list for Message Search View feature"
 
 **Purpose**: Consolidate UX, performance, observability, and documentation improvements.
 
-- [ ] T021 [P] Document performance/observability for search paths in `docs/perf.md` and structured logging in `internal/observability/observability.go`
-- [ ] T022 Address accessibility, empty, loading, and error states for search templates in `internal/http/templates/search/messages.html`
-- [ ] T023 Update quickstart and feature docs with usage examples in `specs/002-message-search-view/quickstart.md` and `specs/002-message-search-view/research.md`
+- [X] T021 [P] Document performance/observability for search paths in `docs/perf.md` and structured logging in `internal/observability/observability.go`
+- [X] T022 Address accessibility, empty, loading, and error states for search templates in `internal/http/templates/search/messages.html`
+- [X] T023 Update quickstart and feature docs with usage examples in `specs/002-message-search-view/quickstart.md` and `specs/002-message-search-view/research.md`
 
 ---
 

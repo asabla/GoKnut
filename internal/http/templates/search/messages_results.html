@@ -1,5 +1,16 @@
 <!-- Message Search Results Fragment (for HTMX partial updates) -->
-{{if not .HasQuery}}
+{{if .Error}}
+<div class="rounded-md bg-red-900/50 border border-red-500/50 p-4" role="alert">
+    <div class="flex">
+        <svg class="h-5 w-5 text-red-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"/>
+        </svg>
+        <div class="ml-3">
+            <p class="text-sm font-medium text-red-300">{{.Error}}</p>
+        </div>
+    </div>
+</div>
+{{else if not .HasQuery}}
 <div class="text-center py-12 text-gray-500">
     <svg class="mx-auto h-12 w-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -54,8 +65,8 @@
     <nav class="flex items-center justify-between pt-4" aria-label="Pagination">
         <div class="flex-1 flex justify-between sm:justify-end space-x-3">
             {{if .HasPrev}}
-            <a href="/search/messages?q={{.Query}}&page={{.PrevPage}}{{if .ChannelID}}&channel_id={{.ChannelID}}{{end}}{{if .UserID}}&user_id={{.UserID}}{{end}}"
-               hx-get="/search/messages?q={{.Query}}&page={{.PrevPage}}{{if .ChannelID}}&channel_id={{.ChannelID}}{{end}}{{if .UserID}}&user_id={{.UserID}}{{end}}"
+            <a href="/search/messages?q={{.Query}}&page={{.PrevPage}}{{if .ChannelID}}&channel_id={{.ChannelID}}{{end}}{{if .UserID}}&user_id={{.UserID}}{{end}}{{if .StartStr}}&start={{.StartStr}}{{end}}{{if .EndStr}}&end={{.EndStr}}{{end}}"
+               hx-get="/search/messages?q={{.Query}}&page={{.PrevPage}}{{if .ChannelID}}&channel_id={{.ChannelID}}{{end}}{{if .UserID}}&user_id={{.UserID}}{{end}}{{if .StartStr}}&start={{.StartStr}}{{end}}{{if .EndStr}}&end={{.EndStr}}{{end}}"
                hx-target="#search-results"
                hx-swap="innerHTML"
                class="relative inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-twitch-gray hover:bg-gray-700">
@@ -66,8 +77,8 @@
                 Page {{.Page}} of {{.TotalPages}}
             </span>
             {{if .HasNext}}
-            <a href="/search/messages?q={{.Query}}&page={{.NextPage}}{{if .ChannelID}}&channel_id={{.ChannelID}}{{end}}{{if .UserID}}&user_id={{.UserID}}{{end}}"
-               hx-get="/search/messages?q={{.Query}}&page={{.NextPage}}{{if .ChannelID}}&channel_id={{.ChannelID}}{{end}}{{if .UserID}}&user_id={{.UserID}}{{end}}"
+            <a href="/search/messages?q={{.Query}}&page={{.NextPage}}{{if .ChannelID}}&channel_id={{.ChannelID}}{{end}}{{if .UserID}}&user_id={{.UserID}}{{end}}{{if .StartStr}}&start={{.StartStr}}{{end}}{{if .EndStr}}&end={{.EndStr}}{{end}}"
+               hx-get="/search/messages?q={{.Query}}&page={{.NextPage}}{{if .ChannelID}}&channel_id={{.ChannelID}}{{end}}{{if .UserID}}&user_id={{.UserID}}{{end}}{{if .StartStr}}&start={{.StartStr}}{{end}}{{if .EndStr}}&end={{.EndStr}}{{end}}"
                hx-target="#search-results"
                hx-swap="innerHTML"
                class="relative inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-twitch-gray hover:bg-gray-700">

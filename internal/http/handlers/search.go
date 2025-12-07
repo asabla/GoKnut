@@ -239,15 +239,10 @@ func (h *SearchHandler) handleSearchMessages(w http.ResponseWriter, r *http.Requ
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
 
-	// If no query, show empty search form
-	if query == "" {
-		h.renderSearchMessagesPage(w, r, nil, query, nil, nil, nil, nil)
-		return
-	}
-
-	// Parse optional filters
+	// Parse optional filters (always parse to preserve in form)
 	var channelID, userID *int64
 	var startTime, endTime *time.Time
+	var startStr, endStr string
 
 	if chID := r.URL.Query().Get("channel_id"); chID != "" {
 		id, err := strconv.ParseInt(chID, 10, 64)
@@ -264,17 +259,25 @@ func (h *SearchHandler) handleSearchMessages(w http.ResponseWriter, r *http.Requ
 	}
 
 	if start := r.URL.Query().Get("start"); start != "" {
+		startStr = start
 		if t, err := time.Parse("2006-01-02", start); err == nil {
 			startTime = &t
 		}
 	}
 
 	if end := r.URL.Query().Get("end"); end != "" {
+		endStr = end
 		if t, err := time.Parse("2006-01-02", end); err == nil {
 			// Include the entire day
 			endOfDay := t.Add(24*time.Hour - time.Second)
 			endTime = &endOfDay
 		}
+	}
+
+	// If no query, show empty search form with preserved filters
+	if query == "" {
+		h.renderSearchMessagesPage(w, r, nil, query, channelID, userID, startStr, endStr, "")
+		return
 	}
 
 	req := dto.SearchMessagesRequest{
@@ -289,23 +292,23 @@ func (h *SearchHandler) handleSearchMessages(w http.ResponseWriter, r *http.Requ
 		},
 	}
 
-	// Validate query length
-	if len(query) < 2 {
-		h.renderError(w, r, "Search query must be at least 2 characters", http.StatusBadRequest)
+	// Validate request (includes query length and time range validation)
+	if err := req.Validate(); err != nil {
+		h.renderSearchMessagesPage(w, r, nil, query, channelID, userID, startStr, endStr, err.Error())
 		return
 	}
 
 	result, err := h.service.SearchMessages(ctx, req)
 	if err != nil {
 		h.logger.Error("failed to search messages", "query", query, "error", err)
-		h.renderError(w, r, "Failed to search messages", http.StatusInternalServerError)
+		h.renderSearchMessagesPage(w, r, nil, query, channelID, userID, startStr, endStr, "Failed to search messages. Please try again.")
 		return
 	}
 
-	h.renderSearchMessagesPage(w, r, result, query, channelID, userID, startTime, endTime)
+	h.renderSearchMessagesPage(w, r, result, query, channelID, userID, startStr, endStr, "")
 }
 
-func (h *SearchHandler) renderSearchMessagesPage(w http.ResponseWriter, r *http.Request, result *services.MessageSearchResult, query string, channelID, userID *int64, startTime, endTime *time.Time) {
+func (h *SearchHandler) renderSearchMessagesPage(w http.ResponseWriter, r *http.Request, result *services.MessageSearchResult, query string, channelID, userID *int64, startStr, endStr string, errorMsg string) {
 	var messages []MessageWithHighlight
 	if result != nil {
 		for _, m := range result.Messages {
@@ -341,7 +344,7 @@ func (h *SearchHandler) renderSearchMessagesPage(w http.ResponseWriter, r *http.
 	data := map[string]any{
 		"Query":      query,
 		"Messages":   messages,
-		"IsEmpty":    len(messages) == 0 && query != "",
+		"IsEmpty":    len(messages) == 0 && query != "" && errorMsg == "",
 		"HasQuery":   query != "",
 		"Page":       page,
 		"TotalPages": totalPages,
@@ -352,12 +355,16 @@ func (h *SearchHandler) renderSearchMessagesPage(w http.ResponseWriter, r *http.
 		"PrevPage":   page - 1,
 		"ChannelID":  channelID,
 		"UserID":     userID,
-		"StartTime":  startTime,
-		"EndTime":    endTime,
+		"StartStr":   startStr,
+		"EndStr":     endStr,
+		"Error":      errorMsg,
 	}
 
 	if h.wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
+		if errorMsg != "" {
+			w.WriteHeader(http.StatusBadRequest)
+		}
 		json.NewEncoder(w).Encode(data)
 		return
 	}
