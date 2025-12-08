@@ -1,164 +1,74 @@
 {{define "home"}}
 <!DOCTYPE html>
 <html lang="en" class="h-full">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{template "shared/head"}}
     <title>GoKnut - Twitch Chat Archiver</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        twitch: {
-                            purple: '#9146FF',
-                            dark: '#18181B',
-                            gray: '#1F1F23',
-                            light: '#EFEFF1',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
-            .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { opacity: 1; }
-        }
-    </style>
 </head>
-
-<body class="min-h-screen flex flex-col bg-twitch-dark text-twitch-light">
-    <nav class="bg-twitch-gray border-b border-gray-700">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center">
-                    <a href="/" class="flex-shrink-0"><span
-                            class="text-twitch-purple font-bold text-xl">GoKnut</span></a>
-                    <div class="ml-10 flex items-baseline space-x-4">
-                        <a href="/channels"
-                            class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Channels</a>
-                        <a href="/users"
-                            class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Users</a>
-                        <a href="/messages"
-                            class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Messages</a>
-                    </div>
-                </div>
-                <!-- SSE Status Indicator (inline) -->
-                <div class="flex items-center space-x-2">
-                    <span id="sse-status-home" class="inline-flex items-center text-xs" data-testid="sse-status-home">
-                        <span id="sse-home-connected" class="hidden items-center text-green-400">
-                            <span class="relative flex h-1.5 w-1.5 mr-1">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
-                            </span>
-                            Live
-                        </span>
-                        <span id="sse-home-idle" class="hidden items-center text-gray-500">
-                            <span class="h-1.5 w-1.5 rounded-full bg-gray-500 mr-1"></span>
-                            Idle
-                        </span>
-                        <span id="sse-home-reconnecting" class="hidden items-center text-yellow-400">
-                            <svg class="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                            </svg>
-                            Reconnecting
-                        </span>
-                        <span id="sse-home-error" class="hidden items-center text-red-400">
-                            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Offline
-                        </span>
-                    </span>
-                </div>
-            </div>
-        </div>
-    </nav>
-    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex-1">
+<body class="min-h-screen flex flex-col bg-surface-dark text-twitch-light">
+    {{template "shared/nav" dict "ActivePage" ""}}
+    
+    <main class="flex-1 container-prose py-6 w-full">
         <div class="space-y-8">
             <!-- Statistics -->
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-4" data-testid="statistics-section">
-                <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700 text-center">
-                    <div class="text-3xl font-bold text-twitch-purple" id="stat-messages" data-testid="stat-messages">{{formatNumber
-                        .TotalMessages}}</div>
+                <div class="card p-4 text-center">
+                    <div class="text-3xl font-bold text-primary-500" id="stat-messages" data-testid="stat-messages">{{formatNumber .TotalMessages}}</div>
                     <div class="text-sm text-gray-400 mt-1">Messages Archived</div>
                 </div>
-                <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700 text-center">
-                    <div class="text-3xl font-bold text-twitch-purple" id="stat-channels" data-testid="stat-channels">{{.TotalChannels}}
-                    </div>
+                <div class="card p-4 text-center">
+                    <div class="text-3xl font-bold text-primary-500" id="stat-channels" data-testid="stat-channels">{{.TotalChannels}}</div>
                     <div class="text-sm text-gray-400 mt-1">Total Channels</div>
                 </div>
-                <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700 text-center">
-                    <div class="text-3xl font-bold text-green-400" id="stat-enabled" data-testid="stat-enabled">{{.EnabledChannels}}</div>
+                <div class="card p-4 text-center">
+                    <div class="text-3xl font-bold text-success-400" id="stat-enabled" data-testid="stat-enabled">{{.EnabledChannels}}</div>
                     <div class="text-sm text-gray-400 mt-1">Active Channels</div>
                 </div>
-                <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700 text-center">
-                    <div class="text-3xl font-bold text-twitch-purple" id="stat-users" data-testid="stat-users">{{formatNumber
-                        .TotalUsers}}</div>
+                <div class="card p-4 text-center">
+                    <div class="text-3xl font-bold text-primary-500" id="stat-users" data-testid="stat-users">{{formatNumber .TotalUsers}}</div>
                     <div class="text-sm text-gray-400 mt-1">Unique Users</div>
                 </div>
             </div>
 
             <!-- Quick Actions -->
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
-                <a href="/channels"
-                    class="bg-twitch-gray rounded-lg p-6 border border-gray-700 hover:border-twitch-purple transition-colors group">
+                <a href="/channels" class="card-interactive p-6 group">
                     <div class="flex items-center">
-                        <div
-                            class="flex-shrink-0 h-12 w-12 rounded-full bg-twitch-purple/20 flex items-center justify-center group-hover:bg-twitch-purple/30 transition-colors">
-                            <svg class="h-6 w-6 text-twitch-purple" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10m-9 0v14a2 2 0 002 2h6a2 2 0 002-2V4m-9 0H5a2 2 0 00-2 2v12a2 2 0 002 2h2" />
+                        <div class="flex-shrink-0 h-12 w-12 rounded-full bg-primary-500/20 flex items-center justify-center group-hover:bg-primary-500/30 transition-colors">
+                            <svg class="h-6 w-6 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10m-9 0v14a2 2 0 002 2h6a2 2 0 002-2V4m-9 0H5a2 2 0 00-2 2v12a2 2 0 002 2h2" />
                             </svg>
                         </div>
                         <div class="ml-4">
-                            <h2 class="text-lg font-medium text-white group-hover:text-twitch-purple transition-colors">
-                                Channels</h2>
+                            <h2 class="text-lg font-medium text-white group-hover:text-primary-500 transition-colors">Channels</h2>
                             <p class="text-sm text-gray-400">Manage tracked Twitch channels</p>
                         </div>
                     </div>
                 </a>
 
-                <a href="/users"
-                    class="bg-twitch-gray rounded-lg p-6 border border-gray-700 hover:border-twitch-purple transition-colors group">
+                <a href="/users" class="card-interactive p-6 group">
                     <div class="flex items-center">
-                        <div
-                            class="flex-shrink-0 h-12 w-12 rounded-full bg-twitch-purple/20 flex items-center justify-center group-hover:bg-twitch-purple/30 transition-colors">
-                            <svg class="h-6 w-6 text-twitch-purple" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        <div class="flex-shrink-0 h-12 w-12 rounded-full bg-primary-500/20 flex items-center justify-center group-hover:bg-primary-500/30 transition-colors">
+                            <svg class="h-6 w-6 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                             </svg>
                         </div>
                         <div class="ml-4">
-                            <h2 class="text-lg font-medium text-white group-hover:text-twitch-purple transition-colors">
-                                Users</h2>
+                            <h2 class="text-lg font-medium text-white group-hover:text-primary-500 transition-colors">Users</h2>
                             <p class="text-sm text-gray-400">Search and explore user profiles</p>
                         </div>
                     </div>
                 </a>
 
-                <a href="/messages"
-                    class="bg-twitch-gray rounded-lg p-6 border border-gray-700 hover:border-twitch-purple transition-colors group">
+                <a href="/messages" class="card-interactive p-6 group">
                     <div class="flex items-center">
-                        <div
-                            class="flex-shrink-0 h-12 w-12 rounded-full bg-twitch-purple/20 flex items-center justify-center group-hover:bg-twitch-purple/30 transition-colors">
-                            <svg class="h-6 w-6 text-twitch-purple" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        <div class="flex-shrink-0 h-12 w-12 rounded-full bg-primary-500/20 flex items-center justify-center group-hover:bg-primary-500/30 transition-colors">
+                            <svg class="h-6 w-6 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         </div>
                         <div class="ml-4">
-                            <h2 class="text-lg font-medium text-white group-hover:text-twitch-purple transition-colors">
-                                Messages</h2>
+                            <h2 class="text-lg font-medium text-white group-hover:text-primary-500 transition-colors">Messages</h2>
                             <p class="text-sm text-gray-400">Find messages across all channels</p>
                         </div>
                     </div>
@@ -166,44 +76,38 @@
             </div>
 
             <!-- Latest Messages -->
-            <div class="bg-twitch-gray rounded-lg border border-gray-700" data-testid="latest-messages-section">
-                <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+            <div class="card" data-testid="latest-messages-section">
+                <div class="px-6 py-4 border-b border-surface-border flex items-center justify-between">
                     <h2 class="text-xl font-bold text-white">Latest Messages</h2>
-                    <a href="/messages"
-                        class="text-sm text-twitch-purple hover:text-twitch-light transition-colors">View all</a>
+                    <a href="/messages" class="text-sm text-primary-500 hover:text-twitch-light transition-colors">View all</a>
                 </div>
                 <div id="latest-messages-container" class="divide-y divide-gray-700 max-h-96 overflow-y-auto">
                     {{if .RecentMessages}}
                     {{range .RecentMessages}}
-                    <div class="px-6 py-3 hover:bg-gray-800/50 transition-colors message-row" data-testid="message-row" data-message-id="{{.ID}}">
+                    <div class="px-6 py-3 hover:bg-surface-hover transition-colors message-row" data-testid="message-row" data-message-id="{{.ID}}">
                         <div class="flex items-start space-x-3">
-                            <span class="text-gray-500 text-xs shrink-0 tabular-nums mt-0.5"
-                                title='{{.SentAt.Format `2006-01-02 15:04:05 MST`}}'>
+                            <span class="text-gray-500 text-xs shrink-0 tabular-nums mt-0.5" title='{{.SentAt.Format `2006-01-02 15:04:05 MST`}}'>
                                 {{.SentAt.Format "15:04:05"}}
                             </span>
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center space-x-2 text-sm">
-                                    <a href="/users/{{.Username}}"
-                                        class="font-medium text-twitch-purple hover:underline shrink-0">
+                                    <a href="/users/{{.Username}}" class="font-medium text-primary-500 hover:underline shrink-0">
                                         {{if .DisplayName}}{{.DisplayName}}{{else}}{{.Username}}{{end}}
                                     </a>
                                     <span class="text-gray-500">in</span>
-                                    <a href="/channels/{{.ChannelName}}/view"
-                                        class="text-gray-400 hover:text-twitch-purple hover:underline shrink-0">
+                                    <a href="/channels/{{.ChannelName}}/view" class="text-gray-400 hover:text-primary-500 hover:underline shrink-0">
                                         #{{.ChannelName}}
                                     </a>
                                 </div>
-                                <p class="text-twitch-light text-sm mt-1 break-words">{{.Text}}</p>
+                                <p class="text-twitch-light text-sm mt-1 break-words measure">{{.Text}}</p>
                             </div>
                         </div>
                     </div>
                     {{end}}
                     {{else}}
-                    <div id="empty-messages" class="px-6 py-12 text-center text-gray-500">
-                        <svg class="h-12 w-12 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    <div id="empty-messages" class="empty-state">
+                        <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                         </svg>
                         <p>No messages yet</p>
                         <p class="text-sm mt-1">Messages will appear here once channels start being tracked</p>
@@ -211,15 +115,12 @@
                     {{end}}
                 </div>
             </div>
-
         </div>
     </main>
-    <footer class="bg-twitch-gray border-t border-gray-700 mt-auto">
-        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-            <p class="text-center text-gray-500 text-sm">Twitch Chat Archiver & Explorer</p>
-        </div>
-    </footer>
-
+    
+    {{template "shared/footer"}}
+    {{template "shared/htmx-config"}}
+    
     <!-- SSE Client Script for Home View -->
     <script>
     (function() {
@@ -228,12 +129,11 @@
         var eventSource = null;
         var reconnectAttempts = 0;
         var maxReconnectAttempts = 10;
-        var baseReconnectDelay = 1000; // 1 second
-        var maxReconnectDelay = 30000; // 30 seconds
+        var baseReconnectDelay = 1000;
+        var maxReconnectDelay = 30000;
         var lastCursor = 0;
         var isConnected = false;
         
-        // Status indicator management
         function showStatus(state) {
             var states = ['connected', 'idle', 'reconnecting', 'error'];
             states.forEach(function(s) {
@@ -250,14 +150,12 @@
             }
         }
         
-        // Format number for display
         function formatNumber(n) {
             if (n < 1000) return n.toString();
             if (n < 1000000) return (n / 1000).toFixed(1) + 'K';
             return (n / 1000000).toFixed(1) + 'M';
         }
         
-        // Update metrics display
         function updateMetrics(data) {
             var el = document.getElementById('stat-messages');
             if (el) el.textContent = formatNumber(data.total_messages || 0);
@@ -269,22 +167,18 @@
             if (el) el.textContent = formatNumber(data.total_users || 0);
         }
         
-        // Add new message to the list
         function addMessage(msg) {
             var container = document.getElementById('latest-messages-container');
             if (!container) return;
             
-            // Remove empty state if present
             var emptyState = document.getElementById('empty-messages');
             if (emptyState) emptyState.remove();
             
-            // Check for duplicate
             var existing = container.querySelector('[data-message-id="' + msg.id + '"]');
             if (existing) return;
             
-            // Create message element
             var div = document.createElement('div');
-            div.className = 'px-6 py-3 hover:bg-gray-800/50 transition-colors message-row';
+            div.className = 'px-6 py-3 hover:bg-surface-hover transition-colors message-row sse-updated';
             div.setAttribute('data-testid', 'message-row');
             div.setAttribute('data-message-id', msg.id);
             
@@ -295,39 +189,34 @@
                 '<span class="text-gray-500 text-xs shrink-0 tabular-nums mt-0.5">' + timeStr + '</span>' +
                 '<div class="min-w-0 flex-1">' +
                     '<div class="flex items-center space-x-2 text-sm">' +
-                        '<a href="/users/' + msg.username + '" class="font-medium text-twitch-purple hover:underline shrink-0">' +
+                        '<a href="/users/' + msg.username + '" class="font-medium text-primary-500 hover:underline shrink-0">' +
                             (msg.display_name || msg.username) + '</a>' +
                         '<span class="text-gray-500">in</span>' +
-                        '<a href="/channels/' + msg.channel_name + '/view" class="text-gray-400 hover:text-twitch-purple hover:underline shrink-0">' +
+                        '<a href="/channels/' + msg.channel_name + '/view" class="text-gray-400 hover:text-primary-500 hover:underline shrink-0">' +
                             '#' + msg.channel_name + '</a>' +
                     '</div>' +
-                    '<p class="text-twitch-light text-sm mt-1 break-words">' + escapeHtml(msg.text) + '</p>' +
+                    '<p class="text-twitch-light text-sm mt-1 break-words measure">' + escapeHtml(msg.text) + '</p>' +
                 '</div>' +
             '</div>';
             
-            // Insert at the top (newest first)
             container.insertBefore(div, container.firstChild);
             
-            // Limit to 20 messages
             var messages = container.querySelectorAll('.message-row');
             if (messages.length > 20) {
                 messages[messages.length - 1].remove();
             }
         }
         
-        // Escape HTML to prevent XSS
         function escapeHtml(text) {
             var div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
         
-        // Handle SSE message
         function handleMessage(event) {
             try {
                 var data = JSON.parse(event.data);
                 
-                // Update cursor for reconnection
                 if (data.cursor) lastCursor = data.cursor;
                 
                 switch (data.type) {
@@ -340,7 +229,6 @@
                             showStatus('idle');
                         } else if (data.state === 'error' || data.state === 'fallback') {
                             showStatus('error');
-                            // If server suggests fallback, we could switch to polling
                         }
                         break;
                         
@@ -357,7 +245,6 @@
             }
         }
         
-        // Connect to SSE
         function connect() {
             if (eventSource) {
                 eventSource.close();
@@ -384,7 +271,6 @@
                 showStatus('error');
                 eventSource.close();
                 
-                // Exponential backoff reconnection
                 if (reconnectAttempts < maxReconnectAttempts) {
                     var delay = Math.min(baseReconnectDelay * Math.pow(2, reconnectAttempts), maxReconnectDelay);
                     reconnectAttempts++;
@@ -396,13 +282,11 @@
             };
         }
         
-        // Expose reconnect function globally for retry button
         window.sseReconnect = function() {
             reconnectAttempts = 0;
             connect();
         };
         
-        // Start connection when page loads
         if (typeof EventSource !== 'undefined') {
             connect();
         } else {
@@ -410,7 +294,6 @@
             showStatus('error');
         }
         
-        // Cleanup on page unload
         window.addEventListener('beforeunload', function() {
             if (eventSource) {
                 eventSource.close();
@@ -419,6 +302,5 @@
     })();
     </script>
 </body>
-
 </html>
 {{end}}

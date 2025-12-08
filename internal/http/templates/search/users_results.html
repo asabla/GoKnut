@@ -1,14 +1,14 @@
 <!-- User List Fragment (for HTMX partial updates) -->
 {{if .IsEmpty}}
-<div class="text-center py-12 text-gray-500">
-    <svg class="mx-auto h-12 w-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+<div class="empty-state">
+    <svg class="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
     </svg>
     {{if .Query}}
-    <p class="mt-4 text-lg">No users found matching "{{.Query}}"</p>
+    <p class="text-lg">No users found matching "{{.Query}}"</p>
     <p class="mt-1 text-sm">Try a different filter</p>
     {{else}}
-    <p class="mt-4 text-lg">No users found</p>
+    <p class="text-lg">No users found</p>
     <p class="mt-1 text-sm">Users will appear here once they send messages in archived channels</p>
     {{end}}
 </div>
@@ -24,21 +24,21 @@
     </div>
 
     <!-- Results table -->
-    <div class="bg-twitch-gray rounded-lg border border-gray-700 overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-700">
-            <thead class="bg-gray-800">
+    <div class="table-container">
+        <table class="table">
+            <thead class="table-header">
                 <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Username</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Messages</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">First Seen</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Last Seen</th>
+                    <th scope="col" class="table-header-cell">Username</th>
+                    <th scope="col" class="table-header-cell">Messages</th>
+                    <th scope="col" class="table-header-cell">First Seen</th>
+                    <th scope="col" class="table-header-cell">Last Seen</th>
                     <th scope="col" class="relative px-6 py-3"><span class="sr-only">View</span></th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-700">
+            <tbody class="table-body">
                 {{range .Users}}
-                <tr class="hover:bg-gray-700/50 transition-colors" data-user-id="{{.ID}}" data-username="{{.Username}}">
-                    <td class="px-6 py-4 whitespace-nowrap">
+                <tr class="table-row" data-user-id="{{.ID}}" data-username="{{.Username}}">
+                    <td class="table-cell">
                         <div class="flex items-center">
                             <div>
                                 <div class="text-sm font-medium text-white">
@@ -50,20 +50,19 @@
                             </div>
                         </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap" data-sse-target="message-count">
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-900 text-purple-200">
+                    <td class="table-cell" data-sse-target="message-count">
+                        <span class="badge badge-primary">
                             {{.TotalMessages}}
                         </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                    <td class="table-cell text-sm text-gray-400">
                         {{.FirstSeenAt.Format "Jan 02, 2006"}}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400" data-sse-target="last-seen">
+                    <td class="table-cell text-sm text-gray-400" data-sse-target="last-seen">
                         {{.LastSeenAt.Format "Jan 02, 2006 15:04"}}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <a href="/users/{{.Username}}" 
-                           class="text-twitch-purple hover:text-purple-400">
+                    <td class="table-cell text-right text-sm font-medium">
+                        <a href="/users/{{.Username}}" class="text-primary-500 hover:text-primary-400">
                             View Profile
                         </a>
                     </td>
@@ -82,7 +81,7 @@
                hx-get="/users?q={{.Query}}&page={{.PrevPage}}"
                hx-target="#users-list"
                hx-swap="innerHTML"
-               class="relative inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-twitch-gray hover:bg-gray-700">
+               class="btn btn-md btn-secondary">
                 Previous
             </a>
             {{end}}
@@ -94,7 +93,7 @@
                hx-get="/users?q={{.Query}}&page={{.NextPage}}"
                hx-target="#users-list"
                hx-swap="innerHTML"
-               class="relative inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-twitch-gray hover:bg-gray-700">
+               class="btn btn-md btn-secondary">
                 Next
             </a>
             {{end}}
