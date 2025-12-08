@@ -2,123 +2,25 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{template "shared/head"}}
     <title>Channels - GoKnut</title>
-    
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- HTMX -->
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    
-    <!-- Custom Tailwind Config -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        twitch: {
-                            purple: '#9146FF',
-                            dark: '#18181B',
-                            gray: '#1F1F23',
-                            light: '#EFEFF1',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .htmx-indicator {
-                opacity: 0;
-                transition: opacity 200ms ease-in;
-            }
-            .htmx-request .htmx-indicator {
-                opacity: 1;
-            }
-            .htmx-request.htmx-indicator {
-                opacity: 1;
-            }
-            .sse-updated { animation: highlight-fade 2s ease-out; }
-            @keyframes highlight-fade { from { background-color: rgba(145, 70, 255, 0.2); } to { background-color: transparent; } }
-        }
-    </style>
 </head>
-<body class="min-h-screen flex flex-col bg-twitch-dark text-twitch-light">
-    <!-- Navigation -->
-    <nav class="bg-twitch-gray border-b border-gray-700">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center">
-                    <a href="/" class="flex-shrink-0">
-                        <span class="text-twitch-purple font-bold text-xl">GoKnut</span>
-                    </a>
-                    <div class="ml-10 flex items-baseline space-x-1">
-                        <a href="/channels" 
-                           class="text-white bg-twitch-purple/20 border border-twitch-purple/50 px-3 py-2 rounded-md text-sm font-medium">
-                            Channels
-                        </a>
-                        <a href="/users" 
-                           class="text-gray-300 hover:text-white hover:bg-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                            Users
-                        </a>
-                        <a href="/messages" 
-                           class="text-gray-300 hover:text-white hover:bg-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                            Messages
-                        </a>
-                    </div>
-                </div>
-                <!-- SSE Status Indicator -->
-                <div class="flex items-center space-x-2">
-                    <span id="sse-status-channels" class="inline-flex items-center text-xs" data-testid="sse-status-channels">
-                        <span id="sse-channels-connected" class="hidden items-center text-green-400">
-                            <span class="relative flex h-1.5 w-1.5 mr-1">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
-                            </span>
-                            Live
-                        </span>
-                        <span id="sse-channels-idle" class="hidden items-center text-gray-500">
-                            <span class="h-1.5 w-1.5 rounded-full bg-gray-500 mr-1"></span>
-                            Idle
-                        </span>
-                        <span id="sse-channels-reconnecting" class="hidden items-center text-yellow-400">
-                            <svg class="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                            </svg>
-                            Reconnecting
-                        </span>
-                        <span id="sse-channels-error" class="hidden items-center text-red-400">
-                            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Offline
-                        </span>
-                    </span>
-                </div>
-            </div>
-        </div>
-    </nav>
+<body class="min-h-screen flex flex-col bg-surface-dark text-twitch-light">
+    {{template "shared/nav" dict "ActivePage" "channels"}}
 
-    <!-- Main Content -->
-    <main class="flex-1 max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 w-full">
+    <main class="flex-1 container-prose py-6 w-full">
         <div class="space-y-6">
             <div class="flex items-center justify-between">
                 <h1 class="text-2xl font-bold text-white">Channels</h1>
-                <button 
-                    type="button"
+                <button type="button"
                     onclick="document.getElementById('add-channel-form').classList.toggle('hidden')"
-                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-twitch-purple hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-twitch-purple">
+                    class="btn btn-md btn-primary">
                     Add Channel
                 </button>
             </div>
 
             <!-- Add Channel Form -->
-            <div id="add-channel-form" class="hidden bg-twitch-gray rounded-lg p-6 border border-gray-700">
+            <div id="add-channel-form" class="hidden card p-6">
                 <h2 class="text-lg font-medium text-white mb-4">Add New Channel</h2>
                 <form hx-post="/channels" 
                       hx-target="#channels-list" 
@@ -127,47 +29,32 @@
                       class="space-y-4">
                     <div>
                         <label for="name" class="block text-sm font-medium text-gray-300">Channel Name</label>
-                        <input type="text" 
-                               name="name" 
-                               id="name" 
-                               required
-                               pattern="[a-zA-Z0-9_]+"
-                               maxlength="25"
-                               placeholder="e.g. xqc"
-                               class="mt-1 block w-full rounded-md bg-twitch-dark border-gray-600 text-white shadow-sm focus:border-twitch-purple focus:ring-twitch-purple sm:text-sm">
+                        <input type="text" name="name" id="name" required
+                               pattern="[a-zA-Z0-9_]+" maxlength="25" placeholder="e.g. xqc"
+                               class="input input-md mt-1">
                     </div>
                     <div>
                         <label for="display_name" class="block text-sm font-medium text-gray-300">Display Name (optional)</label>
-                        <input type="text" 
-                               name="display_name" 
-                               id="display_name"
-                               placeholder="e.g. xQc"
-                               class="mt-1 block w-full rounded-md bg-twitch-dark border-gray-600 text-white shadow-sm focus:border-twitch-purple focus:ring-twitch-purple sm:text-sm">
+                        <input type="text" name="display_name" id="display_name" placeholder="e.g. xQc"
+                               class="input input-md mt-1">
                     </div>
                     <div class="flex items-center space-x-4">
                         <label class="flex items-center">
-                            <input type="checkbox" 
-                                   name="enabled" 
-                                   checked
-                                   class="rounded bg-twitch-dark border-gray-600 text-twitch-purple focus:ring-twitch-purple">
+                            <input type="checkbox" name="enabled" checked class="checkbox">
                             <span class="ml-2 text-sm text-gray-300">Enabled (join channel)</span>
                         </label>
                         <label class="flex items-center">
-                            <input type="checkbox" 
-                                   name="retain_history_on_delete" 
-                                   checked
-                                   class="rounded bg-twitch-dark border-gray-600 text-twitch-purple focus:ring-twitch-purple">
+                            <input type="checkbox" name="retain_history_on_delete" checked class="checkbox">
                             <span class="ml-2 text-sm text-gray-300">Retain history on delete</span>
                         </label>
                     </div>
                     <div class="flex justify-end space-x-3">
                         <button type="button" 
                                 onclick="document.getElementById('add-channel-form').classList.add('hidden')"
-                                class="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white">
+                                class="btn btn-md btn-ghost">
                             Cancel
                         </button>
-                        <button type="submit" 
-                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-twitch-purple hover:bg-purple-700">
+                        <button type="submit" class="btn btn-md btn-primary">
                             Add Channel
                         </button>
                     </div>
@@ -175,21 +62,21 @@
             </div>
 
             <!-- Channels List -->
-            <div class="bg-twitch-gray rounded-lg border border-gray-700 overflow-hidden">
-                <table class="min-w-full divide-y divide-gray-700">
-                    <thead class="bg-gray-800">
+            <div class="table-container">
+                <table class="table">
+                    <thead class="table-header">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Channel</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Messages</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Last Activity</th>
+                            <th scope="col" class="table-header-cell">Channel</th>
+                            <th scope="col" class="table-header-cell">Status</th>
+                            <th scope="col" class="table-header-cell">Messages</th>
+                            <th scope="col" class="table-header-cell">Last Activity</th>
                             <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
                         </tr>
                     </thead>
-                    <tbody id="channels-list" class="divide-y divide-gray-700">
+                    <tbody id="channels-list" class="table-body">
                         {{if .IsEmpty}}
                         <tr id="empty-state">
-                            <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                            <td colspan="5" class="empty-state">
                                 <p class="text-lg">No channels configured</p>
                                 <p class="mt-1 text-sm">Add a channel to start archiving chat messages.</p>
                             </td>
@@ -205,25 +92,8 @@
         </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-twitch-gray border-t border-gray-700 mt-auto">
-        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-            <p class="text-center text-gray-500 text-sm">
-                Twitch Chat Archiver & Explorer
-            </p>
-        </div>
-    </footer>
-
-    <!-- Global HTMX Configuration -->
-    <script>
-        document.body.addEventListener('htmx:configRequest', function(evt) {
-            // Add any global request configuration here
-        });
-        
-        document.body.addEventListener('htmx:responseError', function(evt) {
-            console.error('HTMX request error:', evt.detail);
-        });
-    </script>
+    {{template "shared/footer"}}
+    {{template "shared/htmx-config"}}
 
     <!-- SSE Client Script for Channels View -->
     <script>
@@ -237,7 +107,6 @@
         var maxReconnectDelay = 30000;
         var isConnected = false;
         
-        // Status indicator management
         function showStatus(state) {
             var states = ['connected', 'idle', 'reconnecting', 'error'];
             states.forEach(function(s) {
@@ -254,14 +123,12 @@
             }
         }
         
-        // Format number for display
         function formatNumber(n) {
             if (n < 1000) return n.toString();
             if (n < 1000000) return (n / 1000).toFixed(1) + 'K';
             return (n / 1000000).toFixed(1) + 'M';
         }
         
-        // Format time for display
         function formatTime(dateStr) {
             if (!dateStr) return 'Never';
             var date = new Date(dateStr);
@@ -276,13 +143,11 @@
             return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         }
         
-        // Update channel count
         function updateChannelCount(data) {
             var channelName = data.channel_name;
             var row = document.querySelector('[data-channel-name="' + channelName + '"]');
             if (!row) return;
             
-            // Update message count
             var countCell = row.querySelector('[data-sse-target="message-count"]');
             if (countCell) {
                 var oldValue = countCell.textContent.trim();
@@ -296,14 +161,12 @@
                 }
             }
             
-            // Update last activity
             var activityCell = row.querySelector('[data-sse-target="last-activity"]');
             if (activityCell && data.last_message_at) {
                 activityCell.textContent = formatTime(data.last_message_at);
             }
         }
         
-        // Handle SSE message
         function handleMessage(event) {
             try {
                 var data = JSON.parse(event.data);
@@ -330,7 +193,6 @@
             }
         }
         
-        // Connect to SSE
         function connect() {
             if (eventSource) {
                 eventSource.close();
@@ -361,14 +223,12 @@
             };
         }
         
-        // Start connection
         if (typeof EventSource !== 'undefined') {
             connect();
         } else {
             showStatus('error');
         }
         
-        // Cleanup
         window.addEventListener('beforeunload', function() {
             if (eventSource) eventSource.close();
         });

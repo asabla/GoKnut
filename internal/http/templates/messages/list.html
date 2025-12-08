@@ -1,33 +1,33 @@
 {{define "messages/list.html"}}
 <!-- Message List Fragment (for HTMX partial updates) -->
 {{if .Error}}
-<div class="rounded-md bg-red-900/50 border border-red-500/50 p-4" role="alert">
+<div class="rounded-md bg-error-900/50 border border-error-500/50 p-4" role="alert">
     <div class="flex">
-        <svg class="h-5 w-5 text-red-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <svg class="h-5 w-5 text-error-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"/>
         </svg>
         <div class="ml-3">
-            <p class="text-sm font-medium text-red-300">{{.Error}}</p>
+            <p class="text-sm font-medium text-error-300">{{.Error}}</p>
         </div>
     </div>
 </div>
 {{else if and (not .HasQuery) (not .Channel) (not .Username) (eq .TotalCount 0)}}
-<div class="text-center py-12 text-gray-500">
-    <svg class="mx-auto h-12 w-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+<div class="empty-state">
+    <svg class="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
     </svg>
-    <p class="mt-4 text-lg">No messages yet</p>
+    <p class="text-lg">No messages yet</p>
     <p class="mt-1 text-sm">Messages will appear here once they are recorded</p>
 </div>
 {{else if .IsEmpty}}
-<div class="text-center py-12 text-gray-500">
-    <svg class="mx-auto h-12 w-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+<div class="empty-state">
+    <svg class="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
     </svg>
     {{if .Query}}
-    <p class="mt-4 text-lg">No messages found for "{{.Query}}"</p>
+    <p class="text-lg">No messages found for "{{.Query}}"</p>
     {{else}}
-    <p class="mt-4 text-lg">No messages found</p>
+    <p class="text-lg">No messages found</p>
     {{end}}
     <p class="mt-1 text-sm">Try a different search term or adjust your filters</p>
 </div>
@@ -39,66 +39,39 @@
     </div>
 
     <!-- Results table -->
-    <div class="bg-twitch-gray rounded-lg border border-gray-700 overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-700">
-            <thead class="bg-gray-800">
+    <div class="table-container overflow-x-auto">
+        <table class="table w-full table-fixed">
+            <thead class="table-header">
                 <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">User</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Channel</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Message</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Time</th>
-                    <th scope="col" class="relative px-6 py-3"><span class="sr-only">Expand</span></th>
+                    <th scope="col" class="table-header-cell w-40">Time</th>
+                    <th scope="col" class="table-header-cell w-40">User</th>
+                    <th scope="col" class="table-header-cell w-36">Channel</th>
+                    <th scope="col" class="table-header-cell">Message</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-700">
+            <tbody class="table-body">
                 {{range $idx, $msg := .Messages}}
-                <tr class="hover:bg-gray-700/50 transition-colors group cursor-pointer" onclick="toggleRow({{$idx}})" data-message-id="{{$msg.Message.ID}}">
-                    <td class="px-6 py-4 whitespace-nowrap">
+                <tr class="table-row" data-message-id="{{$msg.Message.ID}}">
+                    <td class="table-cell text-sm text-gray-400 whitespace-nowrap align-top">
+                        <time datetime="{{$msg.Message.SentAt.Format "2006-01-02T15:04:05Z07:00"}}">
+                            {{$msg.Message.SentAt.Format "Jan 02, 15:04:05"}}
+                        </time>
+                    </td>
+                    <td class="table-cell align-top">
                         <a href="/users/{{$msg.Message.Username}}" 
-                           class="font-medium text-twitch-purple hover:text-purple-400"
-                           onclick="event.stopPropagation();">
+                           class="font-medium text-primary-500 hover:text-primary-400 break-words">
                             {{if $msg.Message.DisplayName}}{{$msg.Message.DisplayName}}{{else}}{{$msg.Message.Username}}{{end}}
                         </a>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
+                    <td class="table-cell align-top">
                         <a href="/channels/{{$msg.Message.ChannelName}}/view" 
-                           class="text-gray-400 hover:text-gray-300"
-                           onclick="event.stopPropagation();">
+                           class="text-gray-400 hover:text-gray-300 break-words">
                             #{{$msg.Message.ChannelName}}
                         </a>
                     </td>
-                    <td class="px-6 py-4">
-                        <div class="text-gray-200 truncate max-w-md">
+                    <td class="px-6 py-4 align-top">
+                        <div class="text-gray-200 whitespace-pre-wrap break-words">
                             {{$msg.HighlightedText}}
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                        <time datetime="{{$msg.Message.SentAt.Format "2006-01-02T15:04:05Z07:00"}}">
-                            {{$msg.Message.SentAt.Format "Jan 02, 15:04"}}
-                        </time>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                        <button type="button" 
-                                class="text-gray-400 hover:text-gray-300 expand-btn"
-                                aria-label="Expand message"
-                                onclick="event.stopPropagation(); toggleRow({{$idx}});">
-                            <svg class="h-5 w-5 transform transition-transform" id="expand-icon-{{$idx}}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </button>
-                    </td>
-                </tr>
-                <!-- Expandable row for full message text -->
-                <tr id="expanded-row-{{$idx}}" class="hidden bg-gray-800/50" data-expanded-for="{{$msg.Message.ID}}">
-                    <td colspan="5" class="px-6 py-4">
-                        <div class="space-y-2">
-                            <div class="flex items-center text-xs text-gray-500">
-                                <span class="font-medium">Full message:</span>
-                                <time class="ml-auto" datetime="{{$msg.Message.SentAt.Format "2006-01-02T15:04:05Z07:00"}}">
-                                    {{$msg.Message.SentAt.Format "Jan 02, 2006 15:04:05"}}
-                                </time>
-                            </div>
-                            <p class="text-gray-200 whitespace-pre-wrap break-words">{{$msg.Message.Text}}</p>
                         </div>
                     </td>
                 </tr>
@@ -117,7 +90,7 @@
                hx-get="/messages?q={{.Query}}&page={{.PrevPage}}{{if .Channel}}&channel={{.Channel}}{{end}}{{if .Username}}&username={{.Username}}{{end}}{{if .StartStr}}&start={{.StartStr}}{{end}}{{if .EndStr}}&end={{.EndStr}}{{end}}"
                hx-target="#messages-list"
                hx-swap="innerHTML"
-               class="relative inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-twitch-gray hover:bg-gray-700">
+               class="btn btn-md btn-secondary">
                 Previous
             </a>
             {{end}}
@@ -129,7 +102,7 @@
                hx-get="/messages?q={{.Query}}&page={{.NextPage}}{{if .Channel}}&channel={{.Channel}}{{end}}{{if .Username}}&username={{.Username}}{{end}}{{if .StartStr}}&start={{.StartStr}}{{end}}{{if .EndStr}}&end={{.EndStr}}{{end}}"
                hx-target="#messages-list"
                hx-swap="innerHTML"
-               class="relative inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-twitch-gray hover:bg-gray-700">
+               class="btn btn-md btn-secondary">
                 Next
             </a>
             {{end}}
@@ -138,17 +111,4 @@
     {{end}}
 </div>
 
-<script>
-function toggleRow(idx) {
-    const row = document.getElementById('expanded-row-' + idx);
-    const icon = document.getElementById('expand-icon-' + idx);
-    if (row.classList.contains('hidden')) {
-        row.classList.remove('hidden');
-        icon.classList.add('rotate-180');
-    } else {
-        row.classList.add('hidden');
-        icon.classList.remove('rotate-180');
-    }
-}
-</script>
 {{end}}

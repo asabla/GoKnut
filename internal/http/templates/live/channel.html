@@ -2,91 +2,37 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{template "shared/head"}}
     <title>{{.Channel.DisplayName}} - Live Chat - GoKnut</title>
-    
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- HTMX -->
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    
-    <!-- Custom Tailwind Config -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        twitch: {
-                            purple: '#9146FF',
-                            dark: '#18181B',
-                            gray: '#1F1F23',
-                            light: '#EFEFF1',
-                        }
-                    }
-                }
-            }
+    <style>
+        /* Custom height calculation for chat container */
+        .chat-container {
+            height: calc(100vh - 280px);
+            min-height: 400px;
         }
-    </script>
-    
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .htmx-indicator {
-                opacity: 0;
-                transition: opacity 200ms ease-in;
-            }
-            .htmx-request .htmx-indicator {
-                opacity: 1;
-            }
-            .htmx-request.htmx-indicator {
-                opacity: 1;
+        @media (min-width: 1024px) {
+            .chat-container {
+                height: calc(100vh - 240px);
             }
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col bg-twitch-dark text-twitch-light">
-    <!-- Navigation -->
-    <nav class="bg-twitch-gray border-b border-gray-700">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center">
-                    <a href="/" class="flex-shrink-0">
-                        <span class="text-twitch-purple font-bold text-xl">GoKnut</span>
-                    </a>
-                    <div class="ml-10 flex items-baseline space-x-1">
-                        <a href="/channels" 
-                           class="text-white bg-twitch-purple/20 border border-twitch-purple/50 px-3 py-2 rounded-md text-sm font-medium">
-                            Channels
-                        </a>
-                        <a href="/users" 
-                           class="text-gray-300 hover:text-white hover:bg-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                            Users
-                        </a>
-                        <a href="/messages" 
-                           class="text-gray-300 hover:text-white hover:bg-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                            Messages
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
+<body class="min-h-screen flex flex-col bg-surface-dark text-twitch-light">
+    {{template "shared/nav" dict "ActivePage" "channels"}}
 
-    <!-- Main Content -->
-    <main class="flex-1 max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 w-full">
+    <main class="flex-1 container-prose py-6 w-full">
         <div class="space-y-4">
             <!-- Channel Header -->
-            <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700">
+            <div class="card p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h1 class="text-2xl font-bold text-twitch-purple">
+                        <h1 class="text-2xl font-bold text-primary-500">
                             #{{.Channel.Name}}
                         </h1>
                         <p class="text-gray-400 text-sm mt-1">
                             {{if .Channel.Enabled}}
                                 <span class="inline-flex items-center">
-                                    <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                                    <span class="w-2 h-2 bg-success-500 rounded-full mr-2 animate-pulse"></span>
                                     Live
                                 </span>
                             {{else}}
@@ -98,23 +44,22 @@
                             · {{.Channel.TotalMessages}} messages
                         </p>
                     </div>
-                    <a href="/channels" 
-                       class="inline-flex items-center px-3 py-1.5 border border-gray-600 text-sm font-medium rounded text-gray-300 hover:bg-gray-700 hover:text-white hover:border-gray-500 transition-colors">
-                        ← Back to Channels
+                    <a href="/channels" class="btn btn-sm btn-secondary">
+                        &larr; Back to Channels
                     </a>
                 </div>
             </div>
 
             <!-- Chat Container -->
-            <div class="bg-twitch-gray rounded-lg border border-gray-700 flex flex-col" style="height: calc(100vh - 280px);">
+            <div class="card flex flex-col chat-container">
                 <!-- Load Earlier Messages -->
-                <div class="border-b border-gray-700 p-2 text-center">
+                <div class="border-b border-surface-border p-2 text-center">
                     {{if not .IsEmpty}}
                     {{$firstMsg := index .Messages 0}}
                     <button hx-get="/channels/{{.Channel.Name}}/messages?before_id={{$firstMsg.ID}}"
                             hx-target="#message-list"
                             hx-swap="afterbegin"
-                            class="inline-flex items-center px-4 py-2 border border-twitch-purple text-sm font-medium rounded-md text-twitch-purple hover:bg-twitch-purple/20 hover:text-white transition-colors">
+                            class="btn btn-sm btn-secondary">
                         Load earlier messages
                         <span class="htmx-indicator ml-2">
                             <svg class="animate-spin h-4 w-4 inline" viewBox="0 0 24 24">
@@ -150,13 +95,9 @@
                 </div>
 
                 <!-- Status Bar -->
-                <div class="border-t border-gray-700 p-2 text-xs text-gray-500 flex justify-between">
-                    <span>
-                        Polling every 1s for new messages
-                    </span>
-                    <span id="last-update">
-                        Last update: just now
-                    </span>
+                <div class="border-t border-surface-border p-2 text-xs text-gray-500 flex justify-between">
+                    <span>Polling every 1s for new messages</span>
+                    <span id="last-update">Last update: just now</span>
                 </div>
             </div>
         </div>
@@ -181,7 +122,6 @@
             }
             lastMessageCount = currentCount;
             
-            // Update last update time
             document.getElementById('last-update').textContent = 'Last update: just now';
         });
 

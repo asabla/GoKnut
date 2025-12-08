@@ -2,92 +2,27 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{template "shared/head"}}
     <title>Users - GoKnut</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        twitch: {
-                            purple: '#9146FF',
-                            dark: '#18181B',
-                            gray: '#1F1F23',
-                            light: '#EFEFF1',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
-            .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { opacity: 1; }
-            .sse-updated { animation: highlight-fade 2s ease-out; }
-            @keyframes highlight-fade { from { background-color: rgba(145, 70, 255, 0.2); } to { background-color: transparent; } }
-        }
-    </style>
 </head>
-<body class="min-h-screen flex flex-col bg-twitch-dark text-twitch-light">
-    <nav class="bg-twitch-gray border-b border-gray-700">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center">
-                    <a href="/" class="flex-shrink-0"><span class="text-twitch-purple font-bold text-xl">GoKnut</span></a>
-                    <div class="ml-10 flex items-baseline space-x-1">
-                        <a href="/channels" class="text-gray-300 hover:text-white hover:bg-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">Channels</a>
-                        <a href="/users" class="text-white bg-twitch-purple/20 border border-twitch-purple/50 px-3 py-2 rounded-md text-sm font-medium">Users</a>
-                        <a href="/messages" class="text-gray-300 hover:text-white hover:bg-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">Messages</a>
-                    </div>
-                </div>
-                <!-- SSE Status Indicator -->
-                <div class="flex items-center space-x-2">
-                    <span id="sse-status-users" class="inline-flex items-center text-xs" data-testid="sse-status-users">
-                        <span id="sse-users-connected" class="hidden items-center text-green-400">
-                            <span class="relative flex h-1.5 w-1.5 mr-1">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
-                            </span>
-                            Live
-                        </span>
-                        <span id="sse-users-idle" class="hidden items-center text-gray-500">
-                            <span class="h-1.5 w-1.5 rounded-full bg-gray-500 mr-1"></span>
-                            Idle
-                        </span>
-                        <span id="sse-users-reconnecting" class="hidden items-center text-yellow-400">
-                            <svg class="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                            </svg>
-                            Reconnecting
-                        </span>
-                        <span id="sse-users-error" class="hidden items-center text-red-400">
-                            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Offline
-                        </span>
-                    </span>
-                </div>
-            </div>
-        </div>
-    </nav>
-    <main class="flex-1 max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 w-full">
+<body class="min-h-screen flex flex-col bg-surface-dark text-twitch-light">
+    {{template "shared/nav" dict "ActivePage" "users"}}
+    
+    <main class="flex-1 container-prose py-6 w-full">
         <div class="space-y-6">
             <div class="flex items-center justify-between">
                 <h1 class="text-2xl font-bold text-white">Users</h1>
             </div>
-            <div class="bg-twitch-gray rounded-lg p-4 border border-gray-700">
+            
+            <div class="card p-4">
                 <form hx-get="/users" hx-target="#users-list" hx-swap="innerHTML" hx-indicator="#filter-indicator" class="flex space-x-4">
                     <div class="flex-1">
                         <label for="q" class="sr-only">Filter by username</label>
-                        <input type="text" name="q" id="q" value="{{.Query}}" placeholder="Filter by username..." class="block w-full rounded-md bg-twitch-dark border-gray-600 text-white shadow-sm focus:border-twitch-purple focus:ring-twitch-purple sm:text-sm px-4 py-2">
+                        <input type="text" name="q" id="q" value="{{.Query}}" 
+                               placeholder="Filter by username..." 
+                               class="input input-md">
                     </div>
-                    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-twitch-purple hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-twitch-purple">
+                    <button type="submit" class="btn btn-md btn-primary">
                         <span class="htmx-indicator" id="filter-indicator">
                             <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -97,22 +32,18 @@
                         Filter
                     </button>
                     {{if .Query}}
-                    <a href="/users" class="inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-transparent hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-twitch-purple">
-                        Clear
-                    </a>
+                    <a href="/users" class="btn btn-md btn-secondary">Clear</a>
                     {{end}}
                 </form>
             </div>
+            
             <div id="users-list">
                 {{template "users_results.html" .}}
             </div>
         </div>
     </main>
-    <footer class="bg-twitch-gray border-t border-gray-700 mt-auto">
-        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-            <p class="text-center text-gray-500 text-sm">Twitch Chat Archiver & Explorer</p>
-        </div>
-    </footer>
+    
+    {{template "shared/footer"}}
 
     <!-- SSE Client Script for Users View -->
     <script>
@@ -126,7 +57,6 @@
         var maxReconnectDelay = 30000;
         var isConnected = false;
         
-        // Status indicator management
         function showStatus(state) {
             var states = ['connected', 'idle', 'reconnecting', 'error'];
             states.forEach(function(s) {
@@ -143,13 +73,11 @@
             }
         }
         
-        // Update user count in table
         function updateUserCount(data) {
             var username = data.username;
             var row = document.querySelector('[data-username="' + username + '"]');
             if (!row) return;
             
-            // Update message count
             var countCell = row.querySelector('[data-sse-target="message-count"]');
             if (countCell) {
                 var oldValue = countCell.textContent.trim();
@@ -163,7 +91,6 @@
                 }
             }
             
-            // Update last seen
             var lastSeenCell = row.querySelector('[data-sse-target="last-seen"]');
             if (lastSeenCell && data.last_seen_at) {
                 var date = new Date(data.last_seen_at);
@@ -174,7 +101,6 @@
             }
         }
         
-        // Handle SSE message
         function handleMessage(event) {
             try {
                 var data = JSON.parse(event.data);
@@ -201,7 +127,6 @@
             }
         }
         
-        // Connect to SSE
         function connect() {
             if (eventSource) {
                 eventSource.close();
@@ -232,14 +157,12 @@
             };
         }
         
-        // Start connection
         if (typeof EventSource !== 'undefined') {
             connect();
         } else {
             showStatus('error');
         }
         
-        // Cleanup
         window.addEventListener('beforeunload', function() {
             if (eventSource) eventSource.close();
         });

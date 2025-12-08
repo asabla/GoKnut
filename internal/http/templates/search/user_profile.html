@@ -2,84 +2,16 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{template "shared/head"}}
     <title>{{.User.Username}} - User Profile - GoKnut</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        twitch: {
-                            purple: '#9146FF',
-                            dark: '#18181B',
-                            gray: '#1F1F23',
-                            light: '#EFEFF1',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
-            .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { opacity: 1; }
-            .sse-updated { animation: highlight-fade 2s ease-out; }
-            @keyframes highlight-fade { from { background-color: rgba(145, 70, 255, 0.2); } to { background-color: transparent; } }
-        }
-    </style>
 </head>
-<body class="min-h-screen flex flex-col bg-twitch-dark text-twitch-light">
-    <nav class="bg-twitch-gray border-b border-gray-700">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center">
-                    <a href="/" class="flex-shrink-0"><span class="text-twitch-purple font-bold text-xl">GoKnut</span></a>
-                    <div class="ml-10 flex items-baseline space-x-1">
-                        <a href="/channels" class="text-gray-300 hover:text-white hover:bg-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">Channels</a>
-                        <a href="/users" class="text-white bg-twitch-purple/20 border border-twitch-purple/50 px-3 py-2 rounded-md text-sm font-medium">Users</a>
-                        <a href="/messages" class="text-gray-300 hover:text-white hover:bg-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">Messages</a>
-                    </div>
-                </div>
-                <!-- SSE Status Indicator -->
-                <div class="flex items-center space-x-2">
-                    <span id="sse-status-profile" class="inline-flex items-center text-xs" data-testid="sse-status-profile">
-                        <span id="sse-profile-connected" class="hidden items-center text-green-400">
-                            <span class="relative flex h-1.5 w-1.5 mr-1">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
-                            </span>
-                            Live
-                        </span>
-                        <span id="sse-profile-idle" class="hidden items-center text-gray-500">
-                            <span class="h-1.5 w-1.5 rounded-full bg-gray-500 mr-1"></span>
-                            Idle
-                        </span>
-                        <span id="sse-profile-reconnecting" class="hidden items-center text-yellow-400">
-                            <svg class="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                            </svg>
-                            Reconnecting
-                        </span>
-                        <span id="sse-profile-error" class="hidden items-center text-red-400">
-                            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Offline
-                        </span>
-                    </span>
-                </div>
-            </div>
-        </div>
-    </nav>
-    <main class="flex-1 max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 w-full">
+<body class="min-h-screen flex flex-col bg-surface-dark text-twitch-light">
+    {{template "shared/nav" dict "ActivePage" "users"}}
+    
+    <main class="flex-1 container-prose py-6 w-full">
         <div class="space-y-6">
             <!-- User Header -->
-            <div class="bg-twitch-gray rounded-lg border border-gray-700 p-6">
+            <div class="card p-6">
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="text-2xl font-bold text-white">
@@ -90,7 +22,7 @@
                         {{end}}
                     </div>
                     <div class="text-right">
-                        <div id="profile-total-messages" class="text-3xl font-bold text-twitch-purple" data-sse-target="total-messages">{{.User.TotalMessages}}</div>
+                        <div id="profile-total-messages" class="text-3xl font-bold text-primary-500" data-sse-target="total-messages">{{.User.TotalMessages}}</div>
                         <div class="text-sm text-gray-400">Total Messages</div>
                     </div>
                 </div>
@@ -116,33 +48,33 @@
 
             <!-- Channels Activity -->
             {{if .Channels}}
-            <div class="bg-twitch-gray rounded-lg border border-gray-700 overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-700">
+            <div class="table-container">
+                <div class="px-6 py-4 border-b border-surface-border">
                     <h2 class="text-lg font-medium text-white">Channel Activity</h2>
                 </div>
-                <table class="min-w-full divide-y divide-gray-700">
-                    <thead class="bg-gray-800">
+                <table class="table">
+                    <thead class="table-header">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Channel</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Messages</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Last Message</th>
+                            <th scope="col" class="table-header-cell">Channel</th>
+                            <th scope="col" class="table-header-cell">Messages</th>
+                            <th scope="col" class="table-header-cell">Last Message</th>
                             <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-700">
+                    <tbody class="table-body">
                         {{range .Channels}}
-                        <tr class="hover:bg-gray-700/50 transition-colors">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <a href="/channels/{{.Name}}/view" class="text-twitch-purple hover:text-purple-400 font-medium">
+                        <tr class="table-row">
+                            <td class="table-cell">
+                                <a href="/channels/{{.Name}}/view" class="text-primary-500 hover:text-primary-400 font-medium">
                                     #{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Name}}{{end}}
                                 </a>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-900 text-purple-200">{{.MessageCount}}</span>
+                            <td class="table-cell">
+                                <span class="badge badge-primary">{{.MessageCount}}</span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{{.LastMessageAt.Format "Jan 02, 2006 15:04"}}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <a href="/users/{{$.User.Username}}/messages?channel={{.Name}}" class="inline-flex items-center px-2.5 py-1 border border-gray-600 text-xs font-medium rounded text-gray-300 hover:bg-gray-700 hover:text-white hover:border-gray-500 transition-colors">View Messages</a>
+                            <td class="table-cell text-sm text-gray-400">{{.LastMessageAt.Format "Jan 02, 2006 15:04"}}</td>
+                            <td class="table-cell text-right text-sm font-medium">
+                                <a href="/users/{{$.User.Username}}/messages?channel={{.Name}}" class="btn btn-sm btn-secondary">View Messages</a>
                             </td>
                         </tr>
                         {{end}}
@@ -152,14 +84,14 @@
             {{end}}
 
             <!-- Recent Messages -->
-            <div class="bg-twitch-gray rounded-lg border border-gray-700">
-                <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+            <div class="card">
+                <div class="px-6 py-4 border-b border-surface-border flex items-center justify-between">
                     <h2 class="text-lg font-medium text-white">Recent Messages</h2>
-                    <a href="/users/{{.User.Username}}/messages" class="inline-flex items-center px-3 py-1.5 border border-twitch-purple text-sm font-medium rounded text-twitch-purple hover:bg-twitch-purple/20 hover:text-white transition-colors">View All</a>
+                    <a href="/users/{{.User.Username}}/messages" class="btn btn-sm btn-secondary">View All</a>
                 </div>
                 <div id="user-messages" hx-get="/users/{{.User.Username}}/messages" hx-trigger="load" hx-swap="innerHTML">
-                    <div class="p-6 text-center text-gray-500">
-                        <svg class="animate-spin mx-auto h-8 w-8 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <div class="loading-container">
+                        <svg class="loading-spinner mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -169,11 +101,8 @@
             </div>
         </div>
     </main>
-    <footer class="bg-twitch-gray border-t border-gray-700 mt-auto">
-        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-            <p class="text-center text-gray-500 text-sm">Twitch Chat Archiver & Explorer</p>
-        </div>
-    </footer>
+    
+    {{template "shared/footer"}}
 
     <!-- SSE Client Script for User Profile View -->
     <script>
@@ -188,7 +117,6 @@
         var maxReconnectDelay = 30000;
         var isConnected = false;
         
-        // Status indicator management
         function showStatus(state) {
             var states = ['connected', 'idle', 'reconnecting', 'error'];
             states.forEach(function(s) {
@@ -205,9 +133,7 @@
             }
         }
         
-        // Update profile stats
         function updateProfile(data) {
-            // Update total messages
             var totalEl = document.getElementById('profile-total-messages');
             if (totalEl) {
                 var oldValue = totalEl.textContent.trim();
@@ -221,7 +147,6 @@
                 }
             }
             
-            // Update last seen
             var lastSeenEl = document.getElementById('profile-last-seen');
             if (lastSeenEl && data.last_seen_at) {
                 var date = new Date(data.last_seen_at);
@@ -232,7 +157,6 @@
             }
         }
         
-        // Handle SSE message
         function handleMessage(event) {
             try {
                 var data = JSON.parse(event.data);
@@ -259,7 +183,6 @@
             }
         }
         
-        // Connect to SSE
         function connect() {
             if (eventSource) {
                 eventSource.close();
@@ -284,20 +207,17 @@
                 if (reconnectAttempts < maxReconnectAttempts) {
                     var delay = Math.min(baseReconnectDelay * Math.pow(2, reconnectAttempts), maxReconnectDelay);
                     reconnectAttempts++;
-                    console.log('Reconnecting in ' + delay + 'ms (attempt ' + reconnectAttempts + ')');
                     setTimeout(connect, delay);
                 }
             };
         }
         
-        // Start connection
         if (typeof EventSource !== 'undefined' && username) {
             connect();
         } else {
             showStatus('error');
         }
         
-        // Cleanup
         window.addEventListener('beforeunload', function() {
             if (eventSource) eventSource.close();
         });

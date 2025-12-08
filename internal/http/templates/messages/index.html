@@ -2,99 +2,39 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{template "shared/head"}}
     <title>Messages - GoKnut</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        twitch: {
-                            purple: '#9146FF',
-                            dark: '#18181B',
-                            gray: '#1F1F23',
-                            light: '#EFEFF1',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
-            .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { opacity: 1; }
-            .sse-new-message { animation: highlight-fade 2s ease-out; }
-            @keyframes highlight-fade { from { background-color: rgba(145, 70, 255, 0.2); } to { background-color: transparent; } }
-        }
-    </style>
 </head>
-<body class="min-h-screen flex flex-col bg-twitch-dark text-twitch-light">
-    <nav class="bg-twitch-gray border-b border-gray-700">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center">
-                    <a href="/" class="flex-shrink-0"><span class="text-twitch-purple font-bold text-xl">GoKnut</span></a>
-                    <div class="ml-10 flex items-baseline space-x-1">
-                        <a href="/channels" class="text-gray-300 hover:text-white hover:bg-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">Channels</a>
-                        <a href="/users" class="text-gray-300 hover:text-white hover:bg-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors">Users</a>
-                        <a href="/messages" class="text-white bg-twitch-purple/20 border border-twitch-purple/50 px-3 py-2 rounded-md text-sm font-medium">Messages</a>
-                    </div>
-                </div>
-                <!-- Streaming Toggle & SSE Status Indicator -->
-                <div class="flex items-center space-x-4">
-                    <label class="flex items-center space-x-2 text-xs text-gray-400 cursor-pointer select-none" title="Toggle live message streaming">
-                        <input type="checkbox" id="streaming-toggle" checked
-                               class="w-3.5 h-3.5 rounded border-gray-600 bg-twitch-dark text-twitch-purple focus:ring-twitch-purple focus:ring-offset-0 cursor-pointer">
-                        <span>Streaming</span>
-                    </label>
-                    <span id="sse-status-messages" class="inline-flex items-center text-xs" data-testid="sse-status-messages">
-                        <span id="sse-messages-connected" class="hidden items-center text-green-400">
-                            <span class="relative flex h-1.5 w-1.5 mr-1">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
-                            </span>
-                            Live
-                        </span>
-                        <span id="sse-messages-idle" class="hidden items-center text-gray-500">
-                            <span class="h-1.5 w-1.5 rounded-full bg-gray-500 mr-1"></span>
-                            Idle
-                        </span>
-                        <span id="sse-messages-reconnecting" class="hidden items-center text-yellow-400">
-                            <svg class="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                            </svg>
-                            Reconnecting
-                        </span>
-                        <span id="sse-messages-error" class="hidden items-center text-red-400">
-                            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Offline
-                        </span>
-                    </span>
-                </div>
-            </div>
-        </div>
-    </nav>
-    <main class="flex-1 max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 w-full">
+<body class="min-h-screen flex flex-col bg-surface-dark text-twitch-light">
+    {{template "shared/nav" dict "ActivePage" "messages"}}
+    
+    <main class="flex-1 container-prose py-6 w-full">
         <div class="space-y-6">
             <div class="flex items-center justify-between">
                 <h1 class="text-2xl font-bold text-white">Messages</h1>
+                <!-- Streaming Toggle -->
+                <div class="flex items-center space-x-4">
+                    <label class="flex items-center space-x-2 text-xs text-gray-400 cursor-pointer select-none" title="Toggle live message streaming">
+                        <input type="checkbox" id="streaming-toggle" checked
+                               class="checkbox w-3.5 h-3.5 cursor-pointer">
+                        <span>Streaming</span>
+                    </label>
+                    {{template "shared/sse-status" dict "ID" "messages"}}
+                </div>
             </div>
-            <div class="bg-twitch-gray rounded-lg p-6 border border-gray-700">
+            
+            <div class="card p-6">
                 <form hx-get="/messages" hx-target="#messages-list" hx-swap="innerHTML" hx-indicator="#search-indicator" class="space-y-4" role="search" aria-label="Search messages">
                     <div class="flex space-x-4">
                         <div class="flex-1">
                             <label for="q" class="sr-only">Search messages</label>
-                            <input type="text" name="q" id="q" value="{{.Query}}" placeholder="Search message content (or leave empty for latest)" aria-describedby="search-hint" class="block w-full rounded-md bg-twitch-dark border-gray-600 text-white shadow-sm focus:border-twitch-purple focus:ring-twitch-purple sm:text-sm px-4 py-3">
+                            <input type="text" name="q" id="q" value="{{.Query}}" 
+                                   placeholder="Search message content (or leave empty for latest)" 
+                                   aria-describedby="search-hint" 
+                                   class="input input-lg">
                             <p id="search-hint" class="sr-only">Leave empty to see latest messages, or enter at least 2 characters to search</p>
                         </div>
-                        <button type="submit" class="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-twitch-purple hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-twitch-purple" aria-label="Submit search">
+                        <button type="submit" class="btn btn-lg btn-primary" aria-label="Submit search">
                             <span class="htmx-indicator" id="search-indicator" aria-hidden="true">
                                 <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -109,34 +49,32 @@
                         <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-4">
                             <div>
                                 <label for="channel" class="block text-sm font-medium text-gray-300">Channel</label>
-                                <input type="text" name="channel" id="channel" value="{{.Channel}}" placeholder="e.g. shroud" class="mt-1 block w-full rounded-md bg-twitch-dark border-gray-600 text-white shadow-sm focus:border-twitch-purple focus:ring-twitch-purple sm:text-sm">
+                                <input type="text" name="channel" id="channel" value="{{.Channel}}" placeholder="e.g. shroud" class="input input-md mt-1">
                             </div>
                             <div>
                                 <label for="username" class="block text-sm font-medium text-gray-300">Username</label>
-                                <input type="text" name="username" id="username" value="{{.Username}}" placeholder="e.g. nightbot" class="mt-1 block w-full rounded-md bg-twitch-dark border-gray-600 text-white shadow-sm focus:border-twitch-purple focus:ring-twitch-purple sm:text-sm">
+                                <input type="text" name="username" id="username" value="{{.Username}}" placeholder="e.g. nightbot" class="input input-md mt-1">
                             </div>
                             <div>
                                 <label for="start" class="block text-sm font-medium text-gray-300">From Date</label>
-                                <input type="date" name="start" id="start" value="{{.StartStr}}" class="mt-1 block w-full rounded-md bg-twitch-dark border-gray-600 text-white shadow-sm focus:border-twitch-purple focus:ring-twitch-purple sm:text-sm">
+                                <input type="date" name="start" id="start" value="{{.StartStr}}" class="input input-md mt-1">
                             </div>
                             <div>
                                 <label for="end" class="block text-sm font-medium text-gray-300">To Date</label>
-                                <input type="date" name="end" id="end" value="{{.EndStr}}" class="mt-1 block w-full rounded-md bg-twitch-dark border-gray-600 text-white shadow-sm focus:border-twitch-purple focus:ring-twitch-purple sm:text-sm">
+                                <input type="date" name="end" id="end" value="{{.EndStr}}" class="input input-md mt-1">
                             </div>
                         </div>
                     </details>
                 </form>
             </div>
+            
             <div id="messages-list" aria-live="polite" aria-atomic="false">
                 {{template "messages/list.html" .}}
             </div>
         </div>
     </main>
-    <footer class="bg-twitch-gray border-t border-gray-700 mt-auto">
-        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-            <p class="text-center text-gray-500 text-sm">Twitch Chat Archiver & Explorer</p>
-        </div>
-    </footer>
+    
+    {{template "shared/footer"}}
 
     <!-- SSE Client Script for Messages View -->
     <script>
@@ -146,14 +84,13 @@
         var eventSource = null;
         var reconnectAttempts = 0;
         var maxReconnectAttempts = 10;
-        var baseReconnectDelay = 1000; // 1 second
-        var maxReconnectDelay = 30000; // 30 seconds
+        var baseReconnectDelay = 1000;
+        var maxReconnectDelay = 30000;
         var lastCursor = 0;
         var isConnected = false;
         var seenMessageIds = new Set();
-        var streamingEnabled = true; // Controlled by toggle, default true
+        var streamingEnabled = true;
         
-        // Get filter values from the form
         function getFilters() {
             return {
                 query: (document.getElementById('q') || {}).value || '',
@@ -164,26 +101,13 @@
             };
         }
         
-        // Check if any filters are active
-        function hasActiveFilters() {
-            var filters = getFilters();
-            return filters.query.trim() !== '' || 
-                   filters.channel.trim() !== '' || 
-                   filters.username.trim() !== '' ||
-                   filters.startDate !== '' ||
-                   filters.endDate !== '';
-        }
-        
-        // Check if a message matches the current filters
         function messageMatchesFilters(msg) {
             var filters = getFilters();
             
-            // If query is set, skip SSE messages (search requires server-side FTS)
             if (filters.query.trim() !== '') {
                 return false;
             }
             
-            // Check channel filter (case-insensitive)
             if (filters.channel.trim() !== '') {
                 var filterChannel = filters.channel.trim().toLowerCase();
                 var msgChannel = (msg.channel_name || '').toLowerCase();
@@ -192,7 +116,6 @@
                 }
             }
             
-            // Check username filter (case-insensitive)
             if (filters.username.trim() !== '') {
                 var filterUsername = filters.username.trim().toLowerCase();
                 var msgUsername = (msg.username || '').toLowerCase();
@@ -201,7 +124,6 @@
                 }
             }
             
-            // Check date range filters
             if (filters.startDate !== '' || filters.endDate !== '') {
                 var msgDate = new Date(msg.sent_at);
                 
@@ -225,7 +147,6 @@
             return true;
         }
         
-        // Status indicator management
         function showStatus(state) {
             var states = ['connected', 'idle', 'reconnecting', 'error'];
             states.forEach(function(s) {
@@ -242,88 +163,54 @@
             }
         }
         
-        // Escape HTML to prevent XSS
         function escapeHtml(text) {
             var div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
         
-        // Format time for display
         function formatTime(dateStr) {
             var date = new Date(dateStr);
             var month = date.toLocaleString('en-US', { month: 'short' });
             var day = String(date.getDate()).padStart(2, '0');
             var hours = String(date.getHours()).padStart(2, '0');
             var minutes = String(date.getMinutes()).padStart(2, '0');
-            return month + ' ' + day + ', ' + hours + ':' + minutes;
+            var seconds = String(date.getSeconds()).padStart(2, '0');
+            return month + ' ' + day + ', ' + hours + ':' + minutes + ':' + seconds;
         }
         
-        // Format full timestamp
         function formatFullTime(dateStr) {
             var date = new Date(dateStr);
             return date.toISOString();
         }
         
-        // Create message row HTML
         function createMessageRow(msg, idx) {
             var displayName = msg.display_name || msg.username;
             var time = formatTime(msg.sent_at);
             var fullTime = formatFullTime(msg.sent_at);
             
-            return '<tr class="hover:bg-gray-700/50 transition-colors group cursor-pointer sse-new-message" onclick="toggleRow(\'' + idx + '\')" data-message-id="' + msg.id + '">' +
-                '<td class="px-6 py-4 whitespace-nowrap">' +
-                    '<a href="/users/' + escapeHtml(msg.username) + '" class="font-medium text-twitch-purple hover:text-purple-400" onclick="event.stopPropagation();">' +
-                        escapeHtml(displayName) + '</a>' +
-                '</td>' +
-                '<td class="px-6 py-4 whitespace-nowrap">' +
-                    '<a href="/channels/' + escapeHtml(msg.channel_name) + '/view" class="text-gray-400 hover:text-gray-300" onclick="event.stopPropagation();">' +
-                        '#' + escapeHtml(msg.channel_name) + '</a>' +
-                '</td>' +
-                '<td class="px-6 py-4">' +
-                    '<div class="text-gray-200 truncate max-w-md">' + escapeHtml(msg.text) + '</div>' +
-                '</td>' +
-                '<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">' +
+            return '<tr class="table-row sse-new-message" data-message-id="' + msg.id + '">' +
+                '<td class="table-cell text-sm text-gray-400 whitespace-nowrap align-top">' +
                     '<time datetime="' + fullTime + '">' + time + '</time>' +
                 '</td>' +
-                '<td class="px-6 py-4 whitespace-nowrap text-right text-sm">' +
-                    '<button type="button" class="text-gray-400 hover:text-gray-300 expand-btn" aria-label="Expand message" onclick="event.stopPropagation(); toggleRow(\'' + idx + '\');">' +
-                        '<svg class="h-5 w-5 transform transition-transform" id="expand-icon-' + idx + '" fill="none" viewBox="0 0 24 24" stroke="currentColor">' +
-                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>' +
-                        '</svg>' +
-                    '</button>' +
+                '<td class="table-cell align-top">' +
+                    '<a href="/users/' + escapeHtml(msg.username) + '" class="font-medium text-primary-500 hover:text-primary-400 break-words">' +
+                        escapeHtml(displayName) + '</a>' +
                 '</td>' +
-            '</tr>' +
-            '<tr id="expanded-row-' + idx + '" class="hidden bg-gray-800/50" data-expanded-for="' + msg.id + '">' +
-                '<td colspan="5" class="px-6 py-4">' +
-                    '<div class="space-y-2">' +
-                        '<div class="flex items-center text-xs text-gray-500">' +
-                            '<span class="font-medium">Full message:</span>' +
-                            '<time class="ml-auto" datetime="' + fullTime + '">' + 
-                                new Date(msg.sent_at).toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) +
-                            '</time>' +
-                        '</div>' +
-                        '<p class="text-gray-200 whitespace-pre-wrap break-words">' + escapeHtml(msg.text) + '</p>' +
-                    '</div>' +
+                '<td class="table-cell align-top">' +
+                    '<a href="/channels/' + escapeHtml(msg.channel_name) + '/view" class="text-gray-400 hover:text-gray-300 break-words">' +
+                        '#' + escapeHtml(msg.channel_name) + '</a>' +
+                '</td>' +
+                '<td class="px-6 py-4 align-top">' +
+                    '<div class="text-gray-200 whitespace-pre-wrap break-words">' + escapeHtml(msg.text) + '</div>' +
                 '</td>' +
             '</tr>';
         }
         
-        // Get next available row index
-        function getNextRowIndex() {
-            var tbody = document.querySelector('#messages-list tbody');
-            if (!tbody) return 0;
-            var rows = tbody.querySelectorAll('tr[data-message-id]');
-            return rows.length;
-        }
-        
-        // Add new message to the table (prepend)
         function addMessage(msg) {
-            // Check for duplicate
             if (seenMessageIds.has(msg.id)) return;
             seenMessageIds.add(msg.id);
             
-            // Apply client-side filtering for SSE messages
             if (!messageMatchesFilters(msg)) {
                 return;
             }
@@ -331,12 +218,9 @@
             var container = document.getElementById('messages-list');
             var tbody = document.querySelector('#messages-list tbody');
             if (!tbody) {
-                // Messages list might be empty state, need to create table
                 if (container) {
-                    // Check if we have the empty state
                     var emptyState = container.querySelector('.text-center');
                     if (emptyState) {
-                        // Replace empty state with table structure
                         container.innerHTML = createTableStructure();
                         tbody = container.querySelector('tbody');
                     }
@@ -344,62 +228,41 @@
             }
             if (!tbody) return;
             
-            // Update total count if present
-            var countEl = container ? container.querySelector('.text-gray-400') : null;
-            if (countEl && countEl.textContent.includes('total')) {
-                var match = countEl.textContent.match(/\((\d+) total\)/);
-                if (match) {
-                    var newCount = parseInt(match[1]) + 1;
-                    countEl.textContent = 'Showing latest messages (' + newCount + ' total)';
-                }
-            }
-            
-            // Create row with unique index
             var idx = 'sse-' + msg.id;
             var rowHtml = createMessageRow(msg, idx);
             
-            // Insert at the top
             tbody.insertAdjacentHTML('afterbegin', rowHtml);
             
-            // Limit visible rows (remove from bottom)
             var rows = tbody.querySelectorAll('tr[data-message-id]');
             if (rows.length > 50) {
-                // Remove last 2 rows (data row + expanded row)
                 var lastRow = rows[rows.length - 1];
-                var expandedId = lastRow.getAttribute('data-message-id');
-                var expandedRow = tbody.querySelector('[data-expanded-for="' + expandedId + '"]');
-                if (expandedRow) expandedRow.remove();
                 lastRow.remove();
             }
         }
         
-        // Create initial table structure when empty
         function createTableStructure() {
             return '<div class="space-y-4">' +
                 '<div class="text-sm text-gray-400">Showing latest messages (0 total)</div>' +
-                '<div class="bg-twitch-gray rounded-lg border border-gray-700 overflow-hidden">' +
-                    '<table class="min-w-full divide-y divide-gray-700">' +
-                        '<thead class="bg-gray-800">' +
+                '<div class="table-container overflow-x-auto">' +
+                    '<table class="table w-full table-fixed">' +
+                        '<thead class="table-header">' +
                             '<tr>' +
-                                '<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">User</th>' +
-                                '<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Channel</th>' +
-                                '<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Message</th>' +
-                                '<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Time</th>' +
-                                '<th scope="col" class="relative px-6 py-3"><span class="sr-only">Expand</span></th>' +
+                                '<th scope="col" class="table-header-cell w-40">Time</th>' +
+                                '<th scope="col" class="table-header-cell w-40">User</th>' +
+                                '<th scope="col" class="table-header-cell w-36">Channel</th>' +
+                                '<th scope="col" class="table-header-cell">Message</th>' +
                             '</tr>' +
                         '</thead>' +
-                        '<tbody class="divide-y divide-gray-700"></tbody>' +
+                        '<tbody class="table-body"></tbody>' +
                     '</table>' +
                 '</div>' +
             '</div>';
         }
         
-        // Handle SSE message
         function handleMessage(event) {
             try {
                 var data = JSON.parse(event.data);
                 
-                // Update cursor for reconnection
                 if (data.cursor) lastCursor = data.cursor;
                 
                 switch (data.type) {
@@ -424,7 +287,6 @@
             }
         }
         
-        // Connect to SSE
         function connect() {
             if (!streamingEnabled) {
                 showStatus('idle');
@@ -456,22 +318,16 @@
                 showStatus('error');
                 eventSource.close();
                 
-                // Only attempt reconnection if streaming is still enabled
                 if (!streamingEnabled) return;
                 
-                // Exponential backoff reconnection
                 if (reconnectAttempts < maxReconnectAttempts) {
                     var delay = Math.min(baseReconnectDelay * Math.pow(2, reconnectAttempts), maxReconnectDelay);
                     reconnectAttempts++;
-                    console.log('Reconnecting in ' + delay + 'ms (attempt ' + reconnectAttempts + ')');
                     setTimeout(connect, delay);
-                } else {
-                    console.log('Max reconnect attempts reached');
                 }
             };
         }
         
-        // Disconnect from SSE
         function disconnect() {
             if (eventSource) {
                 eventSource.close();
@@ -481,7 +337,6 @@
             showStatus('idle');
         }
         
-        // Initialize seen message IDs from existing rows
         function initSeenIds() {
             var rows = document.querySelectorAll('[data-message-id]');
             rows.forEach(function(row) {
@@ -490,7 +345,6 @@
             });
         }
         
-        // Handle streaming toggle
         function setupStreamingToggle() {
             var toggle = document.getElementById('streaming-toggle');
             if (!toggle) return;
@@ -506,23 +360,19 @@
             });
         }
         
-        // Expose reconnect function globally for retry button
         window.sseReconnect = function() {
             reconnectAttempts = 0;
             connect();
         };
         
-        // Start connection when page loads
         if (typeof EventSource !== 'undefined') {
             initSeenIds();
             setupStreamingToggle();
             connect();
         } else {
-            console.log('SSE not supported');
             showStatus('error');
         }
         
-        // Cleanup on page unload
         window.addEventListener('beforeunload', function() {
             if (eventSource) {
                 eventSource.close();
