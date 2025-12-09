@@ -647,7 +647,7 @@ func TestUsersSSEStream(t *testing.T) {
 	// Create SSE handler
 	logger := observability.NewLogger("test")
 	metrics := observability.NewMetrics()
-	sseHandler := handlers.NewSSEHandler(channelRepo, messageRepo, userRepo, nil, logger, metrics)
+	sseHandler := handlers.NewSSEHandler(channelRepo, messageRepo, userRepo, nil, logger, metrics, nil)
 
 	// Create test server
 	mux := http.NewServeMux()

@@ -23,11 +23,11 @@ type Channel struct {
 
 // ChannelRepository provides CRUD operations for channels.
 type ChannelRepository struct {
-	db *DB
+	db Database
 }
 
 // NewChannelRepository creates a new channel repository.
-func NewChannelRepository(db *DB) *ChannelRepository {
+func NewChannelRepository(db Database) *ChannelRepository {
 	return &ChannelRepository{db: db}
 }
 
@@ -46,42 +46,24 @@ func (r *ChannelRepository) List(ctx context.Context) ([]Channel, error) {
 	}
 	defer rows.Close()
 
-	var channels []Channel
-	for rows.Next() {
-		var ch Channel
-		var createdAt, updatedAt string
-		var lastMessageAt sql.NullString
-
-		err := rows.Scan(
-			&ch.ID, &ch.Name, &ch.DisplayName, &ch.Enabled, &ch.RetainHistoryOnDelete,
-			&createdAt, &updatedAt, &lastMessageAt, &ch.TotalMessages,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan channel: %w", err)
-		}
-
-		ch.CreatedAt, _ = ParseSQLiteDatetime(createdAt)
-		ch.UpdatedAt, _ = ParseSQLiteDatetime(updatedAt)
-		if lastMessageAt.Valid {
-			t, _ := ParseSQLiteDatetime(lastMessageAt.String)
-			ch.LastMessageAt = &t
-		}
-
-		channels = append(channels, ch)
-	}
-
-	return channels, rows.Err()
+	return r.scanChannels(rows)
 }
 
 // ListEnabled returns only enabled channels.
 func (r *ChannelRepository) ListEnabled(ctx context.Context) ([]Channel, error) {
-	query := `
+	// Use driver-specific boolean syntax
+	enabledVal := "1"
+	if r.db.DriverName() == "postgres" {
+		enabledVal = "TRUE"
+	}
+
+	query := fmt.Sprintf(`
 		SELECT id, name, display_name, enabled, retain_history_on_delete,
 		       created_at, updated_at, last_message_at, total_messages
 		FROM channels
-		WHERE enabled = 1
+		WHERE enabled = %s
 		ORDER BY name ASC
-	`
+	`, enabledVal)
 
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
@@ -89,31 +71,7 @@ func (r *ChannelRepository) ListEnabled(ctx context.Context) ([]Channel, error) 
 	}
 	defer rows.Close()
 
-	var channels []Channel
-	for rows.Next() {
-		var ch Channel
-		var createdAt, updatedAt string
-		var lastMessageAt sql.NullString
-
-		err := rows.Scan(
-			&ch.ID, &ch.Name, &ch.DisplayName, &ch.Enabled, &ch.RetainHistoryOnDelete,
-			&createdAt, &updatedAt, &lastMessageAt, &ch.TotalMessages,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan channel: %w", err)
-		}
-
-		ch.CreatedAt, _ = ParseSQLiteDatetime(createdAt)
-		ch.UpdatedAt, _ = ParseSQLiteDatetime(updatedAt)
-		if lastMessageAt.Valid {
-			t, _ := ParseSQLiteDatetime(lastMessageAt.String)
-			ch.LastMessageAt = &t
-		}
-
-		channels = append(channels, ch)
-	}
-
-	return channels, rows.Err()
+	return r.scanChannels(rows)
 }
 
 // GetByID returns a channel by ID.
@@ -122,32 +80,9 @@ func (r *ChannelRepository) GetByID(ctx context.Context, id int64) (*Channel, er
 		SELECT id, name, display_name, enabled, retain_history_on_delete,
 		       created_at, updated_at, last_message_at, total_messages
 		FROM channels
-		WHERE id = ?
-	`
+		WHERE id = ` + r.db.Placeholder(1)
 
-	var ch Channel
-	var createdAt, updatedAt string
-	var lastMessageAt sql.NullString
-
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&ch.ID, &ch.Name, &ch.DisplayName, &ch.Enabled, &ch.RetainHistoryOnDelete,
-		&createdAt, &updatedAt, &lastMessageAt, &ch.TotalMessages,
-	)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get channel: %w", err)
-	}
-
-	ch.CreatedAt, _ = ParseSQLiteDatetime(createdAt)
-	ch.UpdatedAt, _ = ParseSQLiteDatetime(updatedAt)
-	if lastMessageAt.Valid {
-		t, _ := ParseSQLiteDatetime(lastMessageAt.String)
-		ch.LastMessageAt = &t
-	}
-
-	return &ch, nil
+	return r.scanChannel(r.db.QueryRowContext(ctx, query, id))
 }
 
 // GetByName returns a channel by name.
@@ -156,36 +91,33 @@ func (r *ChannelRepository) GetByName(ctx context.Context, name string) (*Channe
 		SELECT id, name, display_name, enabled, retain_history_on_delete,
 		       created_at, updated_at, last_message_at, total_messages
 		FROM channels
-		WHERE name = ?
-	`
+		WHERE name = ` + r.db.Placeholder(1)
 
-	var ch Channel
-	var createdAt, updatedAt string
-	var lastMessageAt sql.NullString
-
-	err := r.db.QueryRowContext(ctx, query, name).Scan(
-		&ch.ID, &ch.Name, &ch.DisplayName, &ch.Enabled, &ch.RetainHistoryOnDelete,
-		&createdAt, &updatedAt, &lastMessageAt, &ch.TotalMessages,
-	)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get channel by name: %w", err)
-	}
-
-	ch.CreatedAt, _ = ParseSQLiteDatetime(createdAt)
-	ch.UpdatedAt, _ = ParseSQLiteDatetime(updatedAt)
-	if lastMessageAt.Valid {
-		t, _ := ParseSQLiteDatetime(lastMessageAt.String)
-		ch.LastMessageAt = &t
-	}
-
-	return &ch, nil
+	return r.scanChannel(r.db.QueryRowContext(ctx, query, name))
 }
 
 // Create creates a new channel.
 func (r *ChannelRepository) Create(ctx context.Context, ch *Channel) error {
+	if r.db.SupportsReturning() {
+		// Postgres: use RETURNING
+		query := `
+			INSERT INTO channels (name, display_name, enabled, retain_history_on_delete)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id, created_at, updated_at
+		`
+		var createdAt, updatedAt time.Time
+		err := r.db.QueryRowContext(ctx, query,
+			ch.Name, ch.DisplayName, ch.Enabled, ch.RetainHistoryOnDelete,
+		).Scan(&ch.ID, &createdAt, &updatedAt)
+		if err != nil {
+			return fmt.Errorf("failed to create channel: %w", err)
+		}
+		ch.CreatedAt = createdAt
+		ch.UpdatedAt = updatedAt
+		return nil
+	}
+
+	// SQLite: use LastInsertId
 	query := `
 		INSERT INTO channels (name, display_name, enabled, retain_history_on_delete)
 		VALUES (?, ?, ?, ?)
@@ -219,14 +151,26 @@ func (r *ChannelRepository) Create(ctx context.Context, ch *Channel) error {
 
 // Update updates an existing channel.
 func (r *ChannelRepository) Update(ctx context.Context, ch *Channel) error {
-	query := `
-		UPDATE channels
-		SET display_name = ?,
-		    enabled = ?,
-		    retain_history_on_delete = ?,
-		    updated_at = datetime('now')
-		WHERE id = ?
-	`
+	var query string
+	if r.db.DriverName() == "postgres" {
+		query = `
+			UPDATE channels
+			SET display_name = $1,
+			    enabled = $2,
+			    retain_history_on_delete = $3,
+			    updated_at = NOW()
+			WHERE id = $4
+		`
+	} else {
+		query = `
+			UPDATE channels
+			SET display_name = ?,
+			    enabled = ?,
+			    retain_history_on_delete = ?,
+			    updated_at = datetime('now')
+			WHERE id = ?
+		`
+	}
 
 	_, err := r.db.ExecContext(ctx, query,
 		ch.DisplayName, ch.Enabled, ch.RetainHistoryOnDelete, ch.ID,
@@ -241,15 +185,16 @@ func (r *ChannelRepository) Update(ctx context.Context, ch *Channel) error {
 // Delete deletes a channel. If retainHistory is false, also deletes all messages.
 func (r *ChannelRepository) Delete(ctx context.Context, id int64, retainHistory bool) error {
 	return r.db.WithTx(ctx, func(tx *sql.Tx) error {
+		placeholder := r.db.Placeholder(1)
 		if !retainHistory {
 			// Delete messages first (triggers will handle FTS cleanup)
-			if _, err := tx.ExecContext(ctx, "DELETE FROM messages WHERE channel_id = ?", id); err != nil {
+			if _, err := tx.ExecContext(ctx, "DELETE FROM messages WHERE channel_id = "+placeholder, id); err != nil {
 				return fmt.Errorf("failed to delete channel messages: %w", err)
 			}
 		}
 
 		// Delete the channel
-		if _, err := tx.ExecContext(ctx, "DELETE FROM channels WHERE id = ?", id); err != nil {
+		if _, err := tx.ExecContext(ctx, "DELETE FROM channels WHERE id = "+placeholder, id); err != nil {
 			return fmt.Errorf("failed to delete channel: %w", err)
 		}
 
@@ -259,13 +204,24 @@ func (r *ChannelRepository) Delete(ctx context.Context, id int64, retainHistory 
 
 // UpdateStats updates the channel message count and last message time.
 func (r *ChannelRepository) UpdateStats(ctx context.Context, id int64, totalMessages int64, lastMessageAt time.Time) error {
-	query := `
-		UPDATE channels
-		SET total_messages = ?,
-		    last_message_at = ?,
-		    updated_at = datetime('now')
-		WHERE id = ?
-	`
+	var query string
+	if r.db.DriverName() == "postgres" {
+		query = `
+			UPDATE channels
+			SET total_messages = $1,
+			    last_message_at = $2,
+			    updated_at = NOW()
+			WHERE id = $3
+		`
+	} else {
+		query = `
+			UPDATE channels
+			SET total_messages = ?,
+			    last_message_at = ?,
+			    updated_at = datetime('now')
+			WHERE id = ?
+		`
+	}
 
 	_, err := r.db.ExecContext(ctx, query, totalMessages, lastMessageAt.Format(time.RFC3339), id)
 	if err != nil {
@@ -289,7 +245,12 @@ func (r *ChannelRepository) GetCount(ctx context.Context) (int64, error) {
 
 // GetEnabledCount returns the number of enabled channels.
 func (r *ChannelRepository) GetEnabledCount(ctx context.Context) (int64, error) {
-	query := `SELECT COUNT(*) FROM channels WHERE enabled = 1`
+	enabledVal := "1"
+	if r.db.DriverName() == "postgres" {
+		enabledVal = "TRUE"
+	}
+
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM channels WHERE enabled = %s`, enabledVal)
 
 	var count int64
 	if err := r.db.QueryRowContext(ctx, query).Scan(&count); err != nil {
@@ -297,4 +258,83 @@ func (r *ChannelRepository) GetEnabledCount(ctx context.Context) (int64, error) 
 	}
 
 	return count, nil
+}
+
+// scanChannel scans a single channel row.
+func (r *ChannelRepository) scanChannel(row *sql.Row) (*Channel, error) {
+	var ch Channel
+	var createdAt, updatedAt any
+	var lastMessageAt any
+
+	err := row.Scan(
+		&ch.ID, &ch.Name, &ch.DisplayName, &ch.Enabled, &ch.RetainHistoryOnDelete,
+		&createdAt, &updatedAt, &lastMessageAt, &ch.TotalMessages,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to scan channel: %w", err)
+	}
+
+	ch.CreatedAt = parseTimeValue(createdAt)
+	ch.UpdatedAt = parseTimeValue(updatedAt)
+	if t := parseTimeValue(lastMessageAt); !t.IsZero() {
+		ch.LastMessageAt = &t
+	}
+
+	return &ch, nil
+}
+
+// scanChannels scans multiple channel rows.
+func (r *ChannelRepository) scanChannels(rows *sql.Rows) ([]Channel, error) {
+	var channels []Channel
+	for rows.Next() {
+		var ch Channel
+		var createdAt, updatedAt any
+		var lastMessageAt any
+
+		err := rows.Scan(
+			&ch.ID, &ch.Name, &ch.DisplayName, &ch.Enabled, &ch.RetainHistoryOnDelete,
+			&createdAt, &updatedAt, &lastMessageAt, &ch.TotalMessages,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan channel: %w", err)
+		}
+
+		ch.CreatedAt = parseTimeValue(createdAt)
+		ch.UpdatedAt = parseTimeValue(updatedAt)
+		if t := parseTimeValue(lastMessageAt); !t.IsZero() {
+			ch.LastMessageAt = &t
+		}
+
+		channels = append(channels, ch)
+	}
+
+	return channels, rows.Err()
+}
+
+// parseTimeValue converts database time values to time.Time.
+// Handles both string (SQLite) and time.Time (Postgres) values.
+func parseTimeValue(v any) time.Time {
+	if v == nil {
+		return time.Time{}
+	}
+	switch t := v.(type) {
+	case time.Time:
+		return t
+	case string:
+		parsed, _ := ParseSQLiteDatetime(t)
+		return parsed
+	case *time.Time:
+		if t != nil {
+			return *t
+		}
+	case *string:
+		if t != nil {
+			parsed, _ := ParseSQLiteDatetime(*t)
+			return parsed
+		}
+	}
+	return time.Time{}
 }

@@ -128,12 +128,13 @@ type SSEClient struct {
 
 // SSEHandler handles Server-Sent Events for live updates.
 type SSEHandler struct {
-	channelRepo *repository.ChannelRepository
-	messageRepo *repository.MessageRepository
-	userRepo    *repository.UserRepository
-	templates   *template.Template
-	logger      *observability.Logger
-	metrics     *observability.Metrics
+	channelRepo  *repository.ChannelRepository
+	messageRepo  *repository.MessageRepository
+	userRepo     *repository.UserRepository
+	templates    *template.Template
+	logger       *observability.Logger
+	metrics      *observability.Metrics
+	otelProvider *observability.OTelProvider
 
 	// Client management
 	mu      sync.RWMutex
@@ -152,16 +153,18 @@ func NewSSEHandler(
 	templates *template.Template,
 	logger *observability.Logger,
 	metrics *observability.Metrics,
+	otelProvider *observability.OTelProvider,
 ) *SSEHandler {
 	return &SSEHandler{
-		channelRepo: channelRepo,
-		messageRepo: messageRepo,
-		userRepo:    userRepo,
-		templates:   templates,
-		logger:      logger,
-		metrics:     metrics,
-		clients:     make(map[string]*SSEClient),
-		shutdownCh:  make(chan struct{}),
+		channelRepo:  channelRepo,
+		messageRepo:  messageRepo,
+		userRepo:     userRepo,
+		templates:    templates,
+		logger:       logger,
+		metrics:      metrics,
+		otelProvider: otelProvider,
+		clients:      make(map[string]*SSEClient),
+		shutdownCh:   make(chan struct{}),
 	}
 }
 
@@ -237,6 +240,9 @@ func (h *SSEHandler) HandleSSE(w http.ResponseWriter, r *http.Request) {
 	if h.metrics != nil {
 		h.metrics.RecordSSEConnect(view)
 	}
+	if h.otelProvider != nil {
+		h.otelProvider.RecordSSEConnect(r.Context(), view)
+	}
 	h.logger.HTTP("SSE client connected", "client_id", clientID, "view", view, "after_id", afterID)
 
 	// Set SSE headers
@@ -275,6 +281,9 @@ func (h *SSEHandler) HandleSSE(w http.ResponseWriter, r *http.Request) {
 			if h.metrics != nil {
 				h.metrics.RecordSSEDisconnect(view, "context_done")
 			}
+			if h.otelProvider != nil {
+				h.otelProvider.RecordSSEDisconnect(r.Context(), view)
+			}
 			return
 
 		case <-h.shutdownCh:
@@ -283,6 +292,9 @@ func (h *SSEHandler) HandleSSE(w http.ResponseWriter, r *http.Request) {
 			if h.metrics != nil {
 				h.metrics.RecordSSEDisconnect(view, "server_shutdown")
 			}
+			if h.otelProvider != nil {
+				h.otelProvider.RecordSSEDisconnect(r.Context(), view)
+			}
 			return
 
 		case <-client.Done:
@@ -290,6 +302,9 @@ func (h *SSEHandler) HandleSSE(w http.ResponseWriter, r *http.Request) {
 			h.logger.HTTP("SSE client disconnected", "client_id", clientID, "reason", "server_close")
 			if h.metrics != nil {
 				h.metrics.RecordSSEDisconnect(view, "server_close")
+			}
+			if h.otelProvider != nil {
+				h.otelProvider.RecordSSEDisconnect(r.Context(), view)
 			}
 			return
 
@@ -427,10 +442,16 @@ func (h *SSEHandler) sendEvent(client *SSEClient, event any) {
 	select {
 	case client.Events <- []byte(sseData):
 		// Event sent successfully
+		if h.otelProvider != nil {
+			h.otelProvider.RecordSSEEventSent(context.Background())
+		}
 	default:
 		// Buffer full, record backpressure
 		if h.metrics != nil {
 			h.metrics.RecordSSEBackpressure(client.View)
+		}
+		if h.otelProvider != nil {
+			h.otelProvider.RecordSSEBackpressure(context.Background(), client.View)
 		}
 		h.logger.Warn("SSE client buffer full, dropping event", "client_id", client.ID, "view", client.View)
 	}

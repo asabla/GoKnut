@@ -5,6 +5,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"github.com/asabla/goknut/internal/observability"
 )
 
 // Message represents a chat message to be ingested.
@@ -54,6 +56,7 @@ type PipelineConfig struct {
 	FlushTimeout time.Duration
 	BufferSize   int
 	Metrics      Metrics
+	OTelProvider *observability.OTelProvider
 	Logger       Logger
 }
 
@@ -68,9 +71,10 @@ func DefaultPipelineConfig() PipelineConfig {
 
 // Pipeline handles message ingestion with batching.
 type Pipeline struct {
-	cfg      PipelineConfig
-	store    MessageStore
-	messages chan Message
+	cfg          PipelineConfig
+	store        MessageStore
+	messages     chan Message
+	otelProvider *observability.OTelProvider
 
 	mu      sync.Mutex
 	batch   []Message
@@ -94,11 +98,12 @@ func NewPipeline(cfg PipelineConfig, store MessageStore) *Pipeline {
 	}
 
 	return &Pipeline{
-		cfg:      cfg,
-		store:    store,
-		messages: make(chan Message, cfg.BufferSize),
-		batch:    make([]Message, 0, cfg.BatchSize),
-		done:     make(chan struct{}),
+		cfg:          cfg,
+		store:        store,
+		messages:     make(chan Message, cfg.BufferSize),
+		batch:        make([]Message, 0, cfg.BatchSize),
+		otelProvider: cfg.OTelProvider,
+		done:         make(chan struct{}),
 	}
 }
 
@@ -152,6 +157,9 @@ func (p *Pipeline) Ingest(msg Message) {
 		}
 		if p.cfg.Metrics != nil {
 			p.cfg.Metrics.RecordDroppedMessages(1)
+		}
+		if p.otelProvider != nil {
+			p.otelProvider.RecordDroppedMessages(context.Background(), 1)
 		}
 	}
 }
@@ -210,6 +218,9 @@ func (p *Pipeline) flush(ctx context.Context) {
 		// Record dropped messages metric
 		if p.cfg.Metrics != nil {
 			p.cfg.Metrics.RecordDroppedMessages(len(batch))
+		}
+		if p.otelProvider != nil {
+			p.otelProvider.RecordDroppedMessages(ctx, len(batch))
 		}
 		return
 	}

@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -19,10 +20,29 @@ const (
 	AuthModeAnonymous AuthMode = "anonymous"
 )
 
+// DBDriver represents the database driver type.
+type DBDriver string
+
+const (
+	// DBDriverSQLite uses SQLite as the database backend.
+	DBDriverSQLite DBDriver = "sqlite"
+	// DBDriverPostgres uses PostgreSQL as the database backend.
+	DBDriverPostgres DBDriver = "postgres"
+)
+
 // Config holds the application configuration.
 type Config struct {
 	// Database
-	DBPath string
+	DBDriver DBDriver // "sqlite" or "postgres"
+	DBPath   string   // SQLite: path to database file
+
+	// PostgreSQL settings (used when DBDriver == "postgres")
+	PGHost     string
+	PGPort     int
+	PGUser     string
+	PGPassword string
+	PGDatabase string
+	PGSSLMode  string
 
 	// HTTP Server
 	HTTPAddr string
@@ -39,21 +59,57 @@ type Config struct {
 	BufferSize   int // ingestion buffer size
 
 	// Feature flags
-	EnableFTS bool
+	EnableFTS bool // FTS5 full-text search (SQLite only)
 	EnableSSE bool // Enable Server-Sent Events for live updates
+
+	// OpenTelemetry configuration
+	OTelEnabled        bool   // Enable OpenTelemetry instrumentation
+	OTelServiceName    string // Service name for traces/metrics
+	OTelExporterOTLP   string // OTLP endpoint (e.g., "localhost:4317")
+	OTelInsecure       bool   // Use insecure connection to OTLP endpoint
+	OTelSamplerRatio   float64
+	OTelMetricsEnabled bool
+	OTelTracesEnabled  bool
+	OTelLogsEnabled    bool
 }
 
 // DefaultConfig returns a Config with default values.
 func DefaultConfig() *Config {
 	return &Config{
-		DBPath:         "./twitch.db",
-		HTTPAddr:       ":8080",
-		TwitchAuthMode: AuthModeAuthenticated, // Default to authenticated
-		BatchSize:      100,
-		FlushTimeout:   100,
-		BufferSize:     10000,
-		EnableFTS:      true,
-		EnableSSE:      true, // SSE enabled by default
+		// Database defaults
+		DBDriver:   DBDriverSQLite,
+		DBPath:     "./twitch.db",
+		PGHost:     "localhost",
+		PGPort:     5432,
+		PGUser:     "goknut",
+		PGPassword: "goknut",
+		PGDatabase: "goknut",
+		PGSSLMode:  "disable",
+
+		// HTTP defaults
+		HTTPAddr: ":8080",
+
+		// Twitch defaults
+		TwitchAuthMode: AuthModeAuthenticated,
+
+		// Ingestion defaults
+		BatchSize:    100,
+		FlushTimeout: 100,
+		BufferSize:   10000,
+
+		// Feature flags
+		EnableFTS: true,
+		EnableSSE: true,
+
+		// OpenTelemetry defaults
+		OTelEnabled:        false,
+		OTelServiceName:    "goknut",
+		OTelExporterOTLP:   "localhost:4317",
+		OTelInsecure:       true,
+		OTelSamplerRatio:   1.0,
+		OTelMetricsEnabled: true,
+		OTelTracesEnabled:  true,
+		OTelLogsEnabled:    true,
 	}
 }
 
@@ -134,6 +190,68 @@ func Load() (*Config, error) {
 		}
 	}
 
+	// Database driver selection
+	if v := os.Getenv("DB_DRIVER"); v != "" {
+		switch strings.ToLower(v) {
+		case "sqlite":
+			cfg.DBDriver = DBDriverSQLite
+		case "postgres", "postgresql":
+			cfg.DBDriver = DBDriverPostgres
+		default:
+			return nil, fmt.Errorf("invalid DB_DRIVER: %s (must be 'sqlite' or 'postgres')", v)
+		}
+	}
+
+	// PostgreSQL settings
+	if v := os.Getenv("PG_HOST"); v != "" {
+		cfg.PGHost = v
+	}
+	if v := os.Getenv("PG_PORT"); v != "" {
+		if port, err := strconv.Atoi(v); err == nil && port > 0 {
+			cfg.PGPort = port
+		}
+	}
+	if v := os.Getenv("PG_USER"); v != "" {
+		cfg.PGUser = v
+	}
+	if v := os.Getenv("PG_PASSWORD"); v != "" {
+		cfg.PGPassword = v
+	}
+	if v := os.Getenv("PG_DATABASE"); v != "" {
+		cfg.PGDatabase = v
+	}
+	if v := os.Getenv("PG_SSLMODE"); v != "" {
+		cfg.PGSSLMode = v
+	}
+
+	// OpenTelemetry settings
+	if v := os.Getenv("OTEL_ENABLED"); v != "" {
+		cfg.OTelEnabled = strings.ToLower(v) == "true" || v == "1"
+	}
+	if v := os.Getenv("OTEL_SERVICE_NAME"); v != "" {
+		cfg.OTelServiceName = v
+	}
+	if v := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); v != "" {
+		cfg.OTelExporterOTLP = v
+	}
+	if v := os.Getenv("OTEL_INSECURE"); v != "" {
+		cfg.OTelInsecure = strings.ToLower(v) == "true" || v == "1"
+	}
+	if v := os.Getenv("OTEL_SAMPLER_RATIO"); v != "" {
+		if ratio, err := strconv.ParseFloat(v, 64); err == nil && ratio >= 0 && ratio <= 1 {
+			cfg.OTelSamplerRatio = ratio
+		}
+	}
+	if v := os.Getenv("OTEL_METRICS_ENABLED"); v != "" {
+		cfg.OTelMetricsEnabled = strings.ToLower(v) == "true" || v == "1"
+	}
+	if v := os.Getenv("OTEL_TRACES_ENABLED"); v != "" {
+		cfg.OTelTracesEnabled = strings.ToLower(v) == "true" || v == "1"
+	}
+	if v := os.Getenv("OTEL_LOGS_ENABLED"); v != "" {
+		cfg.OTelLogsEnabled = strings.ToLower(v) == "true" || v == "1"
+	}
+
 	// Validate required fields
 	if err := cfg.Validate(); err != nil {
 		return nil, err
@@ -146,9 +264,33 @@ func Load() (*Config, error) {
 func (c *Config) Validate() error {
 	var errs []string
 
-	if c.DBPath == "" {
-		errs = append(errs, "db-path is required")
+	// Database validation based on driver
+	switch c.DBDriver {
+	case DBDriverSQLite:
+		if c.DBPath == "" {
+			errs = append(errs, "db-path is required for SQLite")
+		}
+	case DBDriverPostgres:
+		if c.PGHost == "" {
+			errs = append(errs, "PG_HOST is required for Postgres")
+		}
+		if c.PGPort <= 0 {
+			errs = append(errs, "PG_PORT must be positive")
+		}
+		if c.PGUser == "" {
+			errs = append(errs, "PG_USER is required for Postgres")
+		}
+		if c.PGDatabase == "" {
+			errs = append(errs, "PG_DATABASE is required for Postgres")
+		}
+		// Disable FTS for Postgres (SQLite-only feature)
+		if c.EnableFTS {
+			c.EnableFTS = false
+		}
+	default:
+		errs = append(errs, fmt.Sprintf("invalid DB driver: %s", c.DBDriver))
 	}
+
 	if c.HTTPAddr == "" {
 		errs = append(errs, "http-addr is required")
 	}
@@ -183,9 +325,28 @@ func (c *Config) Validate() error {
 		errs = append(errs, "buffer-size must be positive")
 	}
 
+	// OTel validation
+	if c.OTelEnabled {
+		if c.OTelServiceName == "" {
+			errs = append(errs, "OTEL_SERVICE_NAME is required when OTel is enabled")
+		}
+		if c.OTelExporterOTLP == "" {
+			errs = append(errs, "OTEL_EXPORTER_OTLP_ENDPOINT is required when OTel is enabled")
+		}
+		if c.OTelSamplerRatio < 0 || c.OTelSamplerRatio > 1 {
+			errs = append(errs, "OTEL_SAMPLER_RATIO must be between 0 and 1")
+		}
+	}
+
 	if len(errs) > 0 {
 		return errors.New(strings.Join(errs, "; "))
 	}
 
 	return nil
+}
+
+// PostgresDSN returns the PostgreSQL connection string.
+func (c *Config) PostgresDSN() string {
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		c.PGHost, c.PGPort, c.PGUser, c.PGPassword, c.PGDatabase, c.PGSSLMode)
 }

@@ -34,11 +34,11 @@ type User struct {
 
 // MessageRepository provides operations for messages.
 type MessageRepository struct {
-	db *DB
+	db Database
 }
 
 // NewMessageRepository creates a new message repository.
-func NewMessageRepository(db *DB) *MessageRepository {
+func NewMessageRepository(db Database) *MessageRepository {
 	return &MessageRepository{db: db}
 }
 
@@ -53,6 +53,23 @@ func (r *MessageRepository) Create(ctx context.Context, msg *Message) error {
 		tagsJSON = sql.NullString{String: string(data), Valid: true}
 	}
 
+	if r.db.SupportsReturning() {
+		// Postgres: use RETURNING
+		query := `
+			INSERT INTO messages (channel_id, user_id, text, sent_at, tags)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id
+		`
+		err := r.db.QueryRowContext(ctx, query,
+			msg.ChannelID, msg.UserID, msg.Text, msg.SentAt, tagsJSON,
+		).Scan(&msg.ID)
+		if err != nil {
+			return fmt.Errorf("failed to create message: %w", err)
+		}
+		return nil
+	}
+
+	// SQLite: use LastInsertId
 	query := `
 		INSERT INTO messages (channel_id, user_id, text, sent_at, tags)
 		VALUES (?, ?, ?, ?, ?)
@@ -81,10 +98,21 @@ func (r *MessageRepository) CreateBatch(ctx context.Context, messages []Message)
 	}
 
 	return r.db.WithTx(ctx, func(tx *sql.Tx) error {
-		stmt, err := tx.PrepareContext(ctx, `
-			INSERT INTO messages (channel_id, user_id, text, sent_at, tags)
-			VALUES (?, ?, ?, ?, ?)
-		`)
+		var query string
+		if r.db.SupportsReturning() {
+			query = `
+				INSERT INTO messages (channel_id, user_id, text, sent_at, tags)
+				VALUES ($1, $2, $3, $4, $5)
+				RETURNING id
+			`
+		} else {
+			query = `
+				INSERT INTO messages (channel_id, user_id, text, sent_at, tags)
+				VALUES (?, ?, ?, ?, ?)
+			`
+		}
+
+		stmt, err := tx.PrepareContext(ctx, query)
 		if err != nil {
 			return fmt.Errorf("failed to prepare statement: %w", err)
 		}
@@ -102,18 +130,34 @@ func (r *MessageRepository) CreateBatch(ctx context.Context, messages []Message)
 				tagsJSON = sql.NullString{String: string(data), Valid: true}
 			}
 
-			result, err := stmt.ExecContext(ctx,
-				msg.ChannelID, msg.UserID, msg.Text, msg.SentAt.Format(time.RFC3339), tagsJSON,
-			)
-			if err != nil {
-				return fmt.Errorf("failed to insert message: %w", err)
+			var sentAtArg any
+			if r.db.SupportsReturning() {
+				sentAtArg = msg.SentAt
+			} else {
+				sentAtArg = msg.SentAt.Format(time.RFC3339)
 			}
 
-			id, err := result.LastInsertId()
-			if err != nil {
-				return fmt.Errorf("failed to get last insert id: %w", err)
+			if r.db.SupportsReturning() {
+				err := stmt.QueryRowContext(ctx,
+					msg.ChannelID, msg.UserID, msg.Text, sentAtArg, tagsJSON,
+				).Scan(&msg.ID)
+				if err != nil {
+					return fmt.Errorf("failed to insert message: %w", err)
+				}
+			} else {
+				result, err := stmt.ExecContext(ctx,
+					msg.ChannelID, msg.UserID, msg.Text, sentAtArg, tagsJSON,
+				)
+				if err != nil {
+					return fmt.Errorf("failed to insert message: %w", err)
+				}
+
+				id, err := result.LastInsertId()
+				if err != nil {
+					return fmt.Errorf("failed to get last insert id: %w", err)
+				}
+				msg.ID = id
 			}
-			msg.ID = id
 		}
 
 		return nil
@@ -128,8 +172,7 @@ func (r *MessageRepository) GetByID(ctx context.Context, id int64) (*Message, er
 		FROM messages m
 		JOIN users u ON m.user_id = u.id
 		JOIN channels c ON m.channel_id = c.id
-		WHERE m.id = ?
-	`
+		WHERE m.id = ` + r.db.Placeholder(1)
 
 	return r.scanMessage(r.db.QueryRowContext(ctx, query, id))
 }
@@ -149,10 +192,9 @@ func (r *MessageRepository) GetRecent(ctx context.Context, channelID int64, limi
 		FROM messages m
 		JOIN users u ON m.user_id = u.id
 		JOIN channels c ON m.channel_id = c.id
-		WHERE m.channel_id = ?
+		WHERE m.channel_id = ` + r.db.Placeholder(1) + `
 		ORDER BY m.sent_at DESC, m.id DESC
-		LIMIT ?
-	`
+		LIMIT ` + r.db.Placeholder(2)
 
 	rows, err := r.db.QueryContext(ctx, query, channelID, limit)
 	if err != nil {
@@ -179,7 +221,7 @@ func (r *MessageRepository) GetPaginated(ctx context.Context, channelID int64, p
 
 	// Get total count
 	var totalCount int
-	countQuery := `SELECT COUNT(*) FROM messages WHERE channel_id = ?`
+	countQuery := `SELECT COUNT(*) FROM messages WHERE channel_id = ` + r.db.Placeholder(1)
 	if err := r.db.QueryRowContext(ctx, countQuery, channelID).Scan(&totalCount); err != nil {
 		return nil, 0, fmt.Errorf("failed to count messages: %w", err)
 	}
@@ -191,10 +233,9 @@ func (r *MessageRepository) GetPaginated(ctx context.Context, channelID int64, p
 		FROM messages m
 		JOIN users u ON m.user_id = u.id
 		JOIN channels c ON m.channel_id = c.id
-		WHERE m.channel_id = ?
+		WHERE m.channel_id = ` + r.db.Placeholder(1) + `
 		ORDER BY m.sent_at DESC, m.id DESC
-		LIMIT ? OFFSET ?
-	`
+		LIMIT ` + r.db.Placeholder(2) + ` OFFSET ` + r.db.Placeholder(3)
 
 	rows, err := r.db.QueryContext(ctx, query, channelID, pageSize, offset)
 	if err != nil {
@@ -225,10 +266,9 @@ func (r *MessageRepository) GetBeforeID(ctx context.Context, channelID, beforeID
 		FROM messages m
 		JOIN users u ON m.user_id = u.id
 		JOIN channels c ON m.channel_id = c.id
-		WHERE m.channel_id = ? AND m.id < ?
+		WHERE m.channel_id = ` + r.db.Placeholder(1) + ` AND m.id < ` + r.db.Placeholder(2) + `
 		ORDER BY m.sent_at DESC, m.id DESC
-		LIMIT ?
-	`
+		LIMIT ` + r.db.Placeholder(3)
 
 	rows, err := r.db.QueryContext(ctx, query, channelID, beforeID, limit)
 	if err != nil {
@@ -254,10 +294,9 @@ func (r *MessageRepository) GetAfterID(ctx context.Context, channelID, afterID i
 		FROM messages m
 		JOIN users u ON m.user_id = u.id
 		JOIN channels c ON m.channel_id = c.id
-		WHERE m.channel_id = ? AND m.id > ?
+		WHERE m.channel_id = ` + r.db.Placeholder(1) + ` AND m.id > ` + r.db.Placeholder(2) + `
 		ORDER BY m.sent_at ASC, m.id ASC
-		LIMIT ?
-	`
+		LIMIT ` + r.db.Placeholder(3)
 
 	rows, err := r.db.QueryContext(ctx, query, channelID, afterID, limit)
 	if err != nil {
@@ -270,7 +309,7 @@ func (r *MessageRepository) GetAfterID(ctx context.Context, channelID, afterID i
 
 // GetLatestID returns the ID of the most recent message for a channel.
 func (r *MessageRepository) GetLatestID(ctx context.Context, channelID int64) (int64, error) {
-	query := `SELECT COALESCE(MAX(id), 0) FROM messages WHERE channel_id = ?`
+	query := `SELECT COALESCE(MAX(id), 0) FROM messages WHERE channel_id = ` + r.db.Placeholder(1)
 
 	var latestID int64
 	if err := r.db.QueryRowContext(ctx, query, channelID).Scan(&latestID); err != nil {
@@ -296,8 +335,7 @@ func (r *MessageRepository) GetRecentGlobal(ctx context.Context, limit int) ([]M
 		JOIN users u ON m.user_id = u.id
 		JOIN channels c ON m.channel_id = c.id
 		ORDER BY m.sent_at DESC, m.id DESC
-		LIMIT ?
-	`
+		LIMIT ` + r.db.Placeholder(1)
 
 	rows, err := r.db.QueryContext(ctx, query, limit)
 	if err != nil {
@@ -335,10 +373,9 @@ func (r *MessageRepository) GetGlobalAfterID(ctx context.Context, afterID int64,
 		FROM messages m
 		JOIN users u ON m.user_id = u.id
 		JOIN channels c ON m.channel_id = c.id
-		WHERE m.id > ?
+		WHERE m.id > ` + r.db.Placeholder(1) + `
 		ORDER BY m.id ASC
-		LIMIT ?
-	`
+		LIMIT ` + r.db.Placeholder(2)
 
 	rows, err := r.db.QueryContext(ctx, query, afterID, limit)
 	if err != nil {
@@ -363,12 +400,13 @@ func (r *MessageRepository) GetGlobalLatestID(ctx context.Context) (int64, error
 
 func (r *MessageRepository) scanMessage(row *sql.Row) (*Message, error) {
 	var msg Message
-	var sentAt string
+	var sentAt any
 	var tagsJSON sql.NullString
+	var displayName sql.NullString
 
 	err := row.Scan(
 		&msg.ID, &msg.ChannelID, &msg.UserID, &msg.Text, &sentAt, &tagsJSON,
-		&msg.Username, &msg.DisplayName, &msg.ChannelName,
+		&msg.Username, &displayName, &msg.ChannelName,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -377,7 +415,10 @@ func (r *MessageRepository) scanMessage(row *sql.Row) (*Message, error) {
 		return nil, fmt.Errorf("failed to scan message: %w", err)
 	}
 
-	msg.SentAt, _ = ParseSQLiteDatetime(sentAt)
+	msg.SentAt = parseTimeValue(sentAt)
+	if displayName.Valid {
+		msg.DisplayName = displayName.String
+	}
 
 	if tagsJSON.Valid && tagsJSON.String != "" {
 		if err := json.Unmarshal([]byte(tagsJSON.String), &msg.Tags); err != nil {
@@ -394,18 +435,22 @@ func (r *MessageRepository) scanMessages(rows *sql.Rows) ([]Message, error) {
 
 	for rows.Next() {
 		var msg Message
-		var sentAt string
+		var sentAt any
 		var tagsJSON sql.NullString
+		var displayName sql.NullString
 
 		err := rows.Scan(
 			&msg.ID, &msg.ChannelID, &msg.UserID, &msg.Text, &sentAt, &tagsJSON,
-			&msg.Username, &msg.DisplayName, &msg.ChannelName,
+			&msg.Username, &displayName, &msg.ChannelName,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan message: %w", err)
 		}
 
-		msg.SentAt, _ = ParseSQLiteDatetime(sentAt)
+		msg.SentAt = parseTimeValue(sentAt)
+		if displayName.Valid {
+			msg.DisplayName = displayName.String
+		}
 
 		if tagsJSON.Valid && tagsJSON.String != "" {
 			if err := json.Unmarshal([]byte(tagsJSON.String), &msg.Tags); err != nil {
@@ -422,11 +467,11 @@ func (r *MessageRepository) scanMessages(rows *sql.Rows) ([]Message, error) {
 
 // UserRepository provides operations for users.
 type UserRepository struct {
-	db *DB
+	db Database
 }
 
 // NewUserRepository creates a new user repository.
-func NewUserRepository(db *DB) *UserRepository {
+func NewUserRepository(db Database) *UserRepository {
 	return &UserRepository{db: db}
 }
 
@@ -435,30 +480,9 @@ func (r *UserRepository) GetByID(ctx context.Context, id int64) (*User, error) {
 	query := `
 		SELECT id, username, display_name, first_seen_at, last_seen_at, total_messages
 		FROM users
-		WHERE id = ?
-	`
+		WHERE id = ` + r.db.Placeholder(1)
 
-	var user User
-	var firstSeen, lastSeen string
-	var displayName sql.NullString
-
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&user.ID, &user.Username, &displayName, &firstSeen, &lastSeen, &user.TotalMessages,
-	)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user: %w", err)
-	}
-
-	user.FirstSeenAt, _ = ParseSQLiteDatetime(firstSeen)
-	user.LastSeenAt, _ = ParseSQLiteDatetime(lastSeen)
-	if displayName.Valid {
-		user.DisplayName = displayName.String
-	}
-
-	return &user, nil
+	return r.scanUser(r.db.QueryRowContext(ctx, query, id))
 }
 
 // GetByUsername returns a user by username.
@@ -466,43 +490,35 @@ func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*U
 	query := `
 		SELECT id, username, display_name, first_seen_at, last_seen_at, total_messages
 		FROM users
-		WHERE username = ?
-	`
+		WHERE username = ` + r.db.Placeholder(1)
 
-	var user User
-	var firstSeen, lastSeen string
-	var displayName sql.NullString
-
-	err := r.db.QueryRowContext(ctx, query, username).Scan(
-		&user.ID, &user.Username, &displayName, &firstSeen, &lastSeen, &user.TotalMessages,
-	)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user by username: %w", err)
-	}
-
-	user.FirstSeenAt, _ = ParseSQLiteDatetime(firstSeen)
-	user.LastSeenAt, _ = ParseSQLiteDatetime(lastSeen)
-	if displayName.Valid {
-		user.DisplayName = displayName.String
-	}
-
-	return &user, nil
+	return r.scanUser(r.db.QueryRowContext(ctx, query, username))
 }
 
 // Create creates a new user.
 func (r *UserRepository) Create(ctx context.Context, user *User) error {
-	query := `
-		INSERT INTO users (username, display_name, first_seen_at, last_seen_at)
-		VALUES (?, ?, datetime('now'), datetime('now'))
-	`
-
 	var displayName sql.NullString
 	if user.DisplayName != "" {
 		displayName = sql.NullString{String: user.DisplayName, Valid: true}
 	}
+
+	if r.db.SupportsReturning() {
+		query := `
+			INSERT INTO users (username, display_name, first_seen_at, last_seen_at)
+			VALUES ($1, $2, NOW(), NOW())
+			RETURNING id
+		`
+		err := r.db.QueryRowContext(ctx, query, user.Username, displayName).Scan(&user.ID)
+		if err != nil {
+			return fmt.Errorf("failed to create user: %w", err)
+		}
+		return nil
+	}
+
+	query := `
+		INSERT INTO users (username, display_name, first_seen_at, last_seen_at)
+		VALUES (?, ?, datetime('now'), datetime('now'))
+	`
 
 	result, err := r.db.ExecContext(ctx, query, user.Username, displayName)
 	if err != nil {
@@ -528,10 +544,8 @@ func (r *UserRepository) GetOrCreate(ctx context.Context, username, displayName 
 	if user != nil {
 		// Update display name if changed
 		if displayName != "" && displayName != user.DisplayName {
-			if _, err := r.db.ExecContext(ctx,
-				"UPDATE users SET display_name = ? WHERE id = ?",
-				displayName, user.ID,
-			); err != nil {
+			updateQuery := `UPDATE users SET display_name = ` + r.db.Placeholder(1) + ` WHERE id = ` + r.db.Placeholder(2)
+			if _, err := r.db.ExecContext(ctx, updateQuery, displayName, user.ID); err != nil {
 				// Non-fatal
 			}
 			user.DisplayName = displayName
@@ -561,4 +575,28 @@ func (r *UserRepository) GetCount(ctx context.Context) (int64, error) {
 	}
 
 	return count, nil
+}
+
+func (r *UserRepository) scanUser(row *sql.Row) (*User, error) {
+	var user User
+	var firstSeen, lastSeen any
+	var displayName sql.NullString
+
+	err := row.Scan(
+		&user.ID, &user.Username, &displayName, &firstSeen, &lastSeen, &user.TotalMessages,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to scan user: %w", err)
+	}
+
+	user.FirstSeenAt = parseTimeValue(firstSeen)
+	user.LastSeenAt = parseTimeValue(lastSeen)
+	if displayName.Valid {
+		user.DisplayName = displayName.String
+	}
+
+	return &user, nil
 }

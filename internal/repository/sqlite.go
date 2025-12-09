@@ -44,22 +44,22 @@ func ParseSQLiteDatetime(s string) (time.Time, error) {
 }
 
 //go:embed migrations/001_init.sql
-var initSQL string
+var sqliteInitSQL string
 
-// DB wraps the SQLite database connection with configuration and helpers.
-type DB struct {
+// SQLiteDB wraps the SQLite database connection with configuration and helpers.
+type SQLiteDB struct {
 	*sql.DB
 	mu sync.RWMutex
 }
 
-// DBConfig holds database configuration options.
-type DBConfig struct {
+// SQLiteDBConfig holds SQLite database configuration options.
+type SQLiteDBConfig struct {
 	Path      string
 	EnableFTS bool
 }
 
-// Open creates a new database connection with WAL mode and performance pragmas.
-func Open(cfg DBConfig) (*DB, error) {
+// OpenSQLite creates a new SQLite database connection with WAL mode and performance pragmas.
+func OpenSQLite(cfg SQLiteDBConfig) (*SQLiteDB, error) {
 	// Build connection string with pragmas
 	dsn := fmt.Sprintf("file:%s?_journal_mode=WAL&_synchronous=NORMAL&_busy_timeout=5000&_cache_size=-64000", cfg.Path)
 
@@ -86,15 +86,15 @@ func Open(cfg DBConfig) (*DB, error) {
 		}
 	}
 
-	return &DB{DB: db}, nil
+	return &SQLiteDB{DB: db}, nil
 }
 
-// Migrate runs database migrations.
-func (db *DB) Migrate(ctx context.Context) error {
+// Migrate runs SQLite database migrations.
+func (db *SQLiteDB) Migrate(ctx context.Context) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	_, err := db.ExecContext(ctx, initSQL)
+	_, err := db.ExecContext(ctx, sqliteInitSQL)
 	if err != nil {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
@@ -102,8 +102,8 @@ func (db *DB) Migrate(ctx context.Context) error {
 	return nil
 }
 
-// Close closes the database connection.
-func (db *DB) Close() error {
+// Close closes the SQLite database connection.
+func (db *SQLiteDB) Close() error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
@@ -114,12 +114,12 @@ func (db *DB) Close() error {
 }
 
 // BeginTx starts a new transaction with the given options.
-func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
+func (db *SQLiteDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
 	return db.DB.BeginTx(ctx, opts)
 }
 
 // WithTx executes a function within a transaction.
-func (db *DB) WithTx(ctx context.Context, fn func(*sql.Tx) error) error {
+func (db *SQLiteDB) WithTx(ctx context.Context, fn func(*sql.Tx) error) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -138,3 +138,47 @@ func (db *DB) WithTx(ctx context.Context, fn func(*sql.Tx) error) error {
 
 	return nil
 }
+
+// DriverName returns the database driver name.
+func (db *SQLiteDB) DriverName() string {
+	return "sqlite"
+}
+
+// SupportsLastInsertID returns true for SQLite.
+func (db *SQLiteDB) SupportsLastInsertID() bool {
+	return true
+}
+
+// SupportsReturning returns false for SQLite (older versions).
+func (db *SQLiteDB) SupportsReturning() bool {
+	return false
+}
+
+// Placeholder returns ? for SQLite.
+func (db *SQLiteDB) Placeholder(index int) string {
+	return "?"
+}
+
+// NowFunc returns datetime('now') for SQLite.
+func (db *SQLiteDB) NowFunc() string {
+	return "datetime('now')"
+}
+
+// Open is a compatibility wrapper that creates a SQLite database.
+// Deprecated: Use OpenSQLite directly.
+func Open(cfg DBConfig) (*SQLiteDB, error) {
+	return OpenSQLite(SQLiteDBConfig{
+		Path:      cfg.Path,
+		EnableFTS: cfg.EnableFTS,
+	})
+}
+
+// DBConfig is kept for backward compatibility.
+// Deprecated: Use SQLiteDBConfig.
+type DBConfig struct {
+	Path      string
+	EnableFTS bool
+}
+
+// DB is an alias for SQLiteDB for backward compatibility.
+type DB = SQLiteDB

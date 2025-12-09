@@ -20,9 +20,10 @@ var (
 
 // SearchService provides search operations for users and messages.
 type SearchService struct {
-	repo    *search.SearchRepository
-	logger  *observability.Logger
-	metrics *observability.Metrics
+	repo         *search.SearchRepository
+	logger       *observability.Logger
+	metrics      *observability.Metrics
+	otelProvider *observability.OTelProvider
 }
 
 // NewSearchService creates a new search service.
@@ -30,11 +31,13 @@ func NewSearchService(
 	repo *search.SearchRepository,
 	logger *observability.Logger,
 	metrics *observability.Metrics,
+	otelProvider *observability.OTelProvider,
 ) *SearchService {
 	return &SearchService{
-		repo:    repo,
-		logger:  logger,
-		metrics: metrics,
+		repo:         repo,
+		logger:       logger,
+		metrics:      metrics,
+		otelProvider: otelProvider,
 	}
 }
 
@@ -65,8 +68,12 @@ func (s *SearchService) SearchUsers(ctx context.Context, req dto.SearchUsersRequ
 	start := time.Now()
 	defer func() {
 		latency := time.Since(start)
+		latencyMs := float64(latency.Milliseconds())
 		if s.metrics != nil {
 			s.metrics.RecordSearchRequest("users", latency)
+		}
+		if s.otelProvider != nil {
+			s.otelProvider.RecordSearchQuery(ctx, "users", latencyMs)
 		}
 	}()
 
@@ -116,8 +123,12 @@ func (s *SearchService) ListUsers(ctx context.Context, req dto.ListUsersRequest)
 	start := time.Now()
 	defer func() {
 		latency := time.Since(start)
+		latencyMs := float64(latency.Milliseconds())
 		if s.metrics != nil {
 			s.metrics.RecordSearchRequest("list_users", latency)
+		}
+		if s.otelProvider != nil {
+			s.otelProvider.RecordSearchQuery(ctx, "list_users", latencyMs)
 		}
 	}()
 
@@ -167,8 +178,12 @@ func (s *SearchService) SearchMessages(ctx context.Context, req dto.SearchMessag
 	start := time.Now()
 	defer func() {
 		latency := time.Since(start)
+		latencyMs := float64(latency.Milliseconds())
 		if s.metrics != nil {
 			s.metrics.RecordSearchRequest("messages", latency)
+		}
+		if s.otelProvider != nil {
+			s.otelProvider.RecordSearchQuery(ctx, "messages", latencyMs)
 		}
 	}()
 
@@ -224,8 +239,12 @@ func (s *SearchService) GetUserProfile(ctx context.Context, userID int64) (*sear
 	start := time.Now()
 	defer func() {
 		latency := time.Since(start)
+		latencyMs := float64(latency.Milliseconds())
 		if s.metrics != nil {
 			s.metrics.RecordSearchRequest("profile", latency)
+		}
+		if s.otelProvider != nil {
+			s.otelProvider.RecordSearchQuery(ctx, "profile", latencyMs)
 		}
 	}()
 
@@ -253,8 +272,12 @@ func (s *SearchService) GetUserProfileByUsername(ctx context.Context, username s
 	start := time.Now()
 	defer func() {
 		latency := time.Since(start)
+		latencyMs := float64(latency.Milliseconds())
 		if s.metrics != nil {
 			s.metrics.RecordSearchRequest("profile", latency)
+		}
+		if s.otelProvider != nil {
+			s.otelProvider.RecordSearchQuery(ctx, "profile", latencyMs)
 		}
 	}()
 
@@ -282,8 +305,12 @@ func (s *SearchService) GetUserMessages(ctx context.Context, userID int64, chann
 	start := time.Now()
 	defer func() {
 		latency := time.Since(start)
+		latencyMs := float64(latency.Milliseconds())
 		if s.metrics != nil {
 			s.metrics.RecordSearchRequest("user_messages", latency)
+		}
+		if s.otelProvider != nil {
+			s.otelProvider.RecordSearchQuery(ctx, "user_messages", latencyMs)
 		}
 	}()
 
@@ -331,8 +358,12 @@ func (s *SearchService) GetRecentMessages(ctx context.Context, page, pageSize in
 	start := time.Now()
 	defer func() {
 		latency := time.Since(start)
+		latencyMs := float64(latency.Milliseconds())
 		if s.metrics != nil {
 			s.metrics.RecordSearchRequest("recent_messages", latency)
+		}
+		if s.otelProvider != nil {
+			s.otelProvider.RecordSearchQuery(ctx, "recent_messages", latencyMs)
 		}
 	}()
 
@@ -378,8 +409,12 @@ func (s *SearchService) GetUserMessagesByUsername(ctx context.Context, username 
 	start := time.Now()
 	defer func() {
 		latency := time.Since(start)
+		latencyMs := float64(latency.Milliseconds())
 		if s.metrics != nil {
 			s.metrics.RecordSearchRequest("user_messages", latency)
+		}
+		if s.otelProvider != nil {
+			s.otelProvider.RecordSearchQuery(ctx, "user_messages", latencyMs)
 		}
 	}()
 

@@ -18,6 +18,7 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "valid authenticated config",
 			cfg: &config.Config{
+				DBDriver:         config.DBDriverSQLite,
 				DBPath:           "./test.db",
 				HTTPAddr:         ":8080",
 				TwitchAuthMode:   config.AuthModeAuthenticated,
@@ -32,6 +33,7 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "valid anonymous config",
 			cfg: &config.Config{
+				DBDriver:       config.DBDriverSQLite,
 				DBPath:         "./test.db",
 				HTTPAddr:       ":8080",
 				TwitchAuthMode: config.AuthModeAnonymous,
@@ -44,6 +46,7 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "anonymous with username is valid",
 			cfg: &config.Config{
+				DBDriver:       config.DBDriverSQLite,
 				DBPath:         "./test.db",
 				HTTPAddr:       ":8080",
 				TwitchAuthMode: config.AuthModeAnonymous,
@@ -57,6 +60,7 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "anonymous with token is invalid",
 			cfg: &config.Config{
+				DBDriver:         config.DBDriverSQLite,
 				DBPath:           "./test.db",
 				HTTPAddr:         ":8080",
 				TwitchAuthMode:   config.AuthModeAnonymous,
@@ -70,6 +74,7 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "authenticated missing token",
 			cfg: &config.Config{
+				DBDriver:       config.DBDriverSQLite,
 				DBPath:         "./test.db",
 				HTTPAddr:       ":8080",
 				TwitchAuthMode: config.AuthModeAuthenticated,
@@ -83,6 +88,7 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "authenticated missing username",
 			cfg: &config.Config{
+				DBDriver:         config.DBDriverSQLite,
 				DBPath:           "./test.db",
 				HTTPAddr:         ":8080",
 				TwitchAuthMode:   config.AuthModeAuthenticated,
@@ -96,6 +102,7 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "authenticated token without oauth prefix",
 			cfg: &config.Config{
+				DBDriver:         config.DBDriverSQLite,
 				DBPath:           "./test.db",
 				HTTPAddr:         ":8080",
 				TwitchAuthMode:   config.AuthModeAuthenticated,
@@ -110,6 +117,7 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "missing db path",
 			cfg: &config.Config{
+				DBDriver:         config.DBDriverSQLite,
 				DBPath:           "",
 				HTTPAddr:         ":8080",
 				TwitchAuthMode:   config.AuthModeAuthenticated,
@@ -124,6 +132,7 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "missing http addr",
 			cfg: &config.Config{
+				DBDriver:         config.DBDriverSQLite,
 				DBPath:           "./test.db",
 				HTTPAddr:         "",
 				TwitchAuthMode:   config.AuthModeAuthenticated,
@@ -138,6 +147,7 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "invalid batch size",
 			cfg: &config.Config{
+				DBDriver:         config.DBDriverSQLite,
 				DBPath:           "./test.db",
 				HTTPAddr:         ":8080",
 				TwitchAuthMode:   config.AuthModeAuthenticated,
@@ -152,6 +162,7 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "negative batch size",
 			cfg: &config.Config{
+				DBDriver:         config.DBDriverSQLite,
 				DBPath:           "./test.db",
 				HTTPAddr:         ":8080",
 				TwitchAuthMode:   config.AuthModeAuthenticated,
@@ -166,6 +177,7 @@ func TestConfigValidation(t *testing.T) {
 		{
 			name: "invalid flush timeout",
 			cfg: &config.Config{
+				DBDriver:         config.DBDriverSQLite,
 				DBPath:           "./test.db",
 				HTTPAddr:         ":8080",
 				TwitchAuthMode:   config.AuthModeAuthenticated,

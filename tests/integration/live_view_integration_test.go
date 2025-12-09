@@ -280,7 +280,7 @@ func TestHomeSSEStream(t *testing.T) {
 	// Create SSE handler
 	logger := observability.NewLogger("test")
 	metrics := observability.NewMetrics()
-	sseHandler := handlers.NewSSEHandler(channelRepo, messageRepo, userRepo, nil, logger, metrics)
+	sseHandler := handlers.NewSSEHandler(channelRepo, messageRepo, userRepo, nil, logger, metrics, nil)
 
 	// Create test server
 	mux := http.NewServeMux()
@@ -442,7 +442,7 @@ func TestMessagesSSEStream(t *testing.T) {
 	// Create SSE handler
 	logger := observability.NewLogger("test")
 	metrics := observability.NewMetrics()
-	sseHandler := handlers.NewSSEHandler(channelRepo, messageRepo, userRepo, nil, logger, metrics)
+	sseHandler := handlers.NewSSEHandler(channelRepo, messageRepo, userRepo, nil, logger, metrics, nil)
 
 	// Create test server
 	mux := http.NewServeMux()
@@ -618,7 +618,7 @@ func TestMessagesSSEStreamNoDuplicates(t *testing.T) {
 	// Create SSE handler
 	logger := observability.NewLogger("test")
 	metrics := observability.NewMetrics()
-	sseHandler := handlers.NewSSEHandler(channelRepo, messageRepo, userRepo, nil, logger, metrics)
+	sseHandler := handlers.NewSSEHandler(channelRepo, messageRepo, userRepo, nil, logger, metrics, nil)
 
 	// Create test server
 	mux := http.NewServeMux()
@@ -729,7 +729,7 @@ func TestUserProfileSSEStream(t *testing.T) {
 	// Create SSE handler
 	logger := observability.NewLogger("test")
 	metrics := observability.NewMetrics()
-	sseHandler := handlers.NewSSEHandler(channelRepo, messageRepo, userRepo, nil, logger, metrics)
+	sseHandler := handlers.NewSSEHandler(channelRepo, messageRepo, userRepo, nil, logger, metrics, nil)
 
 	// Create test server
 	mux := http.NewServeMux()
