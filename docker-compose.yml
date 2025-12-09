@@ -1,0 +1,217 @@
+# Docker Compose for GoKnut Twitch Chat Archiver
+# Full stack with Postgres, OTel Collector, Prometheus, Tempo, Loki, and Grafana
+
+services:
+  # ====================
+  # Application
+  # ====================
+  goknut:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: goknut
+    ports:
+      - "8080:8080"
+    environment:
+      # Database (Postgres)
+      - DB_DRIVER=postgres
+      - PG_HOST=postgres
+      - PG_PORT=5432
+      - PG_USER=goknut
+      - PG_PASSWORD=goknut
+      - PG_DATABASE=goknut
+      - PG_SSLMODE=disable
+      # HTTP Server
+      - HTTP_ADDR=:8080
+      # Twitch IRC (anonymous by default)
+      - TWITCH_AUTH_MODE=anonymous
+      - TWITCH_CHANNELS=xqc,pokimane,shroud
+      # Features
+      - ENABLE_FTS=true
+      - ENABLE_SSE=true
+      # Ingestion
+      - BATCH_SIZE=100
+      - FLUSH_TIMEOUT_MS=1000
+      # OpenTelemetry
+      - OTEL_ENABLED=true
+      - OTEL_SERVICE_NAME=goknut
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+      - OTEL_INSECURE=true
+      - OTEL_SAMPLER_RATIO=1.0
+      - OTEL_METRICS_ENABLED=true
+      - OTEL_TRACES_ENABLED=true
+      - OTEL_LOGS_ENABLED=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    networks:
+      - goknut-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ====================
+  # Database
+  # ====================
+  postgres:
+    image: postgres:16-alpine
+    container_name: goknut-postgres
+    environment:
+      - POSTGRES_USER=goknut
+      - POSTGRES_PASSWORD=goknut
+      - POSTGRES_DB=goknut
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./deploy/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - goknut-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U goknut -d goknut"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ====================
+  # OpenTelemetry Collector
+  # ====================
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.113.0
+    container_name: goknut-otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./deploy/otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8888:8888"   # Prometheus metrics exposed by collector
+      - "8889:8889"   # Prometheus exporter metrics
+    networks:
+      - goknut-network
+    depends_on:
+      - tempo
+      - prometheus
+      - loki
+    restart: unless-stopped
+
+  # ====================
+  # Tracing - Grafana Tempo
+  # ====================
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: goknut-tempo
+    command: ["-config.file=/etc/tempo/tempo-config.yaml"]
+    volumes:
+      - ./deploy/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "3200:3200"   # Tempo HTTP API
+      - "9095:9095"   # Tempo gRPC
+    networks:
+      - goknut-network
+    restart: unless-stopped
+
+  # ====================
+  # Metrics - Prometheus
+  # ====================
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: goknut-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-remote-write-receiver'
+      - '--enable-feature=exemplar-storage'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - goknut-network
+    restart: unless-stopped
+
+  # ====================
+  # Logging - Loki
+  # ====================
+  loki:
+    image: grafana/loki:3.1.0
+    container_name: goknut-loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./deploy/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    networks:
+      - goknut-network
+    restart: unless-stopped
+
+  # ====================
+  # Logging - Promtail (log collector)
+  # ====================
+  promtail:
+    image: grafana/promtail:3.1.0
+    container_name: goknut-promtail
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./deploy/promtail/promtail-config.yaml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - goknut-network
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  # ====================
+  # Visualization - Grafana
+  # ====================
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: goknut-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    networks:
+      - goknut-network
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    restart: unless-stopped
+
+# ====================
+# Networks
+# ====================
+networks:
+  goknut-network:
+    driver: bridge
+
+# ====================
+# Volumes
+# ====================
+volumes:
+  postgres-data:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+  grafana-data:

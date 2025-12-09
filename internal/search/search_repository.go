@@ -14,6 +14,31 @@ import (
 	"github.com/asabla/goknut/internal/repository"
 )
 
+// parseTimeValue converts database time values to time.Time.
+// Handles both string (SQLite) and time.Time (Postgres) values.
+func parseTimeValue(v any) time.Time {
+	if v == nil {
+		return time.Time{}
+	}
+	switch t := v.(type) {
+	case time.Time:
+		return t
+	case string:
+		parsed, _ := repository.ParseSQLiteDatetime(t)
+		return parsed
+	case *time.Time:
+		if t != nil {
+			return *t
+		}
+	case *string:
+		if t != nil {
+			parsed, _ := repository.ParseSQLiteDatetime(*t)
+			return parsed
+		}
+	}
+	return time.Time{}
+}
+
 // MessageSearchParams defines parameters for message search.
 type MessageSearchParams struct {
 	Query       string
@@ -79,16 +104,21 @@ type UserChannelSummary struct {
 
 // SearchRepository provides search operations.
 type SearchRepository struct {
-	db        *repository.DB
+	db        repository.Database
 	enableFTS bool
 }
 
 // NewSearchRepository creates a new search repository.
-func NewSearchRepository(db *repository.DB, enableFTS bool) *SearchRepository {
+func NewSearchRepository(db repository.Database, enableFTS bool) *SearchRepository {
 	return &SearchRepository{
 		db:        db,
 		enableFTS: enableFTS,
 	}
+}
+
+// ph returns the appropriate placeholder for the given index (1-based).
+func (r *SearchRepository) ph(index int) string {
+	return r.db.Placeholder(index)
 }
 
 // SearchUsers searches for users by username fragment.
@@ -107,7 +137,7 @@ func (r *SearchRepository) SearchUsers(ctx context.Context, params UserSearchPar
 	// Count query
 	countQuery := `
 		SELECT COUNT(*) FROM users
-		WHERE username LIKE ? ESCAPE '\'
+		WHERE username LIKE ` + r.ph(1) + ` ESCAPE '\'
 	`
 	var totalCount int
 	if err := r.db.QueryRowContext(ctx, countQuery, pattern).Scan(&totalCount); err != nil {
@@ -120,9 +150,9 @@ func (r *SearchRepository) SearchUsers(ctx context.Context, params UserSearchPar
 			u.id, u.username, u.display_name, u.first_seen_at, u.last_seen_at, u.total_messages,
 			(SELECT COUNT(DISTINCT channel_id) FROM messages WHERE user_id = u.id) as channel_count
 		FROM users u
-		WHERE u.username LIKE ? ESCAPE '\'
+		WHERE u.username LIKE ` + r.ph(1) + ` ESCAPE '\'
 		ORDER BY u.total_messages DESC, u.username ASC
-		LIMIT ? OFFSET ?
+		LIMIT ` + r.ph(2) + ` OFFSET ` + r.ph(3) + `
 	`
 
 	rows, err := r.db.QueryContext(ctx, query, pattern, params.PageSize, offset)
@@ -134,15 +164,15 @@ func (r *SearchRepository) SearchUsers(ctx context.Context, params UserSearchPar
 	var results []UserSearchResult
 	for rows.Next() {
 		var u UserSearchResult
-		var firstSeen, lastSeen string
+		var firstSeen, lastSeen any
 		var displayName sql.NullString
 
 		if err := rows.Scan(&u.ID, &u.Username, &displayName, &firstSeen, &lastSeen, &u.TotalMessages, &u.ChannelCount); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan user: %w", err)
 		}
 
-		u.FirstSeenAt, _ = repository.ParseSQLiteDatetime(firstSeen)
-		u.LastSeenAt, _ = repository.ParseSQLiteDatetime(lastSeen)
+		u.FirstSeenAt = parseTimeValue(firstSeen)
+		u.LastSeenAt = parseTimeValue(lastSeen)
 		if displayName.Valid {
 			u.DisplayName = displayName.String
 		}
@@ -172,12 +202,14 @@ func (r *SearchRepository) ListUsers(ctx context.Context, params ListUsersParams
 
 	var conditions []string
 	var args []any
+	argIndex := 1
 
 	// Apply optional username filter
 	if params.Query != "" {
 		pattern := BuildLIKEPattern(params.Query)
-		conditions = append(conditions, "u.username LIKE ? ESCAPE '\\'")
+		conditions = append(conditions, "u.username LIKE "+r.ph(argIndex)+" ESCAPE '\\'")
 		args = append(args, pattern)
+		argIndex++
 	}
 
 	whereClause := ""
@@ -200,8 +232,8 @@ func (r *SearchRepository) ListUsers(ctx context.Context, params ListUsersParams
 		FROM users u
 		%s
 		ORDER BY u.total_messages DESC, u.username ASC
-		LIMIT ? OFFSET ?
-	`, whereClause)
+		LIMIT %s OFFSET %s
+	`, whereClause, r.ph(argIndex), r.ph(argIndex+1))
 
 	args = append(args, params.PageSize, offset)
 
@@ -214,15 +246,15 @@ func (r *SearchRepository) ListUsers(ctx context.Context, params ListUsersParams
 	var results []UserSearchResult
 	for rows.Next() {
 		var u UserSearchResult
-		var firstSeen, lastSeen string
+		var firstSeen, lastSeen any
 		var displayName sql.NullString
 
 		if err := rows.Scan(&u.ID, &u.Username, &displayName, &firstSeen, &lastSeen, &u.TotalMessages, &u.ChannelCount); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan user: %w", err)
 		}
 
-		u.FirstSeenAt, _ = repository.ParseSQLiteDatetime(firstSeen)
-		u.LastSeenAt, _ = repository.ParseSQLiteDatetime(lastSeen)
+		u.FirstSeenAt = parseTimeValue(firstSeen)
+		u.LastSeenAt = parseTimeValue(lastSeen)
 		if displayName.Valid {
 			u.DisplayName = displayName.String
 		}
@@ -254,29 +286,35 @@ func (r *SearchRepository) searchMessagesFTS(ctx context.Context, params Message
 	// Build WHERE clauses for filters
 	var conditions []string
 	var args []any
+	argIndex := 1
 
 	// FTS query is optional when using filters
 	if params.Query != "" {
 		ftsQuery := BuildFTSQuery(params.Query)
-		conditions = append(conditions, "f.content MATCH ?")
+		conditions = append(conditions, "f.content MATCH "+r.ph(argIndex))
 		args = append(args, ftsQuery)
+		argIndex++
 	}
 
 	if params.ChannelName != nil {
-		conditions = append(conditions, "c.name = ?")
+		conditions = append(conditions, "c.name = "+r.ph(argIndex))
 		args = append(args, *params.ChannelName)
+		argIndex++
 	}
 	if params.Username != nil {
-		conditions = append(conditions, "u.username = ?")
+		conditions = append(conditions, "u.username = "+r.ph(argIndex))
 		args = append(args, *params.Username)
+		argIndex++
 	}
 	if params.StartTime != nil {
-		conditions = append(conditions, "m.sent_at >= ?")
+		conditions = append(conditions, "m.sent_at >= "+r.ph(argIndex))
 		args = append(args, params.StartTime.Format(time.RFC3339))
+		argIndex++
 	}
 	if params.EndTime != nil {
-		conditions = append(conditions, "m.sent_at <= ?")
+		conditions = append(conditions, "m.sent_at <= "+r.ph(argIndex))
 		args = append(args, params.EndTime.Format(time.RFC3339))
+		argIndex++
 	}
 
 	whereClause := ""
@@ -323,8 +361,8 @@ func (r *SearchRepository) searchMessagesFTS(ctx context.Context, params Message
 			JOIN users u ON m.user_id = u.id
 			%s
 			ORDER BY m.sent_at DESC, m.id DESC
-			LIMIT ? OFFSET ?
-		`, whereClause)
+			LIMIT %s OFFSET %s
+		`, whereClause, r.ph(argIndex), r.ph(argIndex+1))
 	} else {
 		query = fmt.Sprintf(`
 			SELECT 
@@ -335,8 +373,8 @@ func (r *SearchRepository) searchMessagesFTS(ctx context.Context, params Message
 			JOIN users u ON m.user_id = u.id
 			%s
 			ORDER BY m.sent_at DESC, m.id DESC
-			LIMIT ? OFFSET ?
-		`, whereClause)
+			LIMIT %s OFFSET %s
+		`, whereClause, r.ph(argIndex), r.ph(argIndex+1))
 	}
 
 	args = append(args, params.PageSize, offset)
@@ -355,29 +393,35 @@ func (r *SearchRepository) searchMessagesLIKE(ctx context.Context, params Messag
 	// Build WHERE clauses for filters
 	var conditions []string
 	var args []any
+	argIndex := 1
 
 	// Text search is optional when using filters
 	if params.Query != "" {
 		pattern := BuildLIKEPattern(params.Query)
-		conditions = append(conditions, "m.text LIKE ? ESCAPE '\\'")
+		conditions = append(conditions, "m.text LIKE "+r.ph(argIndex)+" ESCAPE '\\'")
 		args = append(args, pattern)
+		argIndex++
 	}
 
 	if params.ChannelName != nil {
-		conditions = append(conditions, "c.name = ?")
+		conditions = append(conditions, "c.name = "+r.ph(argIndex))
 		args = append(args, *params.ChannelName)
+		argIndex++
 	}
 	if params.Username != nil {
-		conditions = append(conditions, "u.username = ?")
+		conditions = append(conditions, "u.username = "+r.ph(argIndex))
 		args = append(args, *params.Username)
+		argIndex++
 	}
 	if params.StartTime != nil {
-		conditions = append(conditions, "m.sent_at >= ?")
+		conditions = append(conditions, "m.sent_at >= "+r.ph(argIndex))
 		args = append(args, params.StartTime.Format(time.RFC3339))
+		argIndex++
 	}
 	if params.EndTime != nil {
-		conditions = append(conditions, "m.sent_at <= ?")
+		conditions = append(conditions, "m.sent_at <= "+r.ph(argIndex))
 		args = append(args, params.EndTime.Format(time.RFC3339))
+		argIndex++
 	}
 
 	whereClause := ""
@@ -409,8 +453,8 @@ func (r *SearchRepository) searchMessagesLIKE(ctx context.Context, params Messag
 		JOIN users u ON m.user_id = u.id
 		%s
 		ORDER BY m.sent_at DESC, m.id DESC
-		LIMIT ? OFFSET ?
-	`, whereClause)
+		LIMIT %s OFFSET %s
+	`, whereClause, r.ph(argIndex), r.ph(argIndex+1))
 
 	args = append(args, params.PageSize, offset)
 
@@ -428,7 +472,7 @@ func (r *SearchRepository) scanMessageResults(rows *sql.Rows, query string) ([]M
 
 	for rows.Next() {
 		var m MessageSearchResult
-		var sentAt string
+		var sentAt any
 		var displayName, tagsJSON sql.NullString
 
 		if err := rows.Scan(
@@ -438,7 +482,7 @@ func (r *SearchRepository) scanMessageResults(rows *sql.Rows, query string) ([]M
 			return nil, 0, fmt.Errorf("failed to scan message: %w", err)
 		}
 
-		m.SentAt, _ = repository.ParseSQLiteDatetime(sentAt)
+		m.SentAt = parseTimeValue(sentAt)
 		if displayName.Valid {
 			m.DisplayName = displayName.String
 		}
@@ -461,7 +505,7 @@ func (r *SearchRepository) GetUserProfile(ctx context.Context, userID int64) (*U
 	userQuery := `
 		SELECT id, username, display_name, first_seen_at, last_seen_at, total_messages
 		FROM users
-		WHERE id = ?
+		WHERE id = ` + r.ph(1) + `
 	`
 
 	return r.getUserProfile(ctx, userQuery, userID)
@@ -473,7 +517,7 @@ func (r *SearchRepository) GetUserProfileByUsername(ctx context.Context, usernam
 	userQuery := `
 		SELECT id, username, display_name, first_seen_at, last_seen_at, total_messages
 		FROM users
-		WHERE username = ?
+		WHERE username = ` + r.ph(1) + `
 	`
 
 	return r.getUserProfile(ctx, userQuery, username)
@@ -482,7 +526,7 @@ func (r *SearchRepository) GetUserProfileByUsername(ctx context.Context, usernam
 // getUserProfile is a shared helper for fetching user profiles.
 func (r *SearchRepository) getUserProfile(ctx context.Context, userQuery string, arg any) (*UserProfile, error) {
 	var profile UserProfile
-	var firstSeen, lastSeen string
+	var firstSeen, lastSeen any
 	var displayName sql.NullString
 
 	err := r.db.QueryRowContext(ctx, userQuery, arg).Scan(
@@ -495,8 +539,8 @@ func (r *SearchRepository) getUserProfile(ctx context.Context, userQuery string,
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	profile.FirstSeenAt, _ = repository.ParseSQLiteDatetime(firstSeen)
-	profile.LastSeenAt, _ = repository.ParseSQLiteDatetime(lastSeen)
+	profile.FirstSeenAt = parseTimeValue(firstSeen)
+	profile.LastSeenAt = parseTimeValue(lastSeen)
 	if displayName.Valid {
 		profile.DisplayName = displayName.String
 	}
@@ -509,7 +553,7 @@ func (r *SearchRepository) getUserProfile(ctx context.Context, userQuery string,
 			MAX(m.sent_at) as last_message_at
 		FROM channels c
 		JOIN messages m ON c.id = m.channel_id
-		WHERE m.user_id = ?
+		WHERE m.user_id = ` + r.ph(1) + `
 		GROUP BY c.id, c.name, c.display_name
 		ORDER BY message_count DESC
 	`
@@ -522,13 +566,13 @@ func (r *SearchRepository) getUserProfile(ctx context.Context, userQuery string,
 
 	for rows.Next() {
 		var ch UserChannelSummary
-		var lastMsgAt string
+		var lastMsgAt any
 
 		if err := rows.Scan(&ch.ID, &ch.Name, &ch.DisplayName, &ch.MessageCount, &lastMsgAt); err != nil {
 			return nil, fmt.Errorf("failed to scan channel: %w", err)
 		}
 
-		ch.LastMessageAt, _ = repository.ParseSQLiteDatetime(lastMsgAt)
+		ch.LastMessageAt = parseTimeValue(lastMsgAt)
 		profile.Channels = append(profile.Channels, ch)
 	}
 
@@ -548,13 +592,16 @@ func (r *SearchRepository) GetUserMessages(ctx context.Context, userID int64, ch
 	// Build WHERE clause
 	var conditions []string
 	var args []any
+	argIndex := 1
 
-	conditions = append(conditions, "m.user_id = ?")
+	conditions = append(conditions, "m.user_id = "+r.ph(argIndex))
 	args = append(args, userID)
+	argIndex++
 
 	if channelID != nil {
-		conditions = append(conditions, "m.channel_id = ?")
+		conditions = append(conditions, "m.channel_id = "+r.ph(argIndex))
 		args = append(args, *channelID)
+		argIndex++
 	}
 
 	whereClause := strings.Join(conditions, " AND ")
@@ -577,8 +624,8 @@ func (r *SearchRepository) GetUserMessages(ctx context.Context, userID int64, ch
 		JOIN users u ON m.user_id = u.id
 		WHERE %s
 		ORDER BY m.sent_at DESC, m.id DESC
-		LIMIT ? OFFSET ?
-	`, whereClause)
+		LIMIT %s OFFSET %s
+	`, whereClause, r.ph(argIndex), r.ph(argIndex+1))
 
 	args = append(args, pageSize, offset)
 
@@ -591,7 +638,7 @@ func (r *SearchRepository) GetUserMessages(ctx context.Context, userID int64, ch
 	var results []MessageSearchResult
 	for rows.Next() {
 		var m MessageSearchResult
-		var sentAt string
+		var sentAt any
 		var displayName, tagsJSON sql.NullString
 
 		if err := rows.Scan(
@@ -601,7 +648,7 @@ func (r *SearchRepository) GetUserMessages(ctx context.Context, userID int64, ch
 			return nil, 0, fmt.Errorf("failed to scan message: %w", err)
 		}
 
-		m.SentAt, _ = repository.ParseSQLiteDatetime(sentAt)
+		m.SentAt = parseTimeValue(sentAt)
 		if displayName.Valid {
 			m.DisplayName = displayName.String
 		}
@@ -629,13 +676,16 @@ func (r *SearchRepository) GetUserMessagesByUsername(ctx context.Context, userna
 	// Build WHERE clause using JOINs to resolve names to IDs
 	var conditions []string
 	var args []any
+	argIndex := 1
 
-	conditions = append(conditions, "u.username = ?")
+	conditions = append(conditions, "u.username = "+r.ph(argIndex))
 	args = append(args, username)
+	argIndex++
 
 	if channelName != nil {
-		conditions = append(conditions, "c.name = ?")
+		conditions = append(conditions, "c.name = "+r.ph(argIndex))
 		args = append(args, *channelName)
+		argIndex++
 	}
 
 	whereClause := strings.Join(conditions, " AND ")
@@ -664,8 +714,8 @@ func (r *SearchRepository) GetUserMessagesByUsername(ctx context.Context, userna
 		JOIN users u ON m.user_id = u.id
 		WHERE %s
 		ORDER BY m.sent_at DESC, m.id DESC
-		LIMIT ? OFFSET ?
-	`, whereClause)
+		LIMIT %s OFFSET %s
+	`, whereClause, r.ph(argIndex), r.ph(argIndex+1))
 
 	args = append(args, pageSize, offset)
 
@@ -678,7 +728,7 @@ func (r *SearchRepository) GetUserMessagesByUsername(ctx context.Context, userna
 	var results []MessageSearchResult
 	for rows.Next() {
 		var m MessageSearchResult
-		var sentAt string
+		var sentAt any
 		var displayName, tagsJSON sql.NullString
 
 		if err := rows.Scan(
@@ -688,7 +738,7 @@ func (r *SearchRepository) GetUserMessagesByUsername(ctx context.Context, userna
 			return nil, 0, fmt.Errorf("failed to scan message: %w", err)
 		}
 
-		m.SentAt, _ = repository.ParseSQLiteDatetime(sentAt)
+		m.SentAt = parseTimeValue(sentAt)
 		if displayName.Valid {
 			m.DisplayName = displayName.String
 		}
@@ -824,7 +874,7 @@ func (r *SearchRepository) GetRecentMessages(ctx context.Context, page, pageSize
 		JOIN channels c ON m.channel_id = c.id
 		JOIN users u ON m.user_id = u.id
 		ORDER BY m.sent_at DESC, m.id DESC
-		LIMIT ? OFFSET ?
+		LIMIT ` + r.ph(1) + ` OFFSET ` + r.ph(2) + `
 	`
 
 	rows, err := r.db.QueryContext(ctx, query, pageSize, offset)
@@ -836,7 +886,7 @@ func (r *SearchRepository) GetRecentMessages(ctx context.Context, page, pageSize
 	var results []MessageSearchResult
 	for rows.Next() {
 		var m MessageSearchResult
-		var sentAt string
+		var sentAt any
 		var displayName, tagsJSON sql.NullString
 
 		if err := rows.Scan(
@@ -846,7 +896,7 @@ func (r *SearchRepository) GetRecentMessages(ctx context.Context, page, pageSize
 			return nil, 0, fmt.Errorf("failed to scan message: %w", err)
 		}
 
-		m.SentAt, _ = repository.ParseSQLiteDatetime(sentAt)
+		m.SentAt = parseTimeValue(sentAt)
 		if displayName.Valid {
 			m.DisplayName = displayName.String
 		}

@@ -28,6 +28,7 @@ type Server struct {
 	templates      *template.Template
 	logger         *observability.Logger
 	metrics        *observability.Metrics
+	otelProvider   *observability.OTelProvider
 	channelService *services.ChannelService
 	searchService  *services.SearchService
 	channelRepo    *repository.ChannelRepository
@@ -42,6 +43,7 @@ type ServerConfig struct {
 	Addr           string
 	Logger         *observability.Logger
 	Metrics        *observability.Metrics
+	OTelProvider   *observability.OTelProvider
 	ChannelService *services.ChannelService
 	SearchService  *services.SearchService
 	ChannelRepo    *repository.ChannelRepository
@@ -100,6 +102,7 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 		mux:            http.NewServeMux(),
 		logger:         cfg.Logger,
 		metrics:        cfg.Metrics,
+		otelProvider:   cfg.OTelProvider,
 		channelService: cfg.ChannelService,
 		searchService:  cfg.SearchService,
 		channelRepo:    cfg.ChannelRepo,
@@ -162,6 +165,12 @@ func (s *Server) registerRoutes() {
 	// Health check
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
 
+	// Prometheus metrics endpoint
+	if s.otelProvider != nil {
+		s.mux.Handle("GET /metrics", s.otelProvider.PrometheusHandler())
+		s.logger.HTTP("Prometheus metrics endpoint enabled", "path", "/metrics")
+	}
+
 	// Home
 	s.mux.HandleFunc("GET /", s.handleHome)
 
@@ -187,14 +196,14 @@ func (s *Server) registerRoutes() {
 	// Register SSE live updates handler
 	if s.enableSSE {
 		s.sseHandler = handlers.NewSSEHandler(
-			s.channelRepo, s.messageRepo, s.userRepo, s.templates, s.logger, s.metrics)
+			s.channelRepo, s.messageRepo, s.userRepo, s.templates, s.logger, s.metrics, s.otelProvider)
 		s.sseHandler.RegisterRoutes(s.mux)
 		s.logger.HTTP("SSE live updates enabled", "path", "/live")
 	}
 }
 
 func (s *Server) middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
 		// Wrap response writer to capture status code
@@ -215,6 +224,12 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 			"latency_ms", latency.Milliseconds(),
 		)
 	})
+
+	// Wrap with OTel HTTP middleware if enabled
+	if s.otelProvider != nil {
+		return s.otelProvider.HTTPMiddleware(handler)
+	}
+	return handler
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {

@@ -1,0 +1,16 @@
+# Grafana dashboard provisioning for GoKnut
+# Automatically loads dashboards from this directory
+
+apiVersion: 1
+
+providers:
+  - name: 'GoKnut Dashboards'
+    orgId: 1
+    folder: 'GoKnut'
+    folderUid: 'goknut'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards

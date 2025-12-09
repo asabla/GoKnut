@@ -33,31 +33,83 @@ func run() error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
+	ctx := context.Background()
+
 	// Initialize observability
 	logger := observability.NewLogger("goknut")
 	metrics := observability.NewMetrics()
 
+	// Initialize OpenTelemetry if enabled
+	var otelProvider *observability.OTelProvider
+	if cfg.OTelEnabled {
+		otelCfg := observability.OTelConfig{
+			ServiceName:    cfg.OTelServiceName,
+			OTLPEndpoint:   cfg.OTelExporterOTLP,
+			Insecure:       cfg.OTelInsecure,
+			SamplerRatio:   cfg.OTelSamplerRatio,
+			MetricsEnabled: cfg.OTelMetricsEnabled,
+			TracesEnabled:  cfg.OTelTracesEnabled,
+			LogsEnabled:    cfg.OTelLogsEnabled,
+		}
+		otelProvider, err = observability.InitOTel(ctx, otelCfg)
+		if err != nil {
+			return fmt.Errorf("failed to initialize OpenTelemetry: %w", err)
+		}
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := otelProvider.Shutdown(shutdownCtx); err != nil {
+				logger.Error("failed to shutdown OpenTelemetry", "error", err)
+			}
+		}()
+		logger.Info("OpenTelemetry initialized",
+			"service", cfg.OTelServiceName,
+			"endpoint", cfg.OTelExporterOTLP,
+			"traces", cfg.OTelTracesEnabled,
+			"metrics", cfg.OTelMetricsEnabled,
+		)
+	}
+
 	logger.Info("starting GoKnut",
 		"auth_mode", cfg.TwitchAuthMode,
+		"db_driver", cfg.DBDriver,
 		"db_path", cfg.DBPath,
 		"http_addr", cfg.HTTPAddr,
 		"batch_size", cfg.BatchSize,
 		"flush_timeout_ms", cfg.FlushTimeout,
 		"enable_fts", cfg.EnableFTS,
+		"otel_enabled", cfg.OTelEnabled,
 	)
 
-	// Open database
-	db, err := repository.Open(repository.DBConfig{
-		Path:      cfg.DBPath,
-		EnableFTS: cfg.EnableFTS,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to open database: %w", err)
+	// Open database based on driver
+	var db repository.Database
+	switch cfg.DBDriver {
+	case config.DBDriverSQLite:
+		db, err = repository.OpenSQLite(repository.SQLiteDBConfig{
+			Path:      cfg.DBPath,
+			EnableFTS: cfg.EnableFTS,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to open sqlite database: %w", err)
+		}
+	case config.DBDriverPostgres:
+		db, err = repository.OpenPostgres(repository.PostgresDBConfig{
+			Host:     cfg.PGHost,
+			Port:     cfg.PGPort,
+			User:     cfg.PGUser,
+			Password: cfg.PGPassword,
+			Database: cfg.PGDatabase,
+			SSLMode:  cfg.PGSSLMode,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to open postgres database: %w", err)
+		}
+	default:
+		return fmt.Errorf("unsupported database driver: %s", cfg.DBDriver)
 	}
 	defer db.Close()
 
 	// Run migrations
-	ctx := context.Background()
 	if err := db.Migrate(ctx); err != nil {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
@@ -68,14 +120,29 @@ func run() error {
 	messageRepo := repository.NewMessageRepository(db)
 	userRepo := repository.NewUserRepository(db)
 
+	// Register database count callbacks for OTel metrics
+	if otelProvider != nil {
+		dbCountProvider := &databaseCountProvider{
+			messageRepo: messageRepo,
+			userRepo:    userRepo,
+			channelRepo: channelRepo,
+		}
+		if err := otelProvider.RegisterDatabaseCountCallbacks(dbCountProvider); err != nil {
+			logger.Error("failed to register database count callbacks", "error", err)
+		} else {
+			logger.Info("database count metrics registered")
+		}
+	}
+
 	// Create message processor (implements ingestion.MessageStore)
 	processor := ingestion.NewProcessor(
 		messageRepo,
 		userRepo,
 		channelRepo,
 		ingestion.ProcessorConfig{
-			Logger:  logger,
-			Metrics: metrics,
+			Logger:       logger,
+			Metrics:      metrics,
+			OTelProvider: otelProvider,
 		},
 	)
 
@@ -86,6 +153,7 @@ func run() error {
 			FlushTimeout: time.Duration(cfg.FlushTimeout) * time.Millisecond,
 			BufferSize:   10000,
 			Metrics:      metrics,
+			OTelProvider: otelProvider,
 		},
 		processor,
 	)
@@ -97,6 +165,10 @@ func run() error {
 		OAuthToken: cfg.TwitchOAuthToken,
 		OnMessage: func(msg irc.Message) {
 			metrics.RecordIRCMessage()
+			// Record OTel metrics for IRC messages (with channel label)
+			if otelProvider != nil {
+				otelProvider.RecordIRCMessage(ctx, msg.Channel)
+			}
 			pipeline.Ingest(ingestion.Message{
 				ChannelName: msg.Channel,
 				Username:    msg.Username,
@@ -125,13 +197,14 @@ func run() error {
 
 	// Create search repository and service
 	searchRepo := search.NewSearchRepository(db, cfg.EnableFTS)
-	searchService := services.NewSearchService(searchRepo, logger, metrics)
+	searchService := services.NewSearchService(searchRepo, logger, metrics, otelProvider)
 
 	// Create HTTP server
 	httpServer, err := gohttp.NewServer(gohttp.ServerConfig{
 		Addr:           cfg.HTTPAddr,
 		Logger:         logger,
 		Metrics:        metrics,
+		OTelProvider:   otelProvider,
 		ChannelService: channelService,
 		SearchService:  searchService,
 		ChannelRepo:    channelRepo,
@@ -163,6 +236,9 @@ func run() error {
 		return fmt.Errorf("failed to connect to IRC: %w", err)
 	}
 	metrics.RecordIRCConnection()
+	if otelProvider != nil {
+		otelProvider.RecordIRCConnection(ctx)
+	}
 	logger.IRC("connected to Twitch IRC",
 		"mode", cfg.TwitchAuthMode,
 		"anonymous", ircClient.IsAnonymous(),
@@ -241,6 +317,9 @@ func run() error {
 		logger.Error("failed to disconnect IRC", "error", err)
 	}
 	metrics.RecordIRCDisconnection()
+	if otelProvider != nil {
+		otelProvider.RecordIRCDisconnection(ctx)
+	}
 
 	// Stop ingestion pipeline (flushes remaining messages)
 	if err := pipeline.Stop(); err != nil {
@@ -259,4 +338,24 @@ func run() error {
 
 	logger.Info("shutdown complete")
 	return nil
+}
+
+// databaseCountProvider implements observability.DatabaseCountProvider
+// to provide database counts for OTel observable gauges.
+type databaseCountProvider struct {
+	messageRepo *repository.MessageRepository
+	userRepo    *repository.UserRepository
+	channelRepo *repository.ChannelRepository
+}
+
+func (p *databaseCountProvider) GetMessageCount(ctx context.Context) (int64, error) {
+	return p.messageRepo.GetTotalCount(ctx)
+}
+
+func (p *databaseCountProvider) GetUserCount(ctx context.Context) (int64, error) {
+	return p.userRepo.GetCount(ctx)
+}
+
+func (p *databaseCountProvider) GetChannelCount(ctx context.Context) (int64, error) {
+	return p.channelRepo.GetCount(ctx)
 }

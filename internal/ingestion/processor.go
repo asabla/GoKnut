@@ -27,6 +27,7 @@ type StoredMessage struct {
 type ProcessorConfig struct {
 	Logger          *observability.Logger
 	Metrics         *observability.Metrics
+	OTelProvider    *observability.OTelProvider    // Optional: OpenTelemetry provider for metrics
 	CacheTTL        time.Duration                  // TTL for cache entries, defaults to 5 minutes
 	OnMessageStored func(msg StoredMessage)        // Called for each message stored (optional)
 	OnBatchStored   func(messages []StoredMessage) // Called after a batch is stored (optional)
@@ -40,12 +41,13 @@ type cacheEntry struct {
 
 // Processor normalizes incoming messages and stores them in the database.
 type Processor struct {
-	messageRepo *repository.MessageRepository
-	userRepo    *repository.UserRepository
-	channelRepo *repository.ChannelRepository
-	logger      *observability.Logger
-	metrics     *observability.Metrics
-	cacheTTL    time.Duration
+	messageRepo  *repository.MessageRepository
+	userRepo     *repository.UserRepository
+	channelRepo  *repository.ChannelRepository
+	logger       *observability.Logger
+	metrics      *observability.Metrics
+	otelProvider *observability.OTelProvider
+	cacheTTL     time.Duration
 
 	// Callbacks
 	onMessageStored func(msg StoredMessage)
@@ -78,6 +80,7 @@ func NewProcessor(
 		channelRepo:     channelRepo,
 		logger:          cfg.Logger,
 		metrics:         cfg.Metrics,
+		otelProvider:    cfg.OTelProvider,
 		cacheTTL:        cacheTTL,
 		onMessageStored: cfg.OnMessageStored,
 		onBatchStored:   cfg.OnBatchStored,
@@ -190,9 +193,14 @@ func (p *Processor) StoreBatch(ctx context.Context, messages []Message) error {
 
 	// Record metrics
 	latency := time.Since(start)
+	latencyMs := float64(latency.Milliseconds())
 	if p.metrics != nil {
 		p.metrics.RecordBatchSize(len(repoMessages))
 		p.metrics.RecordBatchLatency(latency)
+	}
+	// Record OTel metrics
+	if p.otelProvider != nil {
+		p.otelProvider.RecordBatch(ctx, len(repoMessages), latencyMs)
 	}
 
 	if p.logger != nil {
