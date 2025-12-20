@@ -38,6 +38,7 @@ type Server struct {
 	channelRepo          *repository.ChannelRepository
 	messageRepo          *repository.MessageRepository
 	userRepo             *repository.UserRepository
+	profileRepo          *repository.ProfileRepository
 	enableSSE            bool
 	sseHandler           *handlers.SSEHandler
 }
@@ -57,6 +58,7 @@ type ServerConfig struct {
 	ChannelRepo          *repository.ChannelRepository
 	MessageRepo          *repository.MessageRepository
 	UserRepo             *repository.UserRepository
+	ProfileRepo          *repository.ProfileRepository
 	EnableSSE            bool
 }
 
@@ -120,6 +122,7 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 		channelRepo:          cfg.ChannelRepo,
 		messageRepo:          cfg.MessageRepo,
 		userRepo:             cfg.UserRepo,
+		profileRepo:          cfg.ProfileRepo,
 		enableSSE:            cfg.EnableSSE,
 	}
 
@@ -209,6 +212,12 @@ func (s *Server) registerRoutes() {
 	if s.profileService != nil && s.channelRepo != nil {
 		profileHandler := handlers.NewProfileHandler(s.profileService, s.channelRepo, s.templates, s.logger)
 		profileHandler.RegisterRoutes(s.mux)
+	}
+
+	// Register organization handler routes
+	if s.organizationService != nil && s.profileRepo != nil {
+		organizationHandler := handlers.NewOrganizationHandler(s.organizationService, s.profileRepo, s.templates, s.logger)
+		organizationHandler.RegisterRoutes(s.mux)
 	}
 
 	// Register SSE live updates handler

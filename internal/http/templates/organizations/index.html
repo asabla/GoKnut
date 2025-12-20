@@ -1,0 +1,48 @@
+{{define "organizations/index"}}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    {{template "shared/head"}}
+    <title>Organizations - GoKnut</title>
+</head>
+<body class="min-h-screen flex flex-col bg-surface-dark text-twitch-light">
+    {{template "shared/nav" dict "ActivePage" "organizations"}}
+
+    <main class="flex-1 container-prose py-6 w-full">
+        <div class="space-y-6">
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-white">Organizations</h1>
+                <a href="/organizations/new" class="btn btn-md btn-primary">New Organization</a>
+            </div>
+
+            <div class="card p-6">
+                {{if .ErrorMessage}}
+                <div class="mb-4">
+                    {{template "error" dict "Title" "Error" "Message" .ErrorMessage}}
+                </div>
+                {{end}}
+
+                <div class="table-container">
+                    <table class="table">
+                        <thead class="table-header">
+                            <tr>
+                                <th scope="col" class="table-header-cell">Name</th>
+                                <th scope="col" class="table-header-cell">Description</th>
+                                <th scope="col" class="table-header-cell">Created</th>
+                                <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="organizations-list" class="table-body">
+                            {{template "organizations/list.html" .}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    {{template "shared/footer"}}
+    {{template "shared/htmx-config"}}
+</body>
+</html>
+{{end}}

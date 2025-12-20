@@ -26,6 +26,10 @@ var (
 	ErrProfileNameRequired     = errors.New("profile name is required")
 	ErrProfileChannelRequired  = errors.New("channel is required")
 	ErrProfileChannelIDInvalid = errors.New("channel id must be a positive integer")
+
+	ErrOrganizationNameRequired    = errors.New("organization name is required")
+	ErrOrganizationMemberRequired  = errors.New("profile is required")
+	ErrOrganizationMemberIDInvalid = errors.New("profile id must be a positive integer")
 )
 
 // Validation patterns
@@ -259,6 +263,57 @@ type LinkProfileChannelRequest struct {
 func (r *LinkProfileChannelRequest) Validate() error {
 	if r.ChannelID <= 0 {
 		return ErrProfileChannelIDInvalid
+	}
+	return nil
+}
+
+// Organization represents an organization in API responses.
+type Organization struct {
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// CreateOrganizationRequest is the request for creating an organization.
+type CreateOrganizationRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+func (r *CreateOrganizationRequest) Validate() error {
+	r.Name = strings.TrimSpace(r.Name)
+	r.Description = strings.TrimSpace(r.Description)
+	if r.Name == "" {
+		return ErrOrganizationNameRequired
+	}
+	return nil
+}
+
+// UpdateOrganizationRequest is the request for updating an organization.
+type UpdateOrganizationRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+func (r *UpdateOrganizationRequest) Validate() error {
+	r.Name = strings.TrimSpace(r.Name)
+	r.Description = strings.TrimSpace(r.Description)
+	if r.Name == "" {
+		return ErrOrganizationNameRequired
+	}
+	return nil
+}
+
+// AddOrganizationMemberRequest is the request for adding a profile membership.
+type AddOrganizationMemberRequest struct {
+	ProfileID int64 `json:"profile_id"`
+}
+
+func (r *AddOrganizationMemberRequest) Validate() error {
+	if r.ProfileID <= 0 {
+		return ErrOrganizationMemberIDInvalid
 	}
 	return nil
 }
