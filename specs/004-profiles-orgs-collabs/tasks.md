@@ -154,7 +154,7 @@ description: "Task list: Profiles, Organizations & Collaborations"
 
 **Purpose**: UX/observability/performance hardening and cross-story validation.
 
-- [ ] T051 Add consistent empty/error states via shared template partials in `internal/http/templates/partials/empty.html` and `internal/http/templates/partials/error.html`
+- [X] T051 Add consistent empty/error states via shared template partials in `internal/http/templates/partials/empty.html` and `internal/http/templates/partials/error.html`
 - [ ] T052 Add structured logs for create/update/link actions in `internal/http/handlers/profiles.go`, `internal/http/handlers/organizations.go`, `internal/http/handlers/events.go`, `internal/http/handlers/collaborations.go`
 - [ ] T053 Add lightweight metrics counters for CRUD/link outcomes in `internal/observability/observability.go`
 - [ ] T054 Validate all new queries are indexed (verify indexes in `internal/repository/migrations/001_init.sql` and `internal/repository/migrations/postgres/001_init.sql`)
