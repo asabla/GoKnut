@@ -224,6 +224,7 @@ func run() error {
 		ChannelRepo:          channelRepo,
 		MessageRepo:          messageRepo,
 		UserRepo:             userRepo,
+		ProfileRepo:          profileRepo,
 		EnableSSE:            cfg.EnableSSE,
 	})
 	if err != nil {

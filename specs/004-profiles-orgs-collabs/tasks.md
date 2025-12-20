@@ -83,17 +83,17 @@ description: "Task list: Profiles, Organizations & Collaborations"
 
 ### Tests for User Story 2
 
-- [ ] T024 [P] [US2] Unit tests for membership uniqueness in `tests/unit/organization_service_test.go`
-- [ ] T025 [P] [US2] Integration test for organization membership round-trip in `tests/integration/organizations_integration_test.go`
+- [X] T024 [P] [US2] Unit tests for membership uniqueness in `tests/unit/organization_service_test.go`
+- [X] T025 [P] [US2] Integration test for organization membership round-trip in `tests/integration/organizations_integration_test.go`
 
 ### Implementation for User Story 2
 
-- [ ] T026 [P] [US2] Add organization templates (index/list/detail/new) in `internal/http/templates/organizations/index.html`
-- [ ] T027 [P] [US2] Add organization templates (index/list/detail/new) in `internal/http/templates/organizations/list.html`
-- [ ] T028 [P] [US2] Add organization templates (index/list/detail/new) in `internal/http/templates/organizations/detail.html`
-- [ ] T029 [P] [US2] Add organization templates (index/list/detail/new) in `internal/http/templates/organizations/new.html`
-- [ ] T030 [US2] Implement organization routes + handlers per contract in `internal/http/handlers/organizations.go`
-- [ ] T031 [US2] Register organization routes in `internal/http/server.go`
+- [X] T026 [P] [US2] Add organization templates (index/list/detail/new) in `internal/http/templates/organizations/index.html`
+- [X] T027 [P] [US2] Add organization templates (index/list/detail/new) in `internal/http/templates/organizations/list.html`
+- [X] T028 [P] [US2] Add organization templates (index/list/detail/new) in `internal/http/templates/organizations/detail.html`
+- [X] T029 [P] [US2] Add organization templates (index/list/detail/new) in `internal/http/templates/organizations/new.html`
+- [X] T030 [US2] Implement organization routes + handlers per contract in `internal/http/handlers/organizations.go`
+- [X] T031 [US2] Register organization routes in `internal/http/server.go`
 - [ ] T032 [US2] Extend profile detail to show org affiliations in `internal/http/handlers/profiles.go` and `internal/http/templates/profiles/detail.html`
 
 **Checkpoint**: US2 functional; profile page shows org affiliations.
