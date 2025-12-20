@@ -31,6 +31,7 @@ func TestProfilesCreateAndLinkChannel(t *testing.T) {
 	}
 
 	logger := observability.NewLogger("test")
+	metrics := observability.NewMetrics()
 
 	channelRepo := repository.NewChannelRepository(db)
 	profileRepo := repository.NewProfileRepository(db)
@@ -46,7 +47,7 @@ func TestProfilesCreateAndLinkChannel(t *testing.T) {
 
 	mux := http.NewServeMux()
 	templates := testProfileTemplates(t)
-	profileHandler := handlers.NewProfileHandler(profileService, channelRepo, organizationRepo, eventRepo, collaborationRepo, templates, logger)
+	profileHandler := handlers.NewProfileHandler(profileService, channelRepo, organizationRepo, eventRepo, collaborationRepo, templates, logger, metrics)
 	profileHandler.RegisterRoutes(mux)
 
 	srv := httptest.NewServer(mux)

@@ -22,6 +22,7 @@ type OrganizationHandler struct {
 	profiles  *repository.ProfileRepository
 	templates *template.Template
 	logger    *observability.Logger
+	metrics   *observability.Metrics
 }
 
 // NewOrganizationHandler creates a new organization handler.
@@ -30,8 +31,9 @@ func NewOrganizationHandler(
 	profiles *repository.ProfileRepository,
 	templates *template.Template,
 	logger *observability.Logger,
+	metrics *observability.Metrics,
 ) *OrganizationHandler {
-	return &OrganizationHandler{orgs: orgs, profiles: profiles, templates: templates, logger: logger}
+	return &OrganizationHandler{orgs: orgs, profiles: profiles, templates: templates, logger: logger, metrics: metrics}
 }
 
 // RegisterRoutes registers organization routes on the mux.
