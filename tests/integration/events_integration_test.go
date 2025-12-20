@@ -31,6 +31,7 @@ func TestEventsCreateAndAddParticipant(t *testing.T) {
 	}
 
 	logger := observability.NewLogger("test")
+	metrics := observability.NewMetrics()
 
 	profileRepo := repository.NewProfileRepository(db)
 	profile := &repository.Profile{Name: "Profile One"}
@@ -43,7 +44,7 @@ func TestEventsCreateAndAddParticipant(t *testing.T) {
 
 	mux := http.NewServeMux()
 	templates := testEventTemplates(t)
-	eventHandler := handlers.NewEventHandler(eventService, profileRepo, templates, logger)
+	eventHandler := handlers.NewEventHandler(eventService, profileRepo, templates, logger, metrics)
 	eventHandler.RegisterRoutes(mux)
 
 	srv := httptest.NewServer(mux)

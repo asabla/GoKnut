@@ -25,6 +25,7 @@ type EventHandler struct {
 	profiles  *repository.ProfileRepository
 	templates *template.Template
 	logger    *observability.Logger
+	metrics   *observability.Metrics
 }
 
 // NewEventHandler creates a new event handler.
@@ -33,8 +34,9 @@ func NewEventHandler(
 	profiles *repository.ProfileRepository,
 	templates *template.Template,
 	logger *observability.Logger,
+	metrics *observability.Metrics,
 ) *EventHandler {
-	return &EventHandler{events: events, profiles: profiles, templates: templates, logger: logger}
+	return &EventHandler{events: events, profiles: profiles, templates: templates, logger: logger, metrics: metrics}
 }
 
 // RegisterRoutes registers event routes on the mux.

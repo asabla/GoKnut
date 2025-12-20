@@ -219,25 +219,25 @@ func (s *Server) registerRoutes() {
 
 	// Register profile handler routes
 	if s.profileService != nil && s.channelRepo != nil {
-		profileHandler := handlers.NewProfileHandler(s.profileService, s.channelRepo, s.organizationRepo, s.eventRepo, s.collaborationRepo, s.templates, s.logger)
+		profileHandler := handlers.NewProfileHandler(s.profileService, s.channelRepo, s.organizationRepo, s.eventRepo, s.collaborationRepo, s.templates, s.logger, s.metrics)
 		profileHandler.RegisterRoutes(s.mux)
 	}
 
 	// Register organization handler routes
 	if s.organizationService != nil && s.profileRepo != nil {
-		organizationHandler := handlers.NewOrganizationHandler(s.organizationService, s.profileRepo, s.templates, s.logger)
+		organizationHandler := handlers.NewOrganizationHandler(s.organizationService, s.profileRepo, s.templates, s.logger, s.metrics)
 		organizationHandler.RegisterRoutes(s.mux)
 	}
 
 	// Register event handler routes
 	if s.eventService != nil && s.profileRepo != nil {
-		eventHandler := handlers.NewEventHandler(s.eventService, s.profileRepo, s.templates, s.logger)
+		eventHandler := handlers.NewEventHandler(s.eventService, s.profileRepo, s.templates, s.logger, s.metrics)
 		eventHandler.RegisterRoutes(s.mux)
 	}
 
 	// Register collaboration handler routes
 	if s.collaborationService != nil && s.profileRepo != nil {
-		collaborationHandler := handlers.NewCollaborationHandler(s.collaborationService, s.profileRepo, s.templates, s.logger)
+		collaborationHandler := handlers.NewCollaborationHandler(s.collaborationService, s.profileRepo, s.templates, s.logger, s.metrics)
 		collaborationHandler.RegisterRoutes(s.mux)
 	}
 

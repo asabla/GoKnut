@@ -22,6 +22,7 @@ type CollaborationHandler struct {
 	profiles  *repository.ProfileRepository
 	templates *template.Template
 	logger    *observability.Logger
+	metrics   *observability.Metrics
 }
 
 // NewCollaborationHandler creates a new collaboration handler.
@@ -30,8 +31,9 @@ func NewCollaborationHandler(
 	profiles *repository.ProfileRepository,
 	templates *template.Template,
 	logger *observability.Logger,
+	metrics *observability.Metrics,
 ) *CollaborationHandler {
-	return &CollaborationHandler{collabs: collabs, profiles: profiles, templates: templates, logger: logger}
+	return &CollaborationHandler{collabs: collabs, profiles: profiles, templates: templates, logger: logger, metrics: metrics}
 }
 
 // RegisterRoutes registers collaboration routes on the mux.

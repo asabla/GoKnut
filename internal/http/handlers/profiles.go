@@ -25,6 +25,7 @@ type ProfileHandler struct {
 	collabs   *repository.CollaborationRepository
 	templates *template.Template
 	logger    *observability.Logger
+	metrics   *observability.Metrics
 }
 
 // NewProfileHandler creates a new profile handler.
@@ -36,6 +37,7 @@ func NewProfileHandler(
 	collabs *repository.CollaborationRepository,
 	templates *template.Template,
 	logger *observability.Logger,
+	metrics *observability.Metrics,
 ) *ProfileHandler {
 	return &ProfileHandler{
 		profiles:  profiles,
@@ -45,6 +47,7 @@ func NewProfileHandler(
 		collabs:   collabs,
 		templates: templates,
 		logger:    logger,
+		metrics:   metrics,
 	}
 }
 

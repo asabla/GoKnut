@@ -30,6 +30,7 @@ func TestOrganizationsCreateAndAddMember(t *testing.T) {
 	}
 
 	logger := observability.NewLogger("test")
+	metrics := observability.NewMetrics()
 
 	profileRepo := repository.NewProfileRepository(db)
 	orgRepo := repository.NewOrganizationRepository(db)
@@ -42,7 +43,7 @@ func TestOrganizationsCreateAndAddMember(t *testing.T) {
 
 	mux := http.NewServeMux()
 	templates := testOrganizationTemplates(t)
-	orgHandler := handlers.NewOrganizationHandler(orgService, profileRepo, templates, logger)
+	orgHandler := handlers.NewOrganizationHandler(orgService, profileRepo, templates, logger, metrics)
 	orgHandler.RegisterRoutes(mux)
 
 	srv := httptest.NewServer(mux)

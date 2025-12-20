@@ -30,6 +30,7 @@ func TestCollaborationsCreateAndManageParticipants(t *testing.T) {
 	}
 
 	logger := observability.NewLogger("test")
+	metrics := observability.NewMetrics()
 
 	profileRepo := repository.NewProfileRepository(db)
 	collaborationRepo := repository.NewCollaborationRepository(db)
@@ -46,7 +47,7 @@ func TestCollaborationsCreateAndManageParticipants(t *testing.T) {
 
 	mux := http.NewServeMux()
 	templates := testCollaborationTemplates(t)
-	collaborationHandler := handlers.NewCollaborationHandler(collaborationService, profileRepo, templates, logger)
+	collaborationHandler := handlers.NewCollaborationHandler(collaborationService, profileRepo, templates, logger, metrics)
 	collaborationHandler.RegisterRoutes(mux)
 
 	srv := httptest.NewServer(mux)
