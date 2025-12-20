@@ -1,0 +1,49 @@
+{{define "profiles/new"}}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    {{template "shared/head"}}
+    <title>New Profile - GoKnut</title>
+</head>
+<body class="min-h-screen flex flex-col bg-surface-dark text-twitch-light">
+    {{template "shared/nav" dict "ActivePage" "profiles"}}
+
+    <main class="flex-1 container-prose py-6 w-full">
+        <div class="space-y-6">
+            <div>
+                <a href="/profiles" class="btn btn-sm btn-secondary">&larr; Back to Profiles</a>
+            </div>
+
+            <div class="card p-6">
+                <h1 class="text-2xl font-bold text-white">Create Profile</h1>
+                <p class="mt-1 text-sm text-gray-400">Profiles group channels under a shared identity.</p>
+
+                {{if .ErrorMessage}}
+                <div class="mt-4">
+                    {{template "error" dict "Title" "Error" "Message" .ErrorMessage}}
+                </div>
+                {{end}}
+
+                <form method="POST" action="/profiles" class="mt-6 space-y-4">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-300">Name</label>
+                        <input type="text" name="name" id="name" required value="{{.FormName}}" class="input input-md mt-1">
+                    </div>
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-300">Description (optional)</label>
+                        <textarea name="description" id="description" rows="4" class="input input-md mt-1">{{.FormDescription}}</textarea>
+                    </div>
+
+                    <div class="flex justify-end space-x-3">
+                        <a href="/profiles" class="btn btn-md btn-ghost">Cancel</a>
+                        <button type="submit" class="btn btn-md btn-primary">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    {{template "shared/footer"}}
+</body>
+</html>
+{{end}}

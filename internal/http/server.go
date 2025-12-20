@@ -205,6 +205,12 @@ func (s *Server) registerRoutes() {
 		searchHandler.RegisterRoutes(s.mux)
 	}
 
+	// Register profile handler routes
+	if s.profileService != nil && s.channelRepo != nil {
+		profileHandler := handlers.NewProfileHandler(s.profileService, s.channelRepo, s.templates, s.logger)
+		profileHandler.RegisterRoutes(s.mux)
+	}
+
 	// Register SSE live updates handler
 	if s.enableSSE {
 		s.sseHandler = handlers.NewSSEHandler(
