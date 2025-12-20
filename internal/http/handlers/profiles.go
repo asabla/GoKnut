@@ -20,6 +20,7 @@ import (
 type ProfileHandler struct {
 	profiles  *services.ProfileService
 	channels  *repository.ChannelRepository
+	orgs      *repository.OrganizationRepository
 	templates *template.Template
 	logger    *observability.Logger
 }
@@ -28,12 +29,14 @@ type ProfileHandler struct {
 func NewProfileHandler(
 	profiles *services.ProfileService,
 	channels *repository.ChannelRepository,
+	orgs *repository.OrganizationRepository,
 	templates *template.Template,
 	logger *observability.Logger,
 ) *ProfileHandler {
 	return &ProfileHandler{
 		profiles:  profiles,
 		channels:  channels,
+		orgs:      orgs,
 		templates: templates,
 		logger:    logger,
 	}
@@ -153,7 +156,7 @@ func (h *ProfileHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p, linked, allChannels, err := h.loadProfileDetail(ctx, profileID)
+	p, linked, allChannels, orgs, err := h.loadProfileDetail(ctx, profileID)
 	if err != nil {
 		if err == services.ErrProfileNotFound {
 			h.renderError(w, r, "Profile not found", http.StatusNotFound)
@@ -164,7 +167,7 @@ func (h *ProfileHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := h.profileDetailTemplateData(p, linked, allChannels, "", nil, nil, nil)
+	data := h.profileDetailTemplateData(p, linked, allChannels, orgs, "", nil, nil, nil)
 
 	if h.wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
@@ -449,29 +452,38 @@ func (h *ProfileHandler) pathInt64(r *http.Request, name string) (int64, error) 
 	return strconv.ParseInt(v, 10, 64)
 }
 
-func (h *ProfileHandler) loadProfileDetail(ctx context.Context, profileID int64) (*repository.Profile, []repository.Channel, []repository.Channel, error) {
+func (h *ProfileHandler) loadProfileDetail(ctx context.Context, profileID int64) (*repository.Profile, []repository.Channel, []repository.Channel, []repository.Organization, error) {
 	p, err := h.profiles.Get(ctx, profileID)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	linked, err := h.profiles.ListLinkedChannels(ctx, profileID)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	allChannels, err := h.channels.List(ctx)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
-	return p, linked, allChannels, nil
+	var orgs []repository.Organization
+	if h.orgs != nil {
+		orgs, err = h.orgs.ListOrganizationsForProfile(ctx, profileID)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+	}
+
+	return p, linked, allChannels, orgs, nil
 }
 
 func (h *ProfileHandler) profileDetailTemplateData(
 	p *repository.Profile,
 	linked []repository.Channel,
 	allChannels []repository.Channel,
+	orgs []repository.Organization,
 	errorMessage string,
 	formName *string,
 	formDescription *string,
@@ -521,6 +533,17 @@ func (h *ProfileHandler) profileDetailTemplateData(
 		selected = *selectedChannelID
 	}
 
+	orgDTOs := make([]dto.Organization, 0, len(orgs))
+	for _, org := range orgs {
+		orgDTOs = append(orgDTOs, dto.Organization{
+			ID:          org.ID,
+			Name:        org.Name,
+			Description: org.Description,
+			CreatedAt:   org.CreatedAt,
+			UpdatedAt:   org.UpdatedAt,
+		})
+	}
+
 	return map[string]any{
 		"Profile": dto.Profile{
 			ID:          p.ID,
@@ -529,13 +552,15 @@ func (h *ProfileHandler) profileDetailTemplateData(
 			CreatedAt:   p.CreatedAt,
 			UpdatedAt:   p.UpdatedAt,
 		},
-		"LinkedChannels":    linkedDTOs,
-		"ChannelsEmpty":     len(linkedDTOs) == 0,
-		"AllChannels":       allDTOs,
-		"ErrorMessage":      errorMessage,
-		"FormName":          name,
-		"FormDescription":   description,
-		"SelectedChannelID": selected,
+		"LinkedChannels":     linkedDTOs,
+		"ChannelsEmpty":      len(linkedDTOs) == 0,
+		"AllChannels":        allDTOs,
+		"Organizations":      orgDTOs,
+		"OrganizationsEmpty": len(orgDTOs) == 0,
+		"ErrorMessage":       errorMessage,
+		"FormName":           name,
+		"FormDescription":    description,
+		"SelectedChannelID":  selected,
 	}
 }
 
@@ -551,7 +576,7 @@ func (h *ProfileHandler) renderDetailError(
 ) {
 	ctx := r.Context()
 
-	p, linked, allChannels, err := h.loadProfileDetail(ctx, profileID)
+	p, linked, allChannels, orgs, err := h.loadProfileDetail(ctx, profileID)
 	if err != nil {
 		if err == services.ErrProfileNotFound {
 			h.renderError(w, r, "Profile not found", http.StatusNotFound)
@@ -562,7 +587,7 @@ func (h *ProfileHandler) renderDetailError(
 		return
 	}
 
-	data := h.profileDetailTemplateData(p, linked, allChannels, message, formName, formDescription, selectedChannelID)
+	data := h.profileDetailTemplateData(p, linked, allChannels, orgs, message, formName, formDescription, selectedChannelID)
 	h.renderDetailTemplate(w, data, status)
 }
 
