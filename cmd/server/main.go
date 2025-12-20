@@ -220,6 +220,7 @@ func run() error {
 		ProfileService:       profileService,
 		OrganizationService:  organizationService,
 		EventService:         eventService,
+		EventRepo:            eventRepo,
 		CollaborationService: collaborationService,
 		ChannelRepo:          channelRepo,
 		MessageRepo:          messageRepo,
@@ -228,6 +229,7 @@ func run() error {
 		OrganizationRepo:     organizationRepo,
 		EnableSSE:            cfg.EnableSSE,
 	})
+
 	if err != nil {
 		return fmt.Errorf("failed to create HTTP server: %w", err)
 	}

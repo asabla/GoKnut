@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/asabla/goknut/internal/http/dto"
 	"github.com/asabla/goknut/internal/http/handlers"
@@ -34,6 +35,7 @@ func TestProfilesCreateAndLinkChannel(t *testing.T) {
 	channelRepo := repository.NewChannelRepository(db)
 	profileRepo := repository.NewProfileRepository(db)
 	organizationRepo := repository.NewOrganizationRepository(db)
+	eventRepo := repository.NewEventRepository(db)
 	profileService := services.NewProfileService(profileRepo, channelRepo)
 
 	channel := &repository.Channel{Name: "channel1", DisplayName: "Channel One", Enabled: true}
@@ -43,7 +45,7 @@ func TestProfilesCreateAndLinkChannel(t *testing.T) {
 
 	mux := http.NewServeMux()
 	templates := testProfileTemplates(t)
-	profileHandler := handlers.NewProfileHandler(profileService, channelRepo, organizationRepo, templates, logger)
+	profileHandler := handlers.NewProfileHandler(profileService, channelRepo, organizationRepo, eventRepo, templates, logger)
 	profileHandler.RegisterRoutes(mux)
 
 	srv := httptest.NewServer(mux)
@@ -85,6 +87,14 @@ func TestProfilesCreateAndLinkChannel(t *testing.T) {
 		t.Fatalf("failed to add organization member: %v", err)
 	}
 
+	evt := &repository.Event{Title: "Event One", Description: "Test Event", StartAt: mustParseTime(t, "2025-01-02T15:04:05Z")}
+	if err := eventRepo.Create(ctx, evt); err != nil {
+		t.Fatalf("failed to create event: %v", err)
+	}
+	if err := eventRepo.AddParticipant(ctx, evt.ID, createdProfile.ID); err != nil {
+		t.Fatalf("failed to add event participant: %v", err)
+	}
+
 	getReq, _ := http.NewRequest("GET", srv.URL+"/profiles/"+itoa(createdProfile.ID), nil)
 	getReq.Header.Set("Accept", "application/json")
 	getResp, err := client.Do(getReq)
@@ -105,6 +115,13 @@ func TestProfilesCreateAndLinkChannel(t *testing.T) {
 	}
 	if len(orgs) != 1 {
 		t.Fatalf("expected 1 organization, got %d", len(orgs))
+	}
+	events, ok := getData["Events"].([]any)
+	if !ok {
+		t.Fatalf("expected Events to be an array")
+	}
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(events))
 	}
 
 	linkReqBody, _ := json.Marshal(map[string]any{"channel_id": channel.ID})
@@ -182,6 +199,16 @@ func testProfileTemplates(t *testing.T) *template.Template {
 		t.Fatalf("failed to parse test templates: %v", err)
 	}
 	return tmpl
+}
+
+func mustParseTime(t *testing.T, value string) time.Time {
+	t.Helper()
+
+	parsed, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		t.Fatalf("failed to parse time %q: %v", value, err)
+	}
+	return parsed
 }
 
 func itoa(v int64) string {
