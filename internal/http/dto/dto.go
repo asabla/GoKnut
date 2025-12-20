@@ -30,6 +30,12 @@ var (
 	ErrOrganizationNameRequired    = errors.New("organization name is required")
 	ErrOrganizationMemberRequired  = errors.New("profile is required")
 	ErrOrganizationMemberIDInvalid = errors.New("profile id must be a positive integer")
+
+	ErrEventTitleRequired        = errors.New("event title is required")
+	ErrEventStartAtRequired      = errors.New("start_at is required")
+	ErrEventDatesInvalid         = errors.New("end_at must be on or after start_at")
+	ErrEventParticipantRequired  = errors.New("profile is required")
+	ErrEventParticipantIDInvalid = errors.New("profile id must be a positive integer")
 )
 
 // Validation patterns
@@ -314,6 +320,75 @@ type AddOrganizationMemberRequest struct {
 func (r *AddOrganizationMemberRequest) Validate() error {
 	if r.ProfileID <= 0 {
 		return ErrOrganizationMemberIDInvalid
+	}
+	return nil
+}
+
+// Event represents an event in API responses.
+type Event struct {
+	ID          int64      `json:"id"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	StartAt     time.Time  `json:"start_at"`
+	EndAt       *time.Time `json:"end_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+// CreateEventRequest is the request for creating an event.
+type CreateEventRequest struct {
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	StartAt     time.Time  `json:"start_at"`
+	EndAt       *time.Time `json:"end_at,omitempty"`
+}
+
+func (r *CreateEventRequest) Validate() error {
+	r.Title = strings.TrimSpace(r.Title)
+	r.Description = strings.TrimSpace(r.Description)
+	if r.Title == "" {
+		return ErrEventTitleRequired
+	}
+	if r.StartAt.IsZero() {
+		return ErrEventStartAtRequired
+	}
+	if r.EndAt != nil && !r.EndAt.IsZero() && r.EndAt.Before(r.StartAt) {
+		return ErrEventDatesInvalid
+	}
+	return nil
+}
+
+// UpdateEventRequest is the request for updating an event.
+type UpdateEventRequest struct {
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	StartAt     time.Time  `json:"start_at"`
+	EndAt       *time.Time `json:"end_at,omitempty"`
+}
+
+func (r *UpdateEventRequest) Validate() error {
+	r.Title = strings.TrimSpace(r.Title)
+	r.Description = strings.TrimSpace(r.Description)
+	if r.Title == "" {
+		return ErrEventTitleRequired
+	}
+	if r.StartAt.IsZero() {
+		return ErrEventStartAtRequired
+	}
+	if r.EndAt != nil && !r.EndAt.IsZero() && r.EndAt.Before(r.StartAt) {
+		return ErrEventDatesInvalid
+	}
+	return nil
+}
+
+// AddEventParticipantRequest is the request for adding a participant.
+type AddEventParticipantRequest struct {
+	ProfileID int64 `json:"profile_id"`
+}
+
+func (r *AddEventParticipantRequest) Validate() error {
+	if r.ProfileID <= 0 {
+		return ErrEventParticipantIDInvalid
 	}
 	return nil
 }

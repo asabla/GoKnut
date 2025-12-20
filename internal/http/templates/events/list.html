@@ -1,0 +1,23 @@
+{{define "events/list.html"}}
+{{if .IsEmpty}}
+<tr>
+    <td colspan="4" class="px-6 py-4">
+        {{template "empty" dict "Title" "No events" "Message" "Create your first event to begin curation."}}
+    </td>
+</tr>
+{{else}}
+{{range .Events}}
+<tr class="table-row">
+    <td class="table-cell">
+        <div class="text-sm font-medium text-white">{{.Title}}</div>
+        {{if .Description}}<div class="text-sm text-gray-400">{{.Description}}</div>{{end}}
+    </td>
+    <td class="table-cell text-sm text-gray-300">{{.StartAt | formatDate}}</td>
+    <td class="table-cell text-sm text-gray-300">{{if .EndAt}}{{.EndAt | formatTime}}{{else}}—{{end}}</td>
+    <td class="table-cell text-right text-sm font-medium">
+        <a href="/events/{{.ID}}" class="btn btn-sm btn-secondary">View</a>
+    </td>
+</tr>
+{{end}}
+{{end}}
+{{end}}

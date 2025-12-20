@@ -108,17 +108,17 @@ description: "Task list: Profiles, Organizations & Collaborations"
 
 ### Tests for User Story 3
 
-- [ ] T033 [P] [US3] Unit tests for event date validation in `tests/unit/event_service_test.go`
-- [ ] T034 [P] [US3] Integration test for event creation + participants in `tests/integration/events_integration_test.go`
+- [X] T033 [P] [US3] Unit tests for event date validation in `tests/unit/event_service_test.go`
+- [X] T034 [P] [US3] Integration test for event creation + participants in `tests/integration/events_integration_test.go`
 
 ### Implementation for User Story 3
 
-- [ ] T035 [P] [US3] Add event templates (index/list/detail/new) in `internal/http/templates/events/index.html`
-- [ ] T036 [P] [US3] Add event templates (index/list/detail/new) in `internal/http/templates/events/list.html`
-- [ ] T037 [P] [US3] Add event templates (index/list/detail/new) in `internal/http/templates/events/detail.html`
-- [ ] T038 [P] [US3] Add event templates (index/list/detail/new) in `internal/http/templates/events/new.html`
-- [ ] T039 [US3] Implement event routes + handlers per contract in `internal/http/handlers/events.go`
-- [ ] T040 [US3] Register event routes in `internal/http/server.go`
+- [X] T035 [P] [US3] Add event templates (index/list/detail/new) in `internal/http/templates/events/index.html`
+- [X] T036 [P] [US3] Add event templates (index/list/detail/new) in `internal/http/templates/events/list.html`
+- [X] T037 [P] [US3] Add event templates (index/list/detail/new) in `internal/http/templates/events/detail.html`
+- [X] T038 [P] [US3] Add event templates (index/list/detail/new) in `internal/http/templates/events/new.html`
+- [X] T039 [US3] Implement event routes + handlers per contract in `internal/http/handlers/events.go`
+- [X] T040 [US3] Register event routes in `internal/http/server.go`
 - [ ] T041 [US3] Extend profile detail to show associated events in `internal/http/handlers/profiles.go` and `internal/http/templates/profiles/detail.html`
 
 **Checkpoint**: US3 functional; events appear on participant profiles.
