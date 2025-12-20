@@ -4,8 +4,12 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
+
+	"github.com/lib/pq"
+	"modernc.org/sqlite"
 )
 
 // Database provides a common interface for database operations.
@@ -104,4 +108,87 @@ func OpenPostgresWithDSN(dsn string) (*PostgresDB, error) {
 	}
 
 	return &PostgresDB{DB: db}, nil
+}
+
+var (
+	ErrNotFound    = errors.New("not found")
+	ErrConflict    = errors.New("conflict")
+	ErrConstraint  = errors.New("constraint violation")
+	ErrInvalidData = errors.New("invalid data")
+)
+
+const (
+	sqliteConstraintForeignKey = 787
+	sqliteConstraintPrimaryKey = 1555
+	sqliteConstraintRowID      = 2579
+	sqliteConstraintUnique     = 2067
+)
+
+// IsUniqueViolation returns true if err represents a unique/primary-key violation.
+func IsUniqueViolation(err error) bool {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		return string(pqErr.Code) == "23505"
+	}
+
+	var sqliteErr *sqlite.Error
+	if errors.As(err, &sqliteErr) {
+		code := sqliteErr.Code()
+		switch code {
+		case sqliteConstraintUnique, sqliteConstraintPrimaryKey, sqliteConstraintRowID:
+			return true
+		default:
+			return false
+		}
+	}
+
+	return false
+}
+
+// IsForeignKeyViolation returns true if err represents a foreign-key violation.
+func IsForeignKeyViolation(err error) bool {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		return string(pqErr.Code) == "23503"
+	}
+
+	var sqliteErr *sqlite.Error
+	if errors.As(err, &sqliteErr) {
+		return sqliteErr.Code() == sqliteConstraintForeignKey
+	}
+
+	return false
+}
+
+// MapSQLError maps driver-specific SQL errors into shared repository errors.
+// The returned error wraps the original error.
+func MapSQLError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("%w: %w", ErrNotFound, err)
+	}
+	if IsUniqueViolation(err) {
+		return fmt.Errorf("%w: %w", ErrConflict, err)
+	}
+	if IsForeignKeyViolation(err) {
+		return fmt.Errorf("%w: %w", ErrConstraint, err)
+	}
+	return err
+}
+
+// MapResultNotFound returns ErrNotFound if no rows were affected.
+func MapResultNotFound(result sql.Result) error {
+	if result == nil {
+		return nil
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return nil
+	}
+	if affected == 0 {
+		return ErrNotFound
+	}
+	return nil
 }

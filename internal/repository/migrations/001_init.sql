@@ -86,3 +86,102 @@ CREATE TRIGGER IF NOT EXISTS update_user_stats AFTER INSERT ON messages BEGIN
         last_seen_at = new.sent_at
     WHERE id = new.user_id;
 END;
+
+-- Profiles
+CREATE TABLE IF NOT EXISTS profiles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_name ON profiles(name);
+
+-- Channel <-> Profile (enforces channel_id unique)
+CREATE TABLE IF NOT EXISTS profile_channels (
+    profile_id INTEGER NOT NULL,
+    channel_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (profile_id, channel_id),
+    FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE,
+    FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_profile_channels_channel_unique ON profile_channels(channel_id);
+CREATE INDEX IF NOT EXISTS idx_profile_channels_profile_id ON profile_channels(profile_id);
+
+-- Organizations
+CREATE TABLE IF NOT EXISTS organizations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_organizations_name ON organizations(name);
+
+-- Profile <-> Organization
+CREATE TABLE IF NOT EXISTS organization_members (
+    organization_id INTEGER NOT NULL,
+    profile_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (organization_id, profile_id),
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_organization_members_org_id ON organization_members(organization_id);
+CREATE INDEX IF NOT EXISTS idx_organization_members_profile_id ON organization_members(profile_id);
+
+-- Events
+CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    start_at TEXT NOT NULL,
+    end_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_start_at ON events(start_at);
+
+-- Profile <-> Event
+CREATE TABLE IF NOT EXISTS event_participants (
+    event_id INTEGER NOT NULL,
+    profile_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (event_id, profile_id),
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_event_participants_event_id ON event_participants(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_participants_profile_id ON event_participants(profile_id);
+
+-- Collaborations
+CREATE TABLE IF NOT EXISTS collaborations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    shared_chat INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_collaborations_name ON collaborations(name);
+
+-- Profile <-> Collaboration
+CREATE TABLE IF NOT EXISTS collaboration_participants (
+    collaboration_id INTEGER NOT NULL,
+    profile_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (collaboration_id, profile_id),
+    FOREIGN KEY (collaboration_id) REFERENCES collaborations(id) ON DELETE CASCADE,
+    FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_collaboration_participants_collab_id ON collaboration_participants(collaboration_id);
+CREATE INDEX IF NOT EXISTS idx_collaboration_participants_profile_id ON collaboration_participants(profile_id);

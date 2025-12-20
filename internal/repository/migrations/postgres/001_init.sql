@@ -88,3 +88,94 @@ CREATE TRIGGER trigger_update_user_stats
     AFTER INSERT ON messages
     FOR EACH ROW
     EXECUTE FUNCTION update_user_stats();
+
+-- Profiles
+CREATE TABLE IF NOT EXISTS profiles (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_name ON profiles(name);
+
+-- Channel <-> Profile (enforces channel_id unique)
+CREATE TABLE IF NOT EXISTS profile_channels (
+    profile_id BIGINT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    channel_id BIGINT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (profile_id, channel_id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_profile_channels_channel_unique ON profile_channels(channel_id);
+CREATE INDEX IF NOT EXISTS idx_profile_channels_profile_id ON profile_channels(profile_id);
+
+-- Organizations
+CREATE TABLE IF NOT EXISTS organizations (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_organizations_name ON organizations(name);
+
+-- Profile <-> Organization
+CREATE TABLE IF NOT EXISTS organization_members (
+    organization_id BIGINT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    profile_id BIGINT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (organization_id, profile_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_organization_members_org_id ON organization_members(organization_id);
+CREATE INDEX IF NOT EXISTS idx_organization_members_profile_id ON organization_members(profile_id);
+
+-- Events
+CREATE TABLE IF NOT EXISTS events (
+    id BIGSERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    start_at TIMESTAMPTZ NOT NULL,
+    end_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_start_at ON events(start_at);
+
+-- Profile <-> Event
+CREATE TABLE IF NOT EXISTS event_participants (
+    event_id BIGINT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    profile_id BIGINT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (event_id, profile_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_event_participants_event_id ON event_participants(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_participants_profile_id ON event_participants(profile_id);
+
+-- Collaborations
+CREATE TABLE IF NOT EXISTS collaborations (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    shared_chat BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_collaborations_name ON collaborations(name);
+
+-- Profile <-> Collaboration
+CREATE TABLE IF NOT EXISTS collaboration_participants (
+    collaboration_id BIGINT NOT NULL REFERENCES collaborations(id) ON DELETE CASCADE,
+    profile_id BIGINT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (collaboration_id, profile_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_collaboration_participants_collab_id ON collaboration_participants(collaboration_id);
+CREATE INDEX IF NOT EXISTS idx_collaboration_participants_profile_id ON collaboration_participants(profile_id);

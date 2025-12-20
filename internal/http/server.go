@@ -22,34 +22,42 @@ var templatesFS embed.FS
 
 // Server is the HTTP server for the web UI.
 type Server struct {
-	addr           string
-	server         *http.Server
-	mux            *http.ServeMux
-	templates      *template.Template
-	logger         *observability.Logger
-	metrics        *observability.Metrics
-	otelProvider   *observability.OTelProvider
-	channelService *services.ChannelService
-	searchService  *services.SearchService
-	channelRepo    *repository.ChannelRepository
-	messageRepo    *repository.MessageRepository
-	userRepo       *repository.UserRepository
-	enableSSE      bool
-	sseHandler     *handlers.SSEHandler
+	addr                 string
+	server               *http.Server
+	mux                  *http.ServeMux
+	templates            *template.Template
+	logger               *observability.Logger
+	metrics              *observability.Metrics
+	otelProvider         *observability.OTelProvider
+	channelService       *services.ChannelService
+	searchService        *services.SearchService
+	profileService       *services.ProfileService
+	organizationService  *services.OrganizationService
+	eventService         *services.EventService
+	collaborationService *services.CollaborationService
+	channelRepo          *repository.ChannelRepository
+	messageRepo          *repository.MessageRepository
+	userRepo             *repository.UserRepository
+	enableSSE            bool
+	sseHandler           *handlers.SSEHandler
 }
 
 // ServerConfig holds HTTP server configuration.
 type ServerConfig struct {
-	Addr           string
-	Logger         *observability.Logger
-	Metrics        *observability.Metrics
-	OTelProvider   *observability.OTelProvider
-	ChannelService *services.ChannelService
-	SearchService  *services.SearchService
-	ChannelRepo    *repository.ChannelRepository
-	MessageRepo    *repository.MessageRepository
-	UserRepo       *repository.UserRepository
-	EnableSSE      bool
+	Addr                 string
+	Logger               *observability.Logger
+	Metrics              *observability.Metrics
+	OTelProvider         *observability.OTelProvider
+	ChannelService       *services.ChannelService
+	SearchService        *services.SearchService
+	ProfileService       *services.ProfileService
+	OrganizationService  *services.OrganizationService
+	EventService         *services.EventService
+	CollaborationService *services.CollaborationService
+	ChannelRepo          *repository.ChannelRepository
+	MessageRepo          *repository.MessageRepository
+	UserRepo             *repository.UserRepository
+	EnableSSE            bool
 }
 
 // templateFuncs returns the custom template functions.
@@ -98,17 +106,21 @@ func templateFuncs() template.FuncMap {
 // NewServer creates a new HTTP server.
 func NewServer(cfg ServerConfig) (*Server, error) {
 	s := &Server{
-		addr:           cfg.Addr,
-		mux:            http.NewServeMux(),
-		logger:         cfg.Logger,
-		metrics:        cfg.Metrics,
-		otelProvider:   cfg.OTelProvider,
-		channelService: cfg.ChannelService,
-		searchService:  cfg.SearchService,
-		channelRepo:    cfg.ChannelRepo,
-		messageRepo:    cfg.MessageRepo,
-		userRepo:       cfg.UserRepo,
-		enableSSE:      cfg.EnableSSE,
+		addr:                 cfg.Addr,
+		mux:                  http.NewServeMux(),
+		logger:               cfg.Logger,
+		metrics:              cfg.Metrics,
+		otelProvider:         cfg.OTelProvider,
+		channelService:       cfg.ChannelService,
+		searchService:        cfg.SearchService,
+		profileService:       cfg.ProfileService,
+		organizationService:  cfg.OrganizationService,
+		eventService:         cfg.EventService,
+		collaborationService: cfg.CollaborationService,
+		channelRepo:          cfg.ChannelRepo,
+		messageRepo:          cfg.MessageRepo,
+		userRepo:             cfg.UserRepo,
+		enableSSE:            cfg.EnableSSE,
 	}
 
 	// Parse templates with custom functions
