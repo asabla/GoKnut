@@ -1,0 +1,53 @@
+{{define "collaborations/new"}}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    {{template "shared/head"}}
+    <title>New Collaboration - GoKnut</title>
+</head>
+<body class="min-h-screen flex flex-col bg-surface-dark text-twitch-light">
+    {{template "shared/nav" dict "ActivePage" "collaborations"}}
+
+    <main class="flex-1 container-prose py-6 w-full">
+        <div class="space-y-6">
+            <div>
+                <a href="/collaborations" class="btn btn-sm btn-secondary">&larr; Back to Collaborations</a>
+            </div>
+
+            <div class="card p-6">
+                <h1 class="text-2xl font-bold text-white mb-6">New Collaboration</h1>
+
+                {{if .ErrorMessage}}
+                <div class="mb-4">
+                    {{template "error" dict "Title" "Error" "Message" .ErrorMessage}}
+                </div>
+                {{end}}
+
+                <form method="POST" action="/collaborations" class="space-y-4">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-300">Name</label>
+                        <input type="text" name="name" id="name" required value="{{.FormName}}" class="input input-md mt-1">
+                    </div>
+
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-300">Description (optional)</label>
+                        <textarea name="description" id="description" rows="4" class="input input-md mt-1">{{.FormDescription}}</textarea>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" name="shared_chat" id="shared_chat" value="true" class="checkbox" {{if .FormSharedChat}}checked{{end}}>
+                        <label for="shared_chat" class="text-sm text-gray-300">Shared chat</label>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button type="submit" class="btn btn-md btn-primary">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    {{template "shared/footer"}}
+</body>
+</html>
+{{end}}

@@ -1,0 +1,22 @@
+{{define "collaborations/list.html"}}
+{{range .Collaborations}}
+<tr class="table-row">
+    <td class="table-cell">
+        <div>
+            <div class="text-sm font-medium text-white">{{.Name}}</div>
+            {{if .Description}}<div class="text-sm text-gray-400">{{.Description}}</div>{{end}}
+        </div>
+    </td>
+    <td class="table-cell">
+        {{if .SharedChat}}
+        <span class="badge badge-success">Yes</span>
+        {{else}}
+        <span class="badge badge-gray">No</span>
+        {{end}}
+    </td>
+    <td class="table-cell text-right text-sm font-medium">
+        <a href="/collaborations/{{.ID}}" class="btn btn-sm btn-secondary">View</a>
+    </td>
+</tr>
+{{end}}
+{{end}}

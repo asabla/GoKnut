@@ -36,6 +36,10 @@ var (
 	ErrEventDatesInvalid         = errors.New("end_at must be on or after start_at")
 	ErrEventParticipantRequired  = errors.New("profile is required")
 	ErrEventParticipantIDInvalid = errors.New("profile id must be a positive integer")
+
+	ErrCollaborationNameRequired         = errors.New("collaboration name is required")
+	ErrCollaborationParticipantRequired  = errors.New("profile is required")
+	ErrCollaborationParticipantIDInvalid = errors.New("profile id must be a positive integer")
 )
 
 // Validation patterns
@@ -389,6 +393,60 @@ type AddEventParticipantRequest struct {
 func (r *AddEventParticipantRequest) Validate() error {
 	if r.ProfileID <= 0 {
 		return ErrEventParticipantIDInvalid
+	}
+	return nil
+}
+
+// Collaboration represents a collaboration in API responses.
+type Collaboration struct {
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	SharedChat  bool      `json:"shared_chat"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// CreateCollaborationRequest is the request for creating a collaboration.
+type CreateCollaborationRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	SharedChat  bool   `json:"shared_chat"`
+}
+
+func (r *CreateCollaborationRequest) Validate() error {
+	r.Name = strings.TrimSpace(r.Name)
+	r.Description = strings.TrimSpace(r.Description)
+	if r.Name == "" {
+		return ErrCollaborationNameRequired
+	}
+	return nil
+}
+
+// UpdateCollaborationRequest is the request for updating a collaboration.
+type UpdateCollaborationRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	SharedChat  bool   `json:"shared_chat"`
+}
+
+func (r *UpdateCollaborationRequest) Validate() error {
+	r.Name = strings.TrimSpace(r.Name)
+	r.Description = strings.TrimSpace(r.Description)
+	if r.Name == "" {
+		return ErrCollaborationNameRequired
+	}
+	return nil
+}
+
+// AddCollaborationParticipantRequest is the request for adding a participant.
+type AddCollaborationParticipantRequest struct {
+	ProfileID int64 `json:"profile_id"`
+}
+
+func (r *AddCollaborationParticipantRequest) Validate() error {
+	if r.ProfileID <= 0 {
+		return ErrCollaborationParticipantIDInvalid
 	}
 	return nil
 }

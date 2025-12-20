@@ -22,6 +22,7 @@ type ProfileHandler struct {
 	channels  *repository.ChannelRepository
 	orgs      *repository.OrganizationRepository
 	events    *repository.EventRepository
+	collabs   *repository.CollaborationRepository
 	templates *template.Template
 	logger    *observability.Logger
 }
@@ -32,6 +33,7 @@ func NewProfileHandler(
 	channels *repository.ChannelRepository,
 	orgs *repository.OrganizationRepository,
 	events *repository.EventRepository,
+	collabs *repository.CollaborationRepository,
 	templates *template.Template,
 	logger *observability.Logger,
 ) *ProfileHandler {
@@ -40,6 +42,7 @@ func NewProfileHandler(
 		channels:  channels,
 		orgs:      orgs,
 		events:    events,
+		collabs:   collabs,
 		templates: templates,
 		logger:    logger,
 	}
@@ -159,7 +162,7 @@ func (h *ProfileHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p, linked, allChannels, orgs, events, err := h.loadProfileDetail(ctx, profileID)
+	p, linked, allChannels, orgs, events, collabs, err := h.loadProfileDetail(ctx, profileID)
 	if err != nil {
 		if err == services.ErrProfileNotFound {
 			h.renderError(w, r, "Profile not found", http.StatusNotFound)
@@ -170,7 +173,7 @@ func (h *ProfileHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := h.profileDetailTemplateData(p, linked, allChannels, orgs, events, "", nil, nil, nil)
+	data := h.profileDetailTemplateData(p, linked, allChannels, orgs, events, collabs, "", nil, nil, nil)
 
 	if h.wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
@@ -455,27 +458,27 @@ func (h *ProfileHandler) pathInt64(r *http.Request, name string) (int64, error) 
 	return strconv.ParseInt(v, 10, 64)
 }
 
-func (h *ProfileHandler) loadProfileDetail(ctx context.Context, profileID int64) (*repository.Profile, []repository.Channel, []repository.Channel, []repository.Organization, []repository.Event, error) {
+func (h *ProfileHandler) loadProfileDetail(ctx context.Context, profileID int64) (*repository.Profile, []repository.Channel, []repository.Channel, []repository.Organization, []repository.Event, []repository.Collaboration, error) {
 	p, err := h.profiles.Get(ctx, profileID)
 	if err != nil {
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, err
 	}
 
 	linked, err := h.profiles.ListLinkedChannels(ctx, profileID)
 	if err != nil {
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, err
 	}
 
 	allChannels, err := h.channels.List(ctx)
 	if err != nil {
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, err
 	}
 
 	var orgs []repository.Organization
 	if h.orgs != nil {
 		orgs, err = h.orgs.ListOrganizationsForProfile(ctx, profileID)
 		if err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, err
 		}
 	}
 
@@ -483,11 +486,19 @@ func (h *ProfileHandler) loadProfileDetail(ctx context.Context, profileID int64)
 	if h.events != nil {
 		events, err = h.events.ListEventsForProfile(ctx, profileID)
 		if err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, err
 		}
 	}
 
-	return p, linked, allChannels, orgs, events, nil
+	var collabs []repository.Collaboration
+	if h.collabs != nil {
+		collabs, err = h.collabs.ListCollaborationsForProfile(ctx, profileID)
+		if err != nil {
+			return nil, nil, nil, nil, nil, nil, err
+		}
+	}
+
+	return p, linked, allChannels, orgs, events, collabs, nil
 }
 
 func (h *ProfileHandler) profileDetailTemplateData(
@@ -496,6 +507,7 @@ func (h *ProfileHandler) profileDetailTemplateData(
 	allChannels []repository.Channel,
 	orgs []repository.Organization,
 	events []repository.Event,
+	collabs []repository.Collaboration,
 	errorMessage string,
 	formName *string,
 	formDescription *string,
@@ -569,6 +581,18 @@ func (h *ProfileHandler) profileDetailTemplateData(
 		})
 	}
 
+	collabDTOs := make([]dto.Collaboration, 0, len(collabs))
+	for _, c := range collabs {
+		collabDTOs = append(collabDTOs, dto.Collaboration{
+			ID:          c.ID,
+			Name:        c.Name,
+			Description: c.Description,
+			SharedChat:  c.SharedChat,
+			CreatedAt:   c.CreatedAt,
+			UpdatedAt:   c.UpdatedAt,
+		})
+	}
+
 	return map[string]any{
 		"Profile": dto.Profile{
 			ID:          p.ID,
@@ -577,17 +601,19 @@ func (h *ProfileHandler) profileDetailTemplateData(
 			CreatedAt:   p.CreatedAt,
 			UpdatedAt:   p.UpdatedAt,
 		},
-		"LinkedChannels":     linkedDTOs,
-		"ChannelsEmpty":      len(linkedDTOs) == 0,
-		"AllChannels":        allDTOs,
-		"Organizations":      orgDTOs,
-		"OrganizationsEmpty": len(orgDTOs) == 0,
-		"Events":             eventDTOs,
-		"EventsEmpty":        len(eventDTOs) == 0,
-		"ErrorMessage":       errorMessage,
-		"FormName":           name,
-		"FormDescription":    description,
-		"SelectedChannelID":  selected,
+		"LinkedChannels":      linkedDTOs,
+		"ChannelsEmpty":       len(linkedDTOs) == 0,
+		"AllChannels":         allDTOs,
+		"Organizations":       orgDTOs,
+		"OrganizationsEmpty":  len(orgDTOs) == 0,
+		"Events":              eventDTOs,
+		"EventsEmpty":         len(eventDTOs) == 0,
+		"Collaborations":      collabDTOs,
+		"CollaborationsEmpty": len(collabDTOs) == 0,
+		"ErrorMessage":        errorMessage,
+		"FormName":            name,
+		"FormDescription":     description,
+		"SelectedChannelID":   selected,
 	}
 }
 
@@ -603,7 +629,7 @@ func (h *ProfileHandler) renderDetailError(
 ) {
 	ctx := r.Context()
 
-	p, linked, allChannels, orgs, events, err := h.loadProfileDetail(ctx, profileID)
+	p, linked, allChannels, orgs, events, collabs, err := h.loadProfileDetail(ctx, profileID)
 	if err != nil {
 		if err == services.ErrProfileNotFound {
 			h.renderError(w, r, "Profile not found", http.StatusNotFound)
@@ -614,7 +640,7 @@ func (h *ProfileHandler) renderDetailError(
 		return
 	}
 
-	data := h.profileDetailTemplateData(p, linked, allChannels, orgs, events, message, formName, formDescription, selectedChannelID)
+	data := h.profileDetailTemplateData(p, linked, allChannels, orgs, events, collabs, message, formName, formDescription, selectedChannelID)
 	h.renderDetailTemplate(w, data, status)
 }
 

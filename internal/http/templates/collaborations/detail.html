@@ -1,0 +1,131 @@
+{{define "collaborations/detail"}}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    {{template "shared/head"}}
+    <title>{{.Collaboration.Name}} - Collaborations - GoKnut</title>
+</head>
+<body class="min-h-screen flex flex-col bg-surface-dark text-twitch-light">
+    {{template "shared/nav" dict "ActivePage" "collaborations"}}
+
+    <main class="flex-1 container-prose py-6 w-full">
+        <div class="space-y-6">
+            <div>
+                <a href="/collaborations" class="btn btn-sm btn-secondary">&larr; Back to Collaborations</a>
+            </div>
+
+            {{if .ErrorMessage}}
+            <div>
+                {{template "error" dict "Title" "Error" "Message" .ErrorMessage}}
+            </div>
+            {{end}}
+
+            <div class="card p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">{{.Collaboration.Name}}</h1>
+                        {{if .Collaboration.Description}}<p class="text-gray-400">{{.Collaboration.Description}}</p>{{end}}
+                        <div class="mt-2 text-sm text-gray-400">Shared chat: {{if .Collaboration.SharedChat}}Yes{{else}}No{{end}}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card p-6">
+                <h2 class="text-lg font-medium text-white mb-4">Edit Collaboration</h2>
+                <form method="POST" action="/collaborations/{{.Collaboration.ID}}" class="space-y-4">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-300">Name</label>
+                        <input type="text" name="name" id="name" required value="{{.FormName}}" class="input input-md mt-1">
+                    </div>
+
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-300">Description (optional)</label>
+                        <textarea name="description" id="description" rows="4" class="input input-md mt-1">{{.FormDescription}}</textarea>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" name="shared_chat" id="shared_chat" value="true" class="checkbox" {{if .FormSharedChat}}checked{{end}}>
+                        <label for="shared_chat" class="text-sm text-gray-300">Shared chat</label>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button type="submit" class="btn btn-md btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-medium text-white">Participants</h2>
+                </div>
+
+                <form method="POST" action="/collaborations/{{.Collaboration.ID}}/participants" class="flex items-end gap-3">
+                    <div class="flex-1">
+                        <label for="profile_id" class="block text-sm font-medium text-gray-300">Profile</label>
+                        <select name="profile_id" id="profile_id" class="input input-md mt-1">
+                            <option value="">Select a profile…</option>
+                            {{range .AllProfiles}}
+                            <option value="{{.ID}}" {{if eq .ID $.SelectedProfileID}}selected{{end}}>{{.Name}}</option>
+                            {{end}}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-md btn-secondary">Add</button>
+                </form>
+
+                <div class="mt-6">
+                    {{if .ParticipantsEmpty}}
+                    {{template "empty" dict "Title" "No participants" "Message" "Add two or more profiles to this collaboration."}}
+                    {{else}}
+                    <div class="table-container">
+                        <table class="table">
+                            <thead class="table-header">
+                                <tr>
+                                    <th scope="col" class="table-header-cell">Profile</th>
+                                    <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
+                                </tr>
+                            </thead>
+                            <tbody class="table-body">
+                                {{range .Participants}}
+                                <tr class="table-row">
+                                    <td class="table-cell">
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-500 flex items-center justify-center">
+                                                <span class="text-white font-medium">{{slice .Name 0 1 | upper}}</span>
+                                            </div>
+                                            <div class="ml-4">
+                                                <div class="text-sm font-medium text-white">{{.Name}}</div>
+                                                {{if .Description}}<div class="text-sm text-gray-400">{{.Description}}</div>{{end}}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="table-cell text-right text-sm font-medium">
+                                        <div class="flex justify-end gap-2">
+                                            <a href="/profiles/{{.ID}}" class="btn btn-sm btn-secondary">View</a>
+                                            <form method="POST" action="/collaborations/{{$.Collaboration.ID}}/participants/{{.ID}}/remove">
+                                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Remove this participant?')">Remove</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+
+            <div class="bg-error-900/20 rounded-lg p-6 border border-error-800">
+                <h2 class="text-lg font-medium text-error-400 mb-4">Danger Zone</h2>
+                <p class="text-sm text-gray-400 mb-4">Deleting a collaboration will remove it and all participants.</p>
+                <form method="POST" action="/collaborations/{{.Collaboration.ID}}/delete" onsubmit="return confirm('Delete this collaboration? This cannot be undone.');">
+                    <button type="submit" class="btn btn-md btn-danger">Delete Collaboration</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    {{template "shared/footer"}}
+</body>
+</html>
+{{end}}

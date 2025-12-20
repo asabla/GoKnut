@@ -222,6 +222,7 @@ func run() error {
 		EventService:         eventService,
 		EventRepo:            eventRepo,
 		CollaborationService: collaborationService,
+		CollaborationRepo:    collaborationRepo,
 		ChannelRepo:          channelRepo,
 		MessageRepo:          messageRepo,
 		UserRepo:             userRepo,
