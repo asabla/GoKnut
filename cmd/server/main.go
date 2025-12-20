@@ -119,6 +119,10 @@ func run() error {
 	channelRepo := repository.NewChannelRepository(db)
 	messageRepo := repository.NewMessageRepository(db)
 	userRepo := repository.NewUserRepository(db)
+	profileRepo := repository.NewProfileRepository(db)
+	organizationRepo := repository.NewOrganizationRepository(db)
+	eventRepo := repository.NewEventRepository(db)
+	collaborationRepo := repository.NewCollaborationRepository(db)
 
 	// Register database count callbacks for OTel metrics
 	if otelProvider != nil {
@@ -199,18 +203,28 @@ func run() error {
 	searchRepo := search.NewSearchRepository(db, cfg.EnableFTS)
 	searchService := services.NewSearchService(searchRepo, logger, metrics, otelProvider)
 
+	// Create profile/org/event/collaboration services
+	profileService := services.NewProfileService(profileRepo, channelRepo)
+	organizationService := services.NewOrganizationService(organizationRepo, profileRepo)
+	eventService := services.NewEventService(eventRepo, profileRepo)
+	collaborationService := services.NewCollaborationService(collaborationRepo, profileRepo)
+
 	// Create HTTP server
 	httpServer, err := gohttp.NewServer(gohttp.ServerConfig{
-		Addr:           cfg.HTTPAddr,
-		Logger:         logger,
-		Metrics:        metrics,
-		OTelProvider:   otelProvider,
-		ChannelService: channelService,
-		SearchService:  searchService,
-		ChannelRepo:    channelRepo,
-		MessageRepo:    messageRepo,
-		UserRepo:       userRepo,
-		EnableSSE:      cfg.EnableSSE,
+		Addr:                 cfg.HTTPAddr,
+		Logger:               logger,
+		Metrics:              metrics,
+		OTelProvider:         otelProvider,
+		ChannelService:       channelService,
+		SearchService:        searchService,
+		ProfileService:       profileService,
+		OrganizationService:  organizationService,
+		EventService:         eventService,
+		CollaborationService: collaborationService,
+		ChannelRepo:          channelRepo,
+		MessageRepo:          messageRepo,
+		UserRepo:             userRepo,
+		EnableSSE:            cfg.EnableSSE,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create HTTP server: %w", err)

@@ -22,8 +22,8 @@ description: "Task list: Profiles, Organizations & Collaborations"
 
 **Purpose**: Add minimal scaffolding and navigation without touching ingestion hot-path.
 
-- [ ] T001 Confirm no ingestion changes planned (no edits required under `internal/ingestion/` and `internal/repository/message_repository.go`)
-- [ ] T002 Add navigation entry points for new sections in `internal/http/templates/partials/base.html`
+- [X] T001 Confirm no ingestion changes planned (no edits required under `internal/ingestion/` and `internal/repository/message_repository.go`)
+- [X] T002 Add navigation entry points for new sections in `internal/http/templates/partials/base.html`
 
 ---
 
@@ -33,18 +33,18 @@ description: "Task list: Profiles, Organizations & Collaborations"
 
 **CRITICAL**: No user story work should start until schema and core repos compile.
 
-- [ ] T003 Add SQLite tables + indexes for profiles/orgs/events/collabs in `internal/repository/migrations/001_init.sql`
-- [ ] T004 Add Postgres tables + indexes for profiles/orgs/events/collabs in `internal/repository/migrations/postgres/001_init.sql`
-- [ ] T005 [P] Create profile repository (types + CRUD + channel linking) in `internal/repository/profile_repository.go`
-- [ ] T006 [P] Create organization repository (types + CRUD + memberships) in `internal/repository/organization_repository.go`
-- [ ] T007 [P] Create event repository (types + CRUD + participants) in `internal/repository/event_repository.go`
-- [ ] T008 [P] Create collaboration repository (types + CRUD + participants) in `internal/repository/collaboration_repository.go`
-- [ ] T009 Add shared repository errors (e.g., conflict/not-found mapping) in `internal/repository/db.go`
-- [ ] T010 [P] Create profile service (validations + orchestration) in `internal/services/profile_service.go`
-- [ ] T011 [P] Create organization service (validations + orchestration) in `internal/services/organization_service.go`
-- [ ] T012 [P] Create event service (date validation + orchestration) in `internal/services/event_service.go`
-- [ ] T013 [P] Create collaboration service (min participants + orchestration) in `internal/services/collaboration_service.go`
-- [ ] T014 Wire new services into server config and struct in `internal/http/server.go`
+- [X] T003 Add SQLite tables + indexes for profiles/orgs/events/collabs in `internal/repository/migrations/001_init.sql`
+- [X] T004 Add Postgres tables + indexes for profiles/orgs/events/collabs in `internal/repository/migrations/postgres/001_init.sql`
+- [X] T005 [P] Create profile repository (types + CRUD + channel linking) in `internal/repository/profile_repository.go`
+- [X] T006 [P] Create organization repository (types + CRUD + memberships) in `internal/repository/organization_repository.go`
+- [X] T007 [P] Create event repository (types + CRUD + participants) in `internal/repository/event_repository.go`
+- [X] T008 [P] Create collaboration repository (types + CRUD + participants) in `internal/repository/collaboration_repository.go`
+- [X] T009 Add shared repository errors (e.g., conflict/not-found mapping) in `internal/repository/db.go`
+- [X] T010 [P] Create profile service (validations + orchestration) in `internal/services/profile_service.go`
+- [X] T011 [P] Create organization service (validations + orchestration) in `internal/services/organization_service.go`
+- [X] T012 [P] Create event service (date validation + orchestration) in `internal/services/event_service.go`
+- [X] T013 [P] Create collaboration service (min participants + orchestration) in `internal/services/collaboration_service.go`
+- [X] T014 Wire new services into server config and struct in `internal/http/server.go`
 
 **Checkpoint**: DB schema + repositories compile; server can be wired with new handlers.
 
