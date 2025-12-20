@@ -1,0 +1,34 @@
+{{define "profiles/list.html"}}
+<!-- Profiles List Fragment (for HTMX partial updates) -->
+{{if .IsEmpty}}
+<tr>
+    <td colspan="4" class="px-6 py-12">
+        {{template "empty" dict "Title" "No profiles" "Message" "Create a profile to group one or more channels." "ActionURL" "/profiles/new" "ActionText" "New Profile"}}
+    </td>
+</tr>
+{{else}}
+{{range .Profiles}}
+<tr class="table-row">
+    <td class="table-cell">
+        <div class="flex items-center">
+            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-500 flex items-center justify-center">
+                <span class="text-white font-medium">{{slice .Name 0 1 | upper}}</span>
+            </div>
+            <div class="ml-4">
+                <div class="text-sm font-medium text-white">{{.Name}}</div>
+            </div>
+        </div>
+    </td>
+    <td class="table-cell text-sm text-gray-400">
+        {{if .Description}}{{.Description}}{{else}}<span class="text-gray-500">—</span>{{end}}
+    </td>
+    <td class="table-cell text-sm text-gray-400">
+        {{.CreatedAt | formatDate}}
+    </td>
+    <td class="table-cell text-right text-sm font-medium">
+        <a href="/profiles/{{.ID}}" class="btn btn-sm btn-secondary border-primary-600 text-primary-500 hover:bg-primary-900/50 hover:text-primary-300">View</a>
+    </td>
+</tr>
+{{end}}
+{{end}}
+{{end}}

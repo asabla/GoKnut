@@ -63,13 +63,13 @@ description: "Task list: Profiles, Organizations & Collaborations"
 
 ### Implementation for User Story 1
 
-- [ ] T017 [P] [US1] Add profile DTOs (create/update/link) in `internal/http/dto/dto.go`
-- [ ] T018 [P] [US1] Add profile templates (index/list/detail/new) in `internal/http/templates/profiles/index.html`
-- [ ] T019 [P] [US1] Add profile templates (index/list/detail/new) in `internal/http/templates/profiles/list.html`
-- [ ] T020 [P] [US1] Add profile templates (index/list/detail/new) in `internal/http/templates/profiles/detail.html`
-- [ ] T021 [P] [US1] Add profile templates (index/list/detail/new) in `internal/http/templates/profiles/new.html`
-- [ ] T022 [US1] Implement profile routes + handlers per contract in `internal/http/handlers/profiles.go`
-- [ ] T023 [US1] Register profile routes in `internal/http/server.go`
+- [X] T017 [P] [US1] Add profile DTOs (create/update/link) in `internal/http/dto/dto.go`
+- [X] T018 [P] [US1] Add profile templates (index/list/detail/new) in `internal/http/templates/profiles/index.html`
+- [X] T019 [P] [US1] Add profile templates (index/list/detail/new) in `internal/http/templates/profiles/list.html`
+- [X] T020 [P] [US1] Add profile templates (index/list/detail/new) in `internal/http/templates/profiles/detail.html`
+- [X] T021 [P] [US1] Add profile templates (index/list/detail/new) in `internal/http/templates/profiles/new.html`
+- [X] T022 [US1] Implement profile routes + handlers per contract in `internal/http/handlers/profiles.go`
+- [X] T023 [US1] Register profile routes in `internal/http/server.go`
 
 **Checkpoint**: US1 fully functional and independently demoable.
 

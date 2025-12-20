@@ -22,6 +22,10 @@ var (
 	ErrSearchQueryTooShort = errors.New("search query must be at least 2 characters")
 	ErrSearchQueryTooLong  = errors.New("search query is too long (max 100 characters)")
 	ErrTimeRangeInvalid    = errors.New("end date must be on or after start date")
+
+	ErrProfileNameRequired     = errors.New("profile name is required")
+	ErrProfileChannelRequired  = errors.New("channel is required")
+	ErrProfileChannelIDInvalid = errors.New("channel id must be a positive integer")
 )
 
 // Validation patterns
@@ -205,6 +209,58 @@ func (r *ListUsersRequest) Validate() error {
 	r.Query = strings.TrimSpace(strings.ToLower(r.Query))
 	// Query is optional for listing, so no required check
 	return r.PaginationRequest.Validate()
+}
+
+// Profile represents a profile in API responses.
+// (US1 uses server-rendered HTML, but DTOs keep handlers consistent.)
+type Profile struct {
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// CreateProfileRequest is the request for creating a profile.
+type CreateProfileRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+func (r *CreateProfileRequest) Validate() error {
+	r.Name = strings.TrimSpace(r.Name)
+	r.Description = strings.TrimSpace(r.Description)
+	if r.Name == "" {
+		return ErrProfileNameRequired
+	}
+	return nil
+}
+
+// UpdateProfileRequest is the request for updating a profile.
+type UpdateProfileRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+func (r *UpdateProfileRequest) Validate() error {
+	r.Name = strings.TrimSpace(r.Name)
+	r.Description = strings.TrimSpace(r.Description)
+	if r.Name == "" {
+		return ErrProfileNameRequired
+	}
+	return nil
+}
+
+// LinkProfileChannelRequest is the request for linking a channel to a profile.
+type LinkProfileChannelRequest struct {
+	ChannelID int64 `json:"channel_id"`
+}
+
+func (r *LinkProfileChannelRequest) Validate() error {
+	if r.ChannelID <= 0 {
+		return ErrProfileChannelIDInvalid
+	}
+	return nil
 }
 
 // ValidateUsername validates a username.
