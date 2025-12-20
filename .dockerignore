@@ -1,0 +1,36 @@
+.git
+.github
+.specify
+.opencode
+.vscode
+.idea
+
+# Go build/test artifacts
+bin
+/dist
+**/*.test
+**/*.out
+
+# Dependencies (when present)
+vendor
+
+# Local data & databases
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/*.sqlite
+**/*.sqlite3
+
+# Logs and temp
+**/*.log
+**/*.tmp
+tmp
+
+# Env
+.env
+.env.*
+*.env
+
+# Docker artifacts
+Dockerfile*
+.dockerignore
