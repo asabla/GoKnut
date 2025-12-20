@@ -86,6 +86,51 @@ type Metrics struct {
 	sseBackpressure      int64
 	sseEventsSent        int64
 	sseConnectionsByView map[string]int64
+
+	// CRUD metrics
+	profileCreatesSuccess int64
+	profileCreatesError   int64
+	profileUpdatesSuccess int64
+	profileUpdatesError   int64
+	profileDeletesSuccess int64
+	profileDeletesError   int64
+	profileLinksSuccess   int64
+	profileLinksError     int64
+	profileUnlinksSuccess int64
+	profileUnlinksError   int64
+
+	organizationCreatesSuccess int64
+	organizationCreatesError   int64
+	organizationUpdatesSuccess int64
+	organizationUpdatesError   int64
+	organizationDeletesSuccess int64
+	organizationDeletesError   int64
+	organizationLinksSuccess   int64
+	organizationLinksError     int64
+	organizationUnlinksSuccess int64
+	organizationUnlinksError   int64
+
+	eventCreatesSuccess int64
+	eventCreatesError   int64
+	eventUpdatesSuccess int64
+	eventUpdatesError   int64
+	eventDeletesSuccess int64
+	eventDeletesError   int64
+	eventLinksSuccess   int64
+	eventLinksError     int64
+	eventUnlinksSuccess int64
+	eventUnlinksError   int64
+
+	collaborationCreatesSuccess int64
+	collaborationCreatesError   int64
+	collaborationUpdatesSuccess int64
+	collaborationUpdatesError   int64
+	collaborationDeletesSuccess int64
+	collaborationDeletesError   int64
+	collaborationLinksSuccess   int64
+	collaborationLinksError     int64
+	collaborationUnlinksSuccess int64
+	collaborationUnlinksError   int64
 }
 
 // NewMetrics creates a new Metrics instance.
@@ -199,6 +244,50 @@ func (m *Metrics) Stats() MetricsSnapshot {
 		AvgHTTPLatency:     avgHTTPLatency,
 		StreamPollRequests: m.streamPollRequests,
 		AvgStreamLatency:   avgStreamLatency,
+
+		ProfileCreatesSuccess: m.profileCreatesSuccess,
+		ProfileCreatesError:   m.profileCreatesError,
+		ProfileUpdatesSuccess: m.profileUpdatesSuccess,
+		ProfileUpdatesError:   m.profileUpdatesError,
+		ProfileDeletesSuccess: m.profileDeletesSuccess,
+		ProfileDeletesError:   m.profileDeletesError,
+		ProfileLinksSuccess:   m.profileLinksSuccess,
+		ProfileLinksError:     m.profileLinksError,
+		ProfileUnlinksSuccess: m.profileUnlinksSuccess,
+		ProfileUnlinksError:   m.profileUnlinksError,
+
+		OrganizationCreatesSuccess: m.organizationCreatesSuccess,
+		OrganizationCreatesError:   m.organizationCreatesError,
+		OrganizationUpdatesSuccess: m.organizationUpdatesSuccess,
+		OrganizationUpdatesError:   m.organizationUpdatesError,
+		OrganizationDeletesSuccess: m.organizationDeletesSuccess,
+		OrganizationDeletesError:   m.organizationDeletesError,
+		OrganizationLinksSuccess:   m.organizationLinksSuccess,
+		OrganizationLinksError:     m.organizationLinksError,
+		OrganizationUnlinksSuccess: m.organizationUnlinksSuccess,
+		OrganizationUnlinksError:   m.organizationUnlinksError,
+
+		EventCreatesSuccess: m.eventCreatesSuccess,
+		EventCreatesError:   m.eventCreatesError,
+		EventUpdatesSuccess: m.eventUpdatesSuccess,
+		EventUpdatesError:   m.eventUpdatesError,
+		EventDeletesSuccess: m.eventDeletesSuccess,
+		EventDeletesError:   m.eventDeletesError,
+		EventLinksSuccess:   m.eventLinksSuccess,
+		EventLinksError:     m.eventLinksError,
+		EventUnlinksSuccess: m.eventUnlinksSuccess,
+		EventUnlinksError:   m.eventUnlinksError,
+
+		CollaborationCreatesSuccess: m.collaborationCreatesSuccess,
+		CollaborationCreatesError:   m.collaborationCreatesError,
+		CollaborationUpdatesSuccess: m.collaborationUpdatesSuccess,
+		CollaborationUpdatesError:   m.collaborationUpdatesError,
+		CollaborationDeletesSuccess: m.collaborationDeletesSuccess,
+		CollaborationDeletesError:   m.collaborationDeletesError,
+		CollaborationLinksSuccess:   m.collaborationLinksSuccess,
+		CollaborationLinksError:     m.collaborationLinksError,
+		CollaborationUnlinksSuccess: m.collaborationUnlinksSuccess,
+		CollaborationUnlinksError:   m.collaborationUnlinksError,
 	}
 }
 
@@ -217,6 +306,50 @@ type MetricsSnapshot struct {
 	AvgHTTPLatency     time.Duration
 	StreamPollRequests int64
 	AvgStreamLatency   time.Duration
+
+	ProfileCreatesSuccess int64
+	ProfileCreatesError   int64
+	ProfileUpdatesSuccess int64
+	ProfileUpdatesError   int64
+	ProfileDeletesSuccess int64
+	ProfileDeletesError   int64
+	ProfileLinksSuccess   int64
+	ProfileLinksError     int64
+	ProfileUnlinksSuccess int64
+	ProfileUnlinksError   int64
+
+	OrganizationCreatesSuccess int64
+	OrganizationCreatesError   int64
+	OrganizationUpdatesSuccess int64
+	OrganizationUpdatesError   int64
+	OrganizationDeletesSuccess int64
+	OrganizationDeletesError   int64
+	OrganizationLinksSuccess   int64
+	OrganizationLinksError     int64
+	OrganizationUnlinksSuccess int64
+	OrganizationUnlinksError   int64
+
+	EventCreatesSuccess int64
+	EventCreatesError   int64
+	EventUpdatesSuccess int64
+	EventUpdatesError   int64
+	EventDeletesSuccess int64
+	EventDeletesError   int64
+	EventLinksSuccess   int64
+	EventLinksError     int64
+	EventUnlinksSuccess int64
+	EventUnlinksError   int64
+
+	CollaborationCreatesSuccess int64
+	CollaborationCreatesError   int64
+	CollaborationUpdatesSuccess int64
+	CollaborationUpdatesError   int64
+	CollaborationDeletesSuccess int64
+	CollaborationDeletesError   int64
+	CollaborationLinksSuccess   int64
+	CollaborationLinksError     int64
+	CollaborationUnlinksSuccess int64
+	CollaborationUnlinksError   int64
 }
 
 // RecordStreamPoll records a stream poll request.
@@ -258,6 +391,206 @@ func (m *Metrics) RecordSSEEventSent() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.sseEventsSent++
+}
+
+func (m *Metrics) RecordProfileCreate(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.profileCreatesSuccess++
+		return
+	}
+	m.profileCreatesError++
+}
+
+func (m *Metrics) RecordProfileUpdate(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.profileUpdatesSuccess++
+		return
+	}
+	m.profileUpdatesError++
+}
+
+func (m *Metrics) RecordProfileDelete(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.profileDeletesSuccess++
+		return
+	}
+	m.profileDeletesError++
+}
+
+func (m *Metrics) RecordProfileLink(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.profileLinksSuccess++
+		return
+	}
+	m.profileLinksError++
+}
+
+func (m *Metrics) RecordProfileUnlink(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.profileUnlinksSuccess++
+		return
+	}
+	m.profileUnlinksError++
+}
+
+func (m *Metrics) RecordOrganizationCreate(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.organizationCreatesSuccess++
+		return
+	}
+	m.organizationCreatesError++
+}
+
+func (m *Metrics) RecordOrganizationUpdate(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.organizationUpdatesSuccess++
+		return
+	}
+	m.organizationUpdatesError++
+}
+
+func (m *Metrics) RecordOrganizationDelete(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.organizationDeletesSuccess++
+		return
+	}
+	m.organizationDeletesError++
+}
+
+func (m *Metrics) RecordOrganizationLink(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.organizationLinksSuccess++
+		return
+	}
+	m.organizationLinksError++
+}
+
+func (m *Metrics) RecordOrganizationUnlink(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.organizationUnlinksSuccess++
+		return
+	}
+	m.organizationUnlinksError++
+}
+
+func (m *Metrics) RecordEventCreate(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.eventCreatesSuccess++
+		return
+	}
+	m.eventCreatesError++
+}
+
+func (m *Metrics) RecordEventUpdate(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.eventUpdatesSuccess++
+		return
+	}
+	m.eventUpdatesError++
+}
+
+func (m *Metrics) RecordEventDelete(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.eventDeletesSuccess++
+		return
+	}
+	m.eventDeletesError++
+}
+
+func (m *Metrics) RecordEventLink(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.eventLinksSuccess++
+		return
+	}
+	m.eventLinksError++
+}
+
+func (m *Metrics) RecordEventUnlink(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.eventUnlinksSuccess++
+		return
+	}
+	m.eventUnlinksError++
+}
+
+func (m *Metrics) RecordCollaborationCreate(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.collaborationCreatesSuccess++
+		return
+	}
+	m.collaborationCreatesError++
+}
+
+func (m *Metrics) RecordCollaborationUpdate(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.collaborationUpdatesSuccess++
+		return
+	}
+	m.collaborationUpdatesError++
+}
+
+func (m *Metrics) RecordCollaborationDelete(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.collaborationDeletesSuccess++
+		return
+	}
+	m.collaborationDeletesError++
+}
+
+func (m *Metrics) RecordCollaborationLink(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.collaborationLinksSuccess++
+		return
+	}
+	m.collaborationLinksError++
+}
+
+func (m *Metrics) RecordCollaborationUnlink(success bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if success {
+		m.collaborationUnlinksSuccess++
+		return
+	}
+	m.collaborationUnlinksError++
 }
 
 // SSEStats returns SSE-specific metrics.
