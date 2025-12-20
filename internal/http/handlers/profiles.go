@@ -119,6 +119,9 @@ func (h *ProfileHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	var req dto.CreateProfileRequest
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			if h.metrics != nil {
+				h.metrics.RecordProfileCreate(false)
+			}
 			h.renderError(w, r, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -129,15 +132,26 @@ func (h *ProfileHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := req.Validate(); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordProfileCreate(false)
+		}
 		h.renderCreateFormError(w, r, err.Error(), req)
 		return
 	}
 
 	p, err := h.profiles.Create(ctx, req.Name, req.Description)
 	if err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordProfileCreate(false)
+		}
 		h.logger.Error("failed to create profile", "error", err)
 		h.renderCreateFormError(w, r, "Failed to create profile", req)
 		return
+	}
+
+	h.logger.Info("profile created", "profile_id", p.ID)
+	if h.metrics != nil {
+		h.metrics.RecordProfileCreate(true)
 	}
 
 	if h.wantsJSON(r) {
@@ -199,6 +213,9 @@ func (h *ProfileHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	var req dto.UpdateProfileRequest
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			if h.metrics != nil {
+				h.metrics.RecordProfileUpdate(false)
+			}
 			h.renderError(w, r, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -209,6 +226,9 @@ func (h *ProfileHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := req.Validate(); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordProfileUpdate(false)
+		}
 		if h.wantsJSON(r) {
 			h.renderError(w, r, err.Error(), http.StatusBadRequest)
 			return
@@ -220,6 +240,9 @@ func (h *ProfileHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.profiles.Update(ctx, profileID, req.Name, req.Description)
 	if err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordProfileUpdate(false)
+		}
 		switch {
 		case err == services.ErrProfileNotFound:
 			h.renderError(w, r, "Profile not found", http.StatusNotFound)
@@ -242,6 +265,11 @@ func (h *ProfileHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	h.logger.Info("profile updated", "profile_id", profileID)
+	if h.metrics != nil {
+		h.metrics.RecordProfileUpdate(true)
+	}
+
 	if h.wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
@@ -261,6 +289,9 @@ func (h *ProfileHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.profiles.Delete(ctx, profileID); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordProfileDelete(false)
+		}
 		if err == services.ErrProfileNotFound {
 			h.renderError(w, r, "Profile not found", http.StatusNotFound)
 			return
@@ -273,6 +304,11 @@ func (h *ProfileHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
 
 		h.renderDetailError(w, r, profileID, http.StatusInternalServerError, "Failed to delete profile", nil, nil, nil)
 		return
+	}
+
+	h.logger.Info("profile deleted", "profile_id", profileID)
+	if h.metrics != nil {
+		h.metrics.RecordProfileDelete(true)
 	}
 
 	if h.wantsJSON(r) {
@@ -296,6 +332,9 @@ func (h *ProfileHandler) handleLinkChannel(w http.ResponseWriter, r *http.Reques
 	var req dto.LinkProfileChannelRequest
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			if h.metrics != nil {
+				h.metrics.RecordProfileLink(false)
+			}
 			h.renderError(w, r, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -322,6 +361,9 @@ func (h *ProfileHandler) handleLinkChannel(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := req.Validate(); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordProfileLink(false)
+		}
 		if h.wantsJSON(r) {
 			h.renderError(w, r, err.Error(), http.StatusBadRequest)
 			return
@@ -333,6 +375,9 @@ func (h *ProfileHandler) handleLinkChannel(w http.ResponseWriter, r *http.Reques
 
 	err = h.profiles.LinkChannel(ctx, profileID, req.ChannelID)
 	if err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordProfileLink(false)
+		}
 		switch {
 		case err == services.ErrProfileNotFound:
 			h.renderError(w, r, "Profile not found", http.StatusNotFound)
@@ -365,6 +410,11 @@ func (h *ProfileHandler) handleLinkChannel(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
+	h.logger.Info("profile linked channel", "profile_id", profileID, "channel_id", req.ChannelID)
+	if h.metrics != nil {
+		h.metrics.RecordProfileLink(true)
+	}
+
 	if h.wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "linked"})
@@ -390,6 +440,9 @@ func (h *ProfileHandler) handleUnlinkChannel(w http.ResponseWriter, r *http.Requ
 	}
 
 	if err := h.profiles.UnlinkChannel(ctx, profileID, channelID); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordProfileUnlink(false)
+		}
 		if err == services.ErrProfileChannelNotFound {
 			if h.wantsJSON(r) {
 				h.renderError(w, r, "Channel link not found", http.StatusNotFound)
@@ -405,6 +458,11 @@ func (h *ProfileHandler) handleUnlinkChannel(w http.ResponseWriter, r *http.Requ
 		}
 		h.renderDetailError(w, r, profileID, http.StatusInternalServerError, "Failed to remove channel link", nil, nil, nil)
 		return
+	}
+
+	h.logger.Info("profile unlinked channel", "profile_id", profileID, "channel_id", channelID)
+	if h.metrics != nil {
+		h.metrics.RecordProfileUnlink(true)
 	}
 
 	if h.wantsJSON(r) {

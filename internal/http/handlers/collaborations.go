@@ -106,6 +106,9 @@ func (h *CollaborationHandler) handleCreate(w http.ResponseWriter, r *http.Reque
 	var req dto.CreateCollaborationRequest
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			if h.metrics != nil {
+				h.metrics.RecordCollaborationCreate(false)
+			}
 			h.renderError(w, r, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -117,12 +120,18 @@ func (h *CollaborationHandler) handleCreate(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := req.Validate(); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordCollaborationCreate(false)
+		}
 		h.renderCreateFormError(w, r, err.Error(), req)
 		return
 	}
 
 	c, err := h.collabs.Create(ctx, req.Name, req.Description, req.SharedChat)
 	if err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordCollaborationCreate(false)
+		}
 		if errors.Is(err, services.ErrInvalidCollaborationName) {
 			h.renderCreateFormError(w, r, dto.ErrCollaborationNameRequired.Error(), req)
 			return
@@ -130,6 +139,11 @@ func (h *CollaborationHandler) handleCreate(w http.ResponseWriter, r *http.Reque
 		h.logger.Error("failed to create collaboration", "error", err)
 		h.renderCreateFormError(w, r, "Failed to create collaboration", req)
 		return
+	}
+
+	h.logger.Info("collaboration created", "collaboration_id", c.ID)
+	if h.metrics != nil {
+		h.metrics.RecordCollaborationCreate(true)
 	}
 
 	if h.wantsJSON(r) {
@@ -192,6 +206,9 @@ func (h *CollaborationHandler) handleUpdate(w http.ResponseWriter, r *http.Reque
 	var req dto.UpdateCollaborationRequest
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			if h.metrics != nil {
+				h.metrics.RecordCollaborationUpdate(false)
+			}
 			h.renderError(w, r, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -203,6 +220,9 @@ func (h *CollaborationHandler) handleUpdate(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := req.Validate(); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordCollaborationUpdate(false)
+		}
 		if h.wantsJSON(r) {
 			h.renderError(w, r, err.Error(), http.StatusBadRequest)
 			return
@@ -213,6 +233,9 @@ func (h *CollaborationHandler) handleUpdate(w http.ResponseWriter, r *http.Reque
 
 	_, err = h.collabs.Update(ctx, collaborationID, req.Name, req.Description, req.SharedChat)
 	if err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordCollaborationUpdate(false)
+		}
 		switch {
 		case err == services.ErrCollaborationNotFound:
 			h.renderError(w, r, "Collaboration not found", http.StatusNotFound)
@@ -235,6 +258,11 @@ func (h *CollaborationHandler) handleUpdate(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
+	h.logger.Info("collaboration updated", "collaboration_id", collaborationID)
+	if h.metrics != nil {
+		h.metrics.RecordCollaborationUpdate(true)
+	}
+
 	if h.wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
@@ -254,6 +282,9 @@ func (h *CollaborationHandler) handleDelete(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := h.collabs.Delete(ctx, collaborationID); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordCollaborationDelete(false)
+		}
 		if err == services.ErrCollaborationNotFound {
 			h.renderError(w, r, "Collaboration not found", http.StatusNotFound)
 			return
@@ -265,6 +296,11 @@ func (h *CollaborationHandler) handleDelete(w http.ResponseWriter, r *http.Reque
 		}
 		h.renderDetailError(w, r, collaborationID, http.StatusInternalServerError, "Failed to delete collaboration", nil, nil, nil, nil)
 		return
+	}
+
+	h.logger.Info("collaboration deleted", "collaboration_id", collaborationID)
+	if h.metrics != nil {
+		h.metrics.RecordCollaborationDelete(true)
 	}
 
 	if h.wantsJSON(r) {
@@ -288,6 +324,9 @@ func (h *CollaborationHandler) handleAddParticipant(w http.ResponseWriter, r *ht
 	var req dto.AddCollaborationParticipantRequest
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			if h.metrics != nil {
+				h.metrics.RecordCollaborationLink(false)
+			}
 			h.renderError(w, r, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -314,6 +353,9 @@ func (h *CollaborationHandler) handleAddParticipant(w http.ResponseWriter, r *ht
 	}
 
 	if err := req.Validate(); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordCollaborationLink(false)
+		}
 		if h.wantsJSON(r) {
 			h.renderError(w, r, err.Error(), http.StatusBadRequest)
 			return
@@ -324,6 +366,9 @@ func (h *CollaborationHandler) handleAddParticipant(w http.ResponseWriter, r *ht
 	}
 
 	if err := h.collabs.AddParticipant(ctx, collaborationID, req.ProfileID); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordCollaborationLink(false)
+		}
 		switch {
 		case err == services.ErrCollaborationNotFound:
 			h.renderError(w, r, "Collaboration not found", http.StatusNotFound)
@@ -351,6 +396,11 @@ func (h *CollaborationHandler) handleAddParticipant(w http.ResponseWriter, r *ht
 		}
 	}
 
+	h.logger.Info("collaboration participant added", "collaboration_id", collaborationID, "profile_id", req.ProfileID)
+	if h.metrics != nil {
+		h.metrics.RecordCollaborationLink(true)
+	}
+
 	if h.wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "added"})
@@ -376,6 +426,9 @@ func (h *CollaborationHandler) handleRemoveParticipant(w http.ResponseWriter, r 
 	}
 
 	if err := h.collabs.RemoveParticipant(ctx, collaborationID, profileID); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordCollaborationUnlink(false)
+		}
 		if err == services.ErrCollaborationNoParticipant {
 			if h.wantsJSON(r) {
 				h.renderError(w, r, "Participant not found", http.StatusNotFound)
@@ -391,6 +444,11 @@ func (h *CollaborationHandler) handleRemoveParticipant(w http.ResponseWriter, r 
 		}
 		h.renderDetailError(w, r, collaborationID, http.StatusInternalServerError, "Failed to remove participant", nil, nil, nil, nil)
 		return
+	}
+
+	h.logger.Info("collaboration participant removed", "collaboration_id", collaborationID, "profile_id", profileID)
+	if h.metrics != nil {
+		h.metrics.RecordCollaborationUnlink(true)
 	}
 
 	if h.wantsJSON(r) {

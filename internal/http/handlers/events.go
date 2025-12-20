@@ -111,6 +111,9 @@ func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	var req dto.CreateEventRequest
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			if h.metrics != nil {
+				h.metrics.RecordEventCreate(false)
+			}
 			h.renderError(w, r, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -121,6 +124,9 @@ func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 
 		startAt, endAt, err := parseEventDatesFromForm(r)
 		if err != nil {
+			if h.metrics != nil {
+				h.metrics.RecordEventCreate(false)
+			}
 			h.renderCreateFormError(w, r, err.Error(), req, r.FormValue("start_at"), r.FormValue("end_at"))
 			return
 		}
@@ -129,12 +135,18 @@ func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := req.Validate(); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordEventCreate(false)
+		}
 		h.renderCreateFormError(w, r, err.Error(), req, formatDateTimeLocal(req.StartAt), formatDateTimeLocalPtr(req.EndAt))
 		return
 	}
 
 	evt, err := h.events.Create(ctx, req.Title, req.Description, req.StartAt, req.EndAt)
 	if err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordEventCreate(false)
+		}
 		switch {
 		case errors.Is(err, services.ErrInvalidEventTitle):
 			h.renderCreateFormError(w, r, dto.ErrEventTitleRequired.Error(), req, formatDateTimeLocal(req.StartAt), formatDateTimeLocalPtr(req.EndAt))
@@ -147,6 +159,11 @@ func (h *EventHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 			h.renderCreateFormError(w, r, "Failed to create event", req, formatDateTimeLocal(req.StartAt), formatDateTimeLocalPtr(req.EndAt))
 			return
 		}
+	}
+
+	h.logger.Info("event created", "event_id", evt.ID)
+	if h.metrics != nil {
+		h.metrics.RecordEventCreate(true)
 	}
 
 	if h.wantsJSON(r) {
@@ -212,6 +229,9 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	var req dto.UpdateEventRequest
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			if h.metrics != nil {
+				h.metrics.RecordEventUpdate(false)
+			}
 			h.renderError(w, r, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -222,6 +242,9 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 
 		startAt, endAt, err := parseEventDatesFromForm(r)
 		if err != nil {
+			if h.metrics != nil {
+				h.metrics.RecordEventUpdate(false)
+			}
 			h.renderDetailError(w, r, eventID, http.StatusBadRequest, err.Error(), &req.Title, &req.Description, ptrString(r.FormValue("start_at")), ptrString(r.FormValue("end_at")), nil)
 			return
 		}
@@ -230,6 +253,9 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := req.Validate(); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordEventUpdate(false)
+		}
 		if h.wantsJSON(r) {
 			h.renderError(w, r, err.Error(), http.StatusBadRequest)
 			return
@@ -242,6 +268,9 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.events.Update(ctx, eventID, req.Title, req.Description, req.StartAt, req.EndAt)
 	if err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordEventUpdate(false)
+		}
 		switch {
 		case err == services.ErrEventNotFound:
 			h.renderError(w, r, "Event not found", http.StatusNotFound)
@@ -277,6 +306,11 @@ func (h *EventHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	h.logger.Info("event updated", "event_id", eventID)
+	if h.metrics != nil {
+		h.metrics.RecordEventUpdate(true)
+	}
+
 	if h.wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
@@ -296,6 +330,9 @@ func (h *EventHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.events.Delete(ctx, eventID); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordEventDelete(false)
+		}
 		if err == services.ErrEventNotFound {
 			h.renderError(w, r, "Event not found", http.StatusNotFound)
 			return
@@ -307,6 +344,11 @@ func (h *EventHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
 		}
 		h.renderDetailError(w, r, eventID, http.StatusInternalServerError, "Failed to delete event", nil, nil, nil, nil, nil)
 		return
+	}
+
+	h.logger.Info("event deleted", "event_id", eventID)
+	if h.metrics != nil {
+		h.metrics.RecordEventDelete(true)
 	}
 
 	if h.wantsJSON(r) {
@@ -330,6 +372,9 @@ func (h *EventHandler) handleAddParticipant(w http.ResponseWriter, r *http.Reque
 	var req dto.AddEventParticipantRequest
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			if h.metrics != nil {
+				h.metrics.RecordEventLink(false)
+			}
 			h.renderError(w, r, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -356,6 +401,9 @@ func (h *EventHandler) handleAddParticipant(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := req.Validate(); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordEventLink(false)
+		}
 		if h.wantsJSON(r) {
 			h.renderError(w, r, err.Error(), http.StatusBadRequest)
 			return
@@ -367,6 +415,9 @@ func (h *EventHandler) handleAddParticipant(w http.ResponseWriter, r *http.Reque
 
 	err = h.events.AddParticipant(ctx, eventID, req.ProfileID)
 	if err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordEventLink(false)
+		}
 		switch {
 		case err == services.ErrEventNotFound:
 			h.renderError(w, r, "Event not found", http.StatusNotFound)
@@ -394,6 +445,11 @@ func (h *EventHandler) handleAddParticipant(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
+	h.logger.Info("event participant added", "event_id", eventID, "profile_id", req.ProfileID)
+	if h.metrics != nil {
+		h.metrics.RecordEventLink(true)
+	}
+
 	if h.wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "added"})
@@ -418,6 +474,9 @@ func (h *EventHandler) handleRemoveParticipant(w http.ResponseWriter, r *http.Re
 	}
 
 	if err := h.events.RemoveParticipant(ctx, eventID, profileID); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordEventUnlink(false)
+		}
 		if err == services.ErrParticipantMissing {
 			h.renderError(w, r, "Participant not found", http.StatusNotFound)
 			return
@@ -429,6 +488,11 @@ func (h *EventHandler) handleRemoveParticipant(w http.ResponseWriter, r *http.Re
 		}
 		h.renderDetailError(w, r, eventID, http.StatusInternalServerError, "Failed to remove participant", nil, nil, nil, nil, nil)
 		return
+	}
+
+	h.logger.Info("event participant removed", "event_id", eventID, "profile_id", profileID)
+	if h.metrics != nil {
+		h.metrics.RecordEventUnlink(true)
 	}
 
 	if h.wantsJSON(r) {

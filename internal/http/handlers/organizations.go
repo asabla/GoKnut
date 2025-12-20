@@ -104,6 +104,9 @@ func (h *OrganizationHandler) handleCreate(w http.ResponseWriter, r *http.Reques
 	var req dto.CreateOrganizationRequest
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			if h.metrics != nil {
+				h.metrics.RecordOrganizationCreate(false)
+			}
 			h.renderError(w, r, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -114,12 +117,18 @@ func (h *OrganizationHandler) handleCreate(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := req.Validate(); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordOrganizationCreate(false)
+		}
 		h.renderCreateFormError(w, r, err.Error(), req)
 		return
 	}
 
 	org, err := h.orgs.Create(ctx, req.Name, req.Description)
 	if err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordOrganizationCreate(false)
+		}
 		if errors.Is(err, services.ErrInvalidOrganizationName) {
 			h.renderCreateFormError(w, r, dto.ErrOrganizationNameRequired.Error(), req)
 			return
@@ -127,6 +136,11 @@ func (h *OrganizationHandler) handleCreate(w http.ResponseWriter, r *http.Reques
 		h.logger.Error("failed to create organization", "error", err)
 		h.renderCreateFormError(w, r, "Failed to create organization", req)
 		return
+	}
+
+	h.logger.Info("organization created", "organization_id", org.ID)
+	if h.metrics != nil {
+		h.metrics.RecordOrganizationCreate(true)
 	}
 
 	if h.wantsJSON(r) {
@@ -190,6 +204,9 @@ func (h *OrganizationHandler) handleUpdate(w http.ResponseWriter, r *http.Reques
 	var req dto.UpdateOrganizationRequest
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			if h.metrics != nil {
+				h.metrics.RecordOrganizationUpdate(false)
+			}
 			h.renderError(w, r, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -200,6 +217,9 @@ func (h *OrganizationHandler) handleUpdate(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := req.Validate(); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordOrganizationUpdate(false)
+		}
 		if h.wantsJSON(r) {
 			h.renderError(w, r, err.Error(), http.StatusBadRequest)
 			return
@@ -210,6 +230,9 @@ func (h *OrganizationHandler) handleUpdate(w http.ResponseWriter, r *http.Reques
 
 	_, err = h.orgs.Update(ctx, orgID, req.Name, req.Description)
 	if err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordOrganizationUpdate(false)
+		}
 		switch {
 		case err == services.ErrOrganizationNotFound:
 			h.renderError(w, r, "Organization not found", http.StatusNotFound)
@@ -232,6 +255,11 @@ func (h *OrganizationHandler) handleUpdate(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
+	h.logger.Info("organization updated", "organization_id", orgID)
+	if h.metrics != nil {
+		h.metrics.RecordOrganizationUpdate(true)
+	}
+
 	if h.wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
@@ -251,6 +279,9 @@ func (h *OrganizationHandler) handleDelete(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := h.orgs.Delete(ctx, orgID); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordOrganizationDelete(false)
+		}
 		if err == services.ErrOrganizationNotFound {
 			h.renderError(w, r, "Organization not found", http.StatusNotFound)
 			return
@@ -262,6 +293,11 @@ func (h *OrganizationHandler) handleDelete(w http.ResponseWriter, r *http.Reques
 		}
 		h.renderDetailError(w, r, orgID, http.StatusInternalServerError, "Failed to delete organization", nil, nil, nil)
 		return
+	}
+
+	h.logger.Info("organization deleted", "organization_id", orgID)
+	if h.metrics != nil {
+		h.metrics.RecordOrganizationDelete(true)
 	}
 
 	if h.wantsJSON(r) {
@@ -285,6 +321,9 @@ func (h *OrganizationHandler) handleAddMember(w http.ResponseWriter, r *http.Req
 	var req dto.AddOrganizationMemberRequest
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			if h.metrics != nil {
+				h.metrics.RecordOrganizationLink(false)
+			}
 			h.renderError(w, r, "Invalid request body", http.StatusBadRequest)
 			return
 		}
@@ -311,6 +350,9 @@ func (h *OrganizationHandler) handleAddMember(w http.ResponseWriter, r *http.Req
 	}
 
 	if err := req.Validate(); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordOrganizationLink(false)
+		}
 		if h.wantsJSON(r) {
 			h.renderError(w, r, err.Error(), http.StatusBadRequest)
 			return
@@ -322,6 +364,9 @@ func (h *OrganizationHandler) handleAddMember(w http.ResponseWriter, r *http.Req
 
 	err = h.orgs.AddMember(ctx, orgID, req.ProfileID)
 	if err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordOrganizationLink(false)
+		}
 		switch {
 		case err == services.ErrOrganizationNotFound:
 			h.renderError(w, r, "Organization not found", http.StatusNotFound)
@@ -349,6 +394,11 @@ func (h *OrganizationHandler) handleAddMember(w http.ResponseWriter, r *http.Req
 		}
 	}
 
+	h.logger.Info("organization member added", "organization_id", orgID, "profile_id", req.ProfileID)
+	if h.metrics != nil {
+		h.metrics.RecordOrganizationLink(true)
+	}
+
 	if h.wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "added"})
@@ -373,6 +423,9 @@ func (h *OrganizationHandler) handleRemoveMember(w http.ResponseWriter, r *http.
 	}
 
 	if err := h.orgs.RemoveMember(ctx, orgID, profileID); err != nil {
+		if h.metrics != nil {
+			h.metrics.RecordOrganizationUnlink(false)
+		}
 		if err == services.ErrMembershipNotFound {
 			h.renderError(w, r, "Membership not found", http.StatusNotFound)
 			return
@@ -384,6 +437,11 @@ func (h *OrganizationHandler) handleRemoveMember(w http.ResponseWriter, r *http.
 		}
 		h.renderDetailError(w, r, orgID, http.StatusInternalServerError, "Failed to remove member", nil, nil, nil)
 		return
+	}
+
+	h.logger.Info("organization member removed", "organization_id", orgID, "profile_id", profileID)
+	if h.metrics != nil {
+		h.metrics.RecordOrganizationUnlink(true)
 	}
 
 	if h.wantsJSON(r) {
