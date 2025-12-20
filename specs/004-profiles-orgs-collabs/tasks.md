@@ -119,7 +119,7 @@ description: "Task list: Profiles, Organizations & Collaborations"
 - [X] T038 [P] [US3] Add event templates (index/list/detail/new) in `internal/http/templates/events/new.html`
 - [X] T039 [US3] Implement event routes + handlers per contract in `internal/http/handlers/events.go`
 - [X] T040 [US3] Register event routes in `internal/http/server.go`
-- [ ] T041 [US3] Extend profile detail to show associated events in `internal/http/handlers/profiles.go` and `internal/http/templates/profiles/detail.html`
+- [X] T041 [US3] Extend profile detail to show associated events in `internal/http/handlers/profiles.go` and `internal/http/templates/profiles/detail.html`
 
 **Checkpoint**: US3 functional; events appear on participant profiles.
 
@@ -133,18 +133,18 @@ description: "Task list: Profiles, Organizations & Collaborations"
 
 ### Tests for User Story 4
 
-- [ ] T042 [P] [US4] Unit tests for minimum participant validation in `tests/unit/collaboration_service_test.go`
-- [ ] T043 [P] [US4] Integration test for collaboration participants add/remove in `tests/integration/collaborations_integration_test.go`
+- [X] T042 [P] [US4] Unit tests for minimum participant validation in `tests/unit/collaboration_service_test.go`
+- [X] T043 [P] [US4] Integration test for collaboration participants add/remove in `tests/integration/collaborations_integration_test.go`
 
 ### Implementation for User Story 4
 
-- [ ] T044 [P] [US4] Add collaboration templates (index/list/detail/new) in `internal/http/templates/collaborations/index.html`
-- [ ] T045 [P] [US4] Add collaboration templates (index/list/detail/new) in `internal/http/templates/collaborations/list.html`
-- [ ] T046 [P] [US4] Add collaboration templates (index/list/detail/new) in `internal/http/templates/collaborations/detail.html`
-- [ ] T047 [P] [US4] Add collaboration templates (index/list/detail/new) in `internal/http/templates/collaborations/new.html`
-- [ ] T048 [US4] Implement collaboration routes + handlers per contract in `internal/http/handlers/collaborations.go`
-- [ ] T049 [US4] Register collaboration routes in `internal/http/server.go`
-- [ ] T050 [US4] Extend profile detail to show collaborations in `internal/http/handlers/profiles.go` and `internal/http/templates/profiles/detail.html`
+- [X] T044 [P] [US4] Add collaboration templates (index/list/detail/new) in `internal/http/templates/collaborations/index.html`
+- [X] T045 [P] [US4] Add collaboration templates (index/list/detail/new) in `internal/http/templates/collaborations/list.html`
+- [X] T046 [P] [US4] Add collaboration templates (index/list/detail/new) in `internal/http/templates/collaborations/detail.html`
+- [X] T047 [P] [US4] Add collaboration templates (index/list/detail/new) in `internal/http/templates/collaborations/new.html`
+- [X] T048 [US4] Implement collaboration routes + handlers per contract in `internal/http/handlers/collaborations.go`
+- [X] T049 [US4] Register collaboration routes in `internal/http/server.go`
+- [X] T050 [US4] Extend profile detail to show collaborations in `internal/http/handlers/profiles.go` and `internal/http/templates/profiles/detail.html`
 
 **Checkpoint**: US4 functional; collaborations appear on participant profiles.
 
@@ -159,7 +159,7 @@ description: "Task list: Profiles, Organizations & Collaborations"
 - [ ] T053 Add lightweight metrics counters for CRUD/link outcomes in `internal/observability/observability.go`
 - [ ] T054 Validate all new queries are indexed (verify indexes in `internal/repository/migrations/001_init.sql` and `internal/repository/migrations/postgres/001_init.sql`)
 - [ ] T055 Run quickstart manual verification from `specs/004-profiles-orgs-collabs/quickstart.md` and update it if behavior differs
-- [ ] T056 Run full test suite: `go test ./...`
+- [X] T056 Run full test suite: `go test ./...`
 
 ---
 
