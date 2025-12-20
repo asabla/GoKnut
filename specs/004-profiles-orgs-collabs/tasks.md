@@ -58,8 +58,8 @@ description: "Task list: Profiles, Organizations & Collaborations"
 
 ### Tests for User Story 1
 
-- [ ] T015 [P] [US1] Unit tests for linking validation + uniqueness errors in `tests/unit/profile_service_test.go`
-- [ ] T016 [P] [US1] Integration test for profile creation + channel linking in `tests/integration/profiles_integration_test.go`
+- [X] T015 [P] [US1] Unit tests for linking validation + uniqueness errors in `tests/unit/profile_service_test.go`
+- [X] T016 [P] [US1] Integration test for profile creation + channel linking in `tests/integration/profiles_integration_test.go`
 
 ### Implementation for User Story 1
 
