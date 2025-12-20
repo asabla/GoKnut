@@ -35,6 +35,7 @@ type Server struct {
 	organizationService  *services.OrganizationService
 	organizationRepo     *repository.OrganizationRepository
 	eventService         *services.EventService
+	eventRepo            *repository.EventRepository
 	collaborationService *services.CollaborationService
 	channelRepo          *repository.ChannelRepository
 	messageRepo          *repository.MessageRepository
@@ -56,6 +57,7 @@ type ServerConfig struct {
 	OrganizationService  *services.OrganizationService
 	OrganizationRepo     *repository.OrganizationRepository
 	EventService         *services.EventService
+	EventRepo            *repository.EventRepository
 	CollaborationService *services.CollaborationService
 	ChannelRepo          *repository.ChannelRepository
 	MessageRepo          *repository.MessageRepository
@@ -121,6 +123,7 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 		organizationService:  cfg.OrganizationService,
 		organizationRepo:     cfg.OrganizationRepo,
 		eventService:         cfg.EventService,
+		eventRepo:            cfg.EventRepo,
 		collaborationService: cfg.CollaborationService,
 		channelRepo:          cfg.ChannelRepo,
 		messageRepo:          cfg.MessageRepo,
@@ -213,7 +216,7 @@ func (s *Server) registerRoutes() {
 
 	// Register profile handler routes
 	if s.profileService != nil && s.channelRepo != nil {
-		profileHandler := handlers.NewProfileHandler(s.profileService, s.channelRepo, s.organizationRepo, s.templates, s.logger)
+		profileHandler := handlers.NewProfileHandler(s.profileService, s.channelRepo, s.organizationRepo, s.eventRepo, s.templates, s.logger)
 		profileHandler.RegisterRoutes(s.mux)
 	}
 
