@@ -1,0 +1,59 @@
+{{define "events/new"}}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    {{template "shared/head"}}
+    <title>New Event - GoKnut</title>
+</head>
+<body class="min-h-screen flex flex-col bg-surface-dark text-twitch-light">
+    {{template "shared/nav" dict "ActivePage" "events"}}
+
+    <main class="flex-1 container-prose py-6 w-full">
+        <div class="space-y-6">
+            <div>
+                <a href="/events" class="btn btn-sm btn-secondary">&larr; Back to Events</a>
+            </div>
+
+            <div class="card p-6">
+                <h1 class="text-2xl font-bold text-white mb-6">New Event</h1>
+
+                {{if .ErrorMessage}}
+                <div class="mb-4">
+                    {{template "error" dict "Title" "Error" "Message" .ErrorMessage}}
+                </div>
+                {{end}}
+
+                <form method="POST" action="/events" class="space-y-4">
+                    <div>
+                        <label for="title" class="block text-sm font-medium text-gray-300">Title</label>
+                        <input type="text" name="title" id="title" required value="{{.FormTitle}}" class="input input-md mt-1">
+                    </div>
+
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-300">Description (optional)</label>
+                        <textarea name="description" id="description" rows="4" class="input input-md mt-1">{{.FormDescription}}</textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="start_at" class="block text-sm font-medium text-gray-300">Start</label>
+                            <input type="datetime-local" name="start_at" id="start_at" required value="{{.FormStartAt}}" class="input input-md mt-1">
+                        </div>
+                        <div>
+                            <label for="end_at" class="block text-sm font-medium text-gray-300">End (optional)</label>
+                            <input type="datetime-local" name="end_at" id="end_at" value="{{.FormEndAt}}" class="input input-md mt-1">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button type="submit" class="btn btn-md btn-primary">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    {{template "shared/footer"}}
+</body>
+</html>
+{{end}}

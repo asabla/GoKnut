@@ -223,6 +223,12 @@ func (s *Server) registerRoutes() {
 		organizationHandler.RegisterRoutes(s.mux)
 	}
 
+	// Register event handler routes
+	if s.eventService != nil && s.profileRepo != nil {
+		eventHandler := handlers.NewEventHandler(s.eventService, s.profileRepo, s.templates, s.logger)
+		eventHandler.RegisterRoutes(s.mux)
+	}
+
 	// Register SSE live updates handler
 	if s.enableSSE {
 		s.sseHandler = handlers.NewSSEHandler(
