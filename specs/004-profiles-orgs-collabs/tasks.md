@@ -94,7 +94,7 @@ description: "Task list: Profiles, Organizations & Collaborations"
 - [X] T029 [P] [US2] Add organization templates (index/list/detail/new) in `internal/http/templates/organizations/new.html`
 - [X] T030 [US2] Implement organization routes + handlers per contract in `internal/http/handlers/organizations.go`
 - [X] T031 [US2] Register organization routes in `internal/http/server.go`
-- [ ] T032 [US2] Extend profile detail to show org affiliations in `internal/http/handlers/profiles.go` and `internal/http/templates/profiles/detail.html`
+- [X] T032 [US2] Extend profile detail to show org affiliations in `internal/http/handlers/profiles.go` and `internal/http/templates/profiles/detail.html`
 
 **Checkpoint**: US2 functional; profile page shows org affiliations.
 

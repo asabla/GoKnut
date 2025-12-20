@@ -33,6 +33,7 @@ type Server struct {
 	searchService        *services.SearchService
 	profileService       *services.ProfileService
 	organizationService  *services.OrganizationService
+	organizationRepo     *repository.OrganizationRepository
 	eventService         *services.EventService
 	collaborationService *services.CollaborationService
 	channelRepo          *repository.ChannelRepository
@@ -53,6 +54,7 @@ type ServerConfig struct {
 	SearchService        *services.SearchService
 	ProfileService       *services.ProfileService
 	OrganizationService  *services.OrganizationService
+	OrganizationRepo     *repository.OrganizationRepository
 	EventService         *services.EventService
 	CollaborationService *services.CollaborationService
 	ChannelRepo          *repository.ChannelRepository
@@ -117,6 +119,7 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 		searchService:        cfg.SearchService,
 		profileService:       cfg.ProfileService,
 		organizationService:  cfg.OrganizationService,
+		organizationRepo:     cfg.OrganizationRepo,
 		eventService:         cfg.EventService,
 		collaborationService: cfg.CollaborationService,
 		channelRepo:          cfg.ChannelRepo,
@@ -210,7 +213,7 @@ func (s *Server) registerRoutes() {
 
 	// Register profile handler routes
 	if s.profileService != nil && s.channelRepo != nil {
-		profileHandler := handlers.NewProfileHandler(s.profileService, s.channelRepo, s.templates, s.logger)
+		profileHandler := handlers.NewProfileHandler(s.profileService, s.channelRepo, s.organizationRepo, s.templates, s.logger)
 		profileHandler.RegisterRoutes(s.mux)
 	}
 

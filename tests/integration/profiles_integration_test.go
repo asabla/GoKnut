@@ -33,6 +33,7 @@ func TestProfilesCreateAndLinkChannel(t *testing.T) {
 
 	channelRepo := repository.NewChannelRepository(db)
 	profileRepo := repository.NewProfileRepository(db)
+	organizationRepo := repository.NewOrganizationRepository(db)
 	profileService := services.NewProfileService(profileRepo, channelRepo)
 
 	channel := &repository.Channel{Name: "channel1", DisplayName: "Channel One", Enabled: true}
@@ -42,7 +43,7 @@ func TestProfilesCreateAndLinkChannel(t *testing.T) {
 
 	mux := http.NewServeMux()
 	templates := testProfileTemplates(t)
-	profileHandler := handlers.NewProfileHandler(profileService, channelRepo, templates, logger)
+	profileHandler := handlers.NewProfileHandler(profileService, channelRepo, organizationRepo, templates, logger)
 	profileHandler.RegisterRoutes(mux)
 
 	srv := httptest.NewServer(mux)
@@ -74,6 +75,36 @@ func TestProfilesCreateAndLinkChannel(t *testing.T) {
 	}
 	if createdProfile.ID == 0 {
 		t.Fatalf("expected created profile to have ID")
+	}
+
+	org := &repository.Organization{Name: "Org One", Description: "Test Org"}
+	if err := organizationRepo.Create(ctx, org); err != nil {
+		t.Fatalf("failed to create organization: %v", err)
+	}
+	if err := organizationRepo.AddMember(ctx, org.ID, createdProfile.ID); err != nil {
+		t.Fatalf("failed to add organization member: %v", err)
+	}
+
+	getReq, _ := http.NewRequest("GET", srv.URL+"/profiles/"+itoa(createdProfile.ID), nil)
+	getReq.Header.Set("Accept", "application/json")
+	getResp, err := client.Do(getReq)
+	if err != nil {
+		t.Fatalf("get request failed: %v", err)
+	}
+	defer getResp.Body.Close()
+	if getResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200 on get, got %d", getResp.StatusCode)
+	}
+	var getData map[string]any
+	if err := json.NewDecoder(getResp.Body).Decode(&getData); err != nil {
+		t.Fatalf("failed to decode get response: %v", err)
+	}
+	orgs, ok := getData["Organizations"].([]any)
+	if !ok {
+		t.Fatalf("expected Organizations to be an array")
+	}
+	if len(orgs) != 1 {
+		t.Fatalf("expected 1 organization, got %d", len(orgs))
 	}
 
 	linkReqBody, _ := json.Marshal(map[string]any{"channel_id": channel.ID})
