@@ -1,0 +1,51 @@
+{{define "collaborations/index"}}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    {{template "shared/head"}}
+    <title>Collaborations - GoKnut</title>
+</head>
+<body class="min-h-screen flex flex-col bg-surface-dark text-twitch-light">
+    {{template "shared/nav" dict "ActivePage" "collaborations"}}
+
+    <main class="flex-1 container-prose py-6 w-full">
+        <div class="space-y-6">
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-white">Collaborations</h1>
+                <a href="/collaborations/new" class="btn btn-md btn-primary">New Collaboration</a>
+            </div>
+
+            <div class="card p-6">
+                {{if .ErrorMessage}}
+                <div class="mb-4">
+                    {{template "error" dict "Title" "Error" "Message" .ErrorMessage}}
+                </div>
+                {{end}}
+
+                {{if .IsEmpty}}
+                {{template "empty" dict "Title" "No collaborations" "Message" "Create a collaboration to group profiles."}}
+                {{else}}
+                <div class="table-container">
+                    <table class="table">
+                        <thead class="table-header">
+                            <tr>
+                                <th scope="col" class="table-header-cell">Name</th>
+                                <th scope="col" class="table-header-cell">Shared Chat</th>
+                                <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody class="table-body">
+                            {{template "collaborations/list.html" .}}
+                        </tbody>
+                    </table>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </main>
+
+    {{template "shared/footer"}}
+    {{template "shared/htmx-config"}}
+</body>
+</html>
+{{end}}

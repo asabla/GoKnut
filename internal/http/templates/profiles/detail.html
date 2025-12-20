@@ -110,6 +110,33 @@
 
             <div class="card p-6">
                 <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-medium text-white">Collaborations</h2>
+                </div>
+
+                <div>
+                    {{if .CollaborationsEmpty}}
+                    {{template "empty" dict "Title" "No collaborations" "Message" "This profile is not participating in any collaborations."}}
+                    {{else}}
+                    <div class="space-y-3">
+                        {{range .Collaborations}}
+                        <div class="flex items-center justify-between p-3 bg-surface rounded-lg border border-surface-light">
+                            <div>
+                                <div class="text-sm font-medium text-white">{{.Name}}</div>
+                                {{if .Description}}
+                                <div class="text-sm text-gray-400">{{.Description}}</div>
+                                {{end}}
+                                <div class="text-sm text-gray-400">Shared chat: {{if .SharedChat}}Yes{{else}}No{{end}}</div>
+                            </div>
+                            <a href="/collaborations/{{.ID}}" class="btn btn-sm btn-secondary">View</a>
+                        </div>
+                        {{end}}
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+
+            <div class="card p-6">
+                <div class="flex items-center justify-between mb-4">
                     <h2 class="text-lg font-medium text-white">Linked Channels</h2>
                 </div>
 

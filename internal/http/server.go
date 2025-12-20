@@ -37,6 +37,7 @@ type Server struct {
 	eventService         *services.EventService
 	eventRepo            *repository.EventRepository
 	collaborationService *services.CollaborationService
+	collaborationRepo    *repository.CollaborationRepository
 	channelRepo          *repository.ChannelRepository
 	messageRepo          *repository.MessageRepository
 	userRepo             *repository.UserRepository
@@ -59,6 +60,7 @@ type ServerConfig struct {
 	EventService         *services.EventService
 	EventRepo            *repository.EventRepository
 	CollaborationService *services.CollaborationService
+	CollaborationRepo    *repository.CollaborationRepository
 	ChannelRepo          *repository.ChannelRepository
 	MessageRepo          *repository.MessageRepository
 	UserRepo             *repository.UserRepository
@@ -125,6 +127,7 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 		eventService:         cfg.EventService,
 		eventRepo:            cfg.EventRepo,
 		collaborationService: cfg.CollaborationService,
+		collaborationRepo:    cfg.CollaborationRepo,
 		channelRepo:          cfg.ChannelRepo,
 		messageRepo:          cfg.MessageRepo,
 		userRepo:             cfg.UserRepo,
@@ -216,7 +219,7 @@ func (s *Server) registerRoutes() {
 
 	// Register profile handler routes
 	if s.profileService != nil && s.channelRepo != nil {
-		profileHandler := handlers.NewProfileHandler(s.profileService, s.channelRepo, s.organizationRepo, s.eventRepo, s.templates, s.logger)
+		profileHandler := handlers.NewProfileHandler(s.profileService, s.channelRepo, s.organizationRepo, s.eventRepo, s.collaborationRepo, s.templates, s.logger)
 		profileHandler.RegisterRoutes(s.mux)
 	}
 
@@ -230,6 +233,12 @@ func (s *Server) registerRoutes() {
 	if s.eventService != nil && s.profileRepo != nil {
 		eventHandler := handlers.NewEventHandler(s.eventService, s.profileRepo, s.templates, s.logger)
 		eventHandler.RegisterRoutes(s.mux)
+	}
+
+	// Register collaboration handler routes
+	if s.collaborationService != nil && s.profileRepo != nil {
+		collaborationHandler := handlers.NewCollaborationHandler(s.collaborationService, s.profileRepo, s.templates, s.logger)
+		collaborationHandler.RegisterRoutes(s.mux)
 	}
 
 	// Register SSE live updates handler

@@ -36,6 +36,7 @@ func TestProfilesCreateAndLinkChannel(t *testing.T) {
 	profileRepo := repository.NewProfileRepository(db)
 	organizationRepo := repository.NewOrganizationRepository(db)
 	eventRepo := repository.NewEventRepository(db)
+	collaborationRepo := repository.NewCollaborationRepository(db)
 	profileService := services.NewProfileService(profileRepo, channelRepo)
 
 	channel := &repository.Channel{Name: "channel1", DisplayName: "Channel One", Enabled: true}
@@ -45,7 +46,7 @@ func TestProfilesCreateAndLinkChannel(t *testing.T) {
 
 	mux := http.NewServeMux()
 	templates := testProfileTemplates(t)
-	profileHandler := handlers.NewProfileHandler(profileService, channelRepo, organizationRepo, eventRepo, templates, logger)
+	profileHandler := handlers.NewProfileHandler(profileService, channelRepo, organizationRepo, eventRepo, collaborationRepo, templates, logger)
 	profileHandler.RegisterRoutes(mux)
 
 	srv := httptest.NewServer(mux)
@@ -87,6 +88,14 @@ func TestProfilesCreateAndLinkChannel(t *testing.T) {
 		t.Fatalf("failed to add organization member: %v", err)
 	}
 
+	collab := &repository.Collaboration{Name: "Collab One", Description: "Test Collab", SharedChat: true}
+	if err := collaborationRepo.Create(ctx, collab); err != nil {
+		t.Fatalf("failed to create collaboration: %v", err)
+	}
+	if err := collaborationRepo.AddParticipant(ctx, collab.ID, createdProfile.ID); err != nil {
+		t.Fatalf("failed to add collaboration participant: %v", err)
+	}
+
 	evt := &repository.Event{Title: "Event One", Description: "Test Event", StartAt: mustParseTime(t, "2025-01-02T15:04:05Z")}
 	if err := eventRepo.Create(ctx, evt); err != nil {
 		t.Fatalf("failed to create event: %v", err)
@@ -122,6 +131,13 @@ func TestProfilesCreateAndLinkChannel(t *testing.T) {
 	}
 	if len(events) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(events))
+	}
+	collabs, ok := getData["Collaborations"].([]any)
+	if !ok {
+		t.Fatalf("expected Collaborations to be an array")
+	}
+	if len(collabs) != 1 {
+		t.Fatalf("expected 1 collaboration, got %d", len(collabs))
 	}
 
 	linkReqBody, _ := json.Marshal(map[string]any{"channel_id": channel.ID})
