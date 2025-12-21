@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/asabla/goknut/internal/observability"
@@ -33,6 +34,9 @@ type HomeDashboardHandler struct {
 
 	prometheusBaseURL string
 	prometheusTimeout time.Duration
+
+	rateLimitMu       sync.Mutex
+	lastDegradedLogAt map[string]time.Time
 }
 
 func NewHomeDashboardHandler(
@@ -53,12 +57,34 @@ func NewHomeDashboardHandler(
 		httpClient:        &http.Client{},
 		prometheusBaseURL: prometheusBaseURL,
 		prometheusTimeout: prometheusTimeout,
+		lastDegradedLogAt: map[string]time.Time{},
 	}
 }
 
 func (h *HomeDashboardHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /dashboard/home/summary", h.handleSummary)
 	mux.HandleFunc("GET /dashboard/home/diagrams", h.handleDiagrams)
+}
+
+func (h *HomeDashboardHandler) logDashboardDegraded(fragment string, errors []string) {
+	const minLogInterval = 60 * time.Second
+
+	if h.logger == nil {
+		return
+	}
+
+	now := time.Now()
+
+	h.rateLimitMu.Lock()
+	last := h.lastDegradedLogAt[fragment]
+	if !last.IsZero() && now.Sub(last) < minLogInterval {
+		h.rateLimitMu.Unlock()
+		return
+	}
+	h.lastDegradedLogAt[fragment] = now
+	h.rateLimitMu.Unlock()
+
+	h.logger.Warn("dashboard fragment degraded", "fragment", fragment, "errors", errors)
 }
 
 type homeSummaryData struct {
@@ -73,6 +99,10 @@ func (h *HomeDashboardHandler) handleSummary(w http.ResponseWriter, r *http.Requ
 	if err := h.templates.ExecuteTemplate(w, "dashboard/home_summary", data); err != nil {
 		h.logger.Error("failed to execute dashboard summary template", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+
+	if snapshot.Degraded() {
+		h.logDashboardDegraded("summary", snapshot.Errors)
 	}
 }
 
@@ -93,21 +123,27 @@ func (h *HomeDashboardHandler) handleDiagrams(w http.ResponseWriter, r *http.Req
 
 	data := homeDiagramsData{
 		WindowLabel: "Last 15m",
-		MessagesSVG: renderSparklineSVG(messages),
-		UsersSVG:    renderSparklineSVG(users),
+		MessagesSVG: RenderSparklineSVG(messages),
+		UsersSVG:    RenderSparklineSVG(users),
 		Degraded:    errMessages != nil || errUsers != nil,
 	}
 	if errMessages != nil {
 		data.Errors = append(data.Errors, "messages")
+		data.MessagesSVG = RenderDegradedSparklineSVG()
 	}
 	if errUsers != nil {
 		data.Errors = append(data.Errors, "users")
+		data.UsersSVG = RenderDegradedSparklineSVG()
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := h.templates.ExecuteTemplate(w, "dashboard/home_diagrams", data); err != nil {
 		h.logger.Error("failed to execute dashboard diagrams template", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+
+	if data.Degraded {
+		h.logDashboardDegraded("diagrams", data.Errors)
 	}
 }
 
@@ -118,60 +154,6 @@ type homeDiagramsData struct {
 
 	MessagesSVG template.HTML
 	UsersSVG    template.HTML
-}
-
-func renderSparklineSVG(points []promPoint) template.HTML {
-	const width = 240
-	const height = 48
-	const pad = 2
-
-	if len(points) == 0 {
-		return template.HTML(fmt.Sprintf(
-			"<svg width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"></svg>",
-			width, height, width, height,
-		))
-	}
-
-	minV := points[0].Value
-	maxV := points[0].Value
-	for _, p := range points[1:] {
-		if p.Value < minV {
-			minV = p.Value
-		}
-		if p.Value > maxV {
-			maxV = p.Value
-		}
-	}
-	if maxV == minV {
-		maxV = minV + 1
-	}
-
-	scaleX := float64(width-2*pad) / float64(max(1, len(points)-1))
-	scaleY := float64(height-2*pad) / (maxV - minV)
-
-	path := strings.Builder{}
-	for i, p := range points {
-		x := float64(pad) + float64(i)*scaleX
-		y := float64(height-pad) - (p.Value-minV)*scaleY
-		if i == 0 {
-			path.WriteString(fmt.Sprintf("M%.2f %.2f", x, y))
-			continue
-		}
-		path.WriteString(fmt.Sprintf(" L%.2f %.2f", x, y))
-	}
-
-	svg := fmt.Sprintf(
-		"<svg width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"%s\" stroke=\"#9146FF\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>",
-		width, height, width, height, path.String(),
-	)
-	return template.HTML(svg)
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 type homeKPISnapshot struct {
@@ -234,7 +216,7 @@ func (h *HomeDashboardHandler) buildKPISnapshot(ctx context.Context) homeKPISnap
 	return snapshot
 }
 
-type promPoint struct {
+type PromPoint struct {
 	Timestamp time.Time
 	Value     float64
 }
@@ -256,7 +238,7 @@ type promQueryRangeResult struct {
 	Values [][]any           `json:"values"`
 }
 
-func (h *HomeDashboardHandler) queryPrometheusRange(ctx context.Context, query string, start, end time.Time, step time.Duration) ([]promPoint, error) {
+func (h *HomeDashboardHandler) queryPrometheusRange(ctx context.Context, query string, start, end time.Time, step time.Duration) ([]PromPoint, error) {
 	if strings.TrimSpace(h.prometheusBaseURL) == "" {
 		return nil, errors.New("prometheus base url not configured")
 	}
@@ -319,7 +301,7 @@ func (h *HomeDashboardHandler) queryPrometheusRange(ctx context.Context, query s
 		return nil, fmt.Errorf("unexpected prometheus result type: %s", decoded.Data.ResultType)
 	}
 	if len(decoded.Data.Result) == 0 {
-		return []promPoint{}, nil
+		return []PromPoint{}, nil
 	}
 
 	series := decoded.Data.Result[0]
@@ -334,7 +316,7 @@ func (h *HomeDashboardHandler) queryPrometheusRange(ctx context.Context, query s
 		}
 	}
 
-	points := make([]promPoint, 0, len(series.Values))
+	points := make([]PromPoint, 0, len(series.Values))
 	for _, v := range series.Values {
 		if len(v) != 2 {
 			continue
@@ -355,7 +337,7 @@ func (h *HomeDashboardHandler) queryPrometheusRange(ctx context.Context, query s
 			continue
 		}
 
-		points = append(points, promPoint{Timestamp: time.Unix(int64(ts), 0), Value: f})
+		points = append(points, PromPoint{Timestamp: time.Unix(int64(ts), 0), Value: f})
 	}
 
 	return points, nil

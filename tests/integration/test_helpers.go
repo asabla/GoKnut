@@ -51,6 +51,9 @@ func templateFromRepoFiles(t *testing.T, relPaths ...string) *template.Template 
 			}
 			return m
 		},
+		"staticHTML": func(s string) template.HTML {
+			return template.HTML(s)
+		},
 	}
 
 	// Test binary CWD is the package directory, so derive repo root

@@ -17,7 +17,6 @@ import (
 
 // SSE Event Types
 const (
-	EventTypeMetrics      = "metrics"
 	EventTypeMessage      = "message"
 	EventTypeChannelCount = "channel_count"
 	EventTypeUserCount    = "user_count"
@@ -47,14 +46,6 @@ const (
 type SSEEvent struct {
 	Type   string `json:"type"`
 	Cursor int64  `json:"cursor"`
-}
-
-// MetricsEvent represents a metrics update event.
-type MetricsEvent struct {
-	SSEEvent
-	TotalMessages int64 `json:"total_messages"`
-	TotalChannels int64 `json:"total_channels"`
-	TotalUsers    int64 `json:"total_users"`
 }
 
 // MessageEvent represents a new message event.
@@ -193,7 +184,7 @@ func (h *SSEHandler) HandleSSE(w http.ResponseWriter, r *http.Request) {
 	// Parse query parameters
 	view := r.URL.Query().Get("view")
 	if view == "" {
-		view = "home" // Default to home view
+		view = "messages" // Default to messages view
 	}
 
 	afterID, _ := strconv.ParseInt(r.URL.Query().Get("after_id"), 10, 64)
@@ -202,7 +193,6 @@ func (h *SSEHandler) HandleSSE(w http.ResponseWriter, r *http.Request) {
 
 	// Validate view
 	validViews := map[string]bool{
-		"home":         true,
 		"messages":     true,
 		"channels":     true,
 		"users":        true,
@@ -402,14 +392,9 @@ func (h *SSEHandler) BroadcastMessage(id, channelID int64, channelName string,
 	defer h.mu.RUnlock()
 
 	for _, client := range h.clients {
-		// Send to home view (shows all messages)
-		if client.View == "home" {
-			h.sendEvent(client, event)
-			continue
-		}
-
 		// Send to messages view (shows all messages)
 		if client.View == "messages" {
+
 			h.sendEvent(client, event)
 			continue
 		}
@@ -494,8 +479,6 @@ func (h *SSEHandler) sendBackfill(ctx context.Context, client *SSEClient, flushe
 // sendInitialData sends initial data based on the view type.
 func (h *SSEHandler) sendInitialData(ctx context.Context, client *SSEClient, flusher http.Flusher) error {
 	switch client.View {
-	case "home":
-		return h.sendHomeData(ctx, client, flusher)
 	case "messages":
 		// Messages view starts with empty state, waits for new messages
 		return nil
@@ -508,38 +491,6 @@ func (h *SSEHandler) sendInitialData(ctx context.Context, client *SSEClient, flu
 	default:
 		return nil
 	}
-}
-
-// sendHomeData sends initial home view data (metrics).
-func (h *SSEHandler) sendHomeData(ctx context.Context, client *SSEClient, flusher http.Flusher) error {
-	var totalMessages, totalChannels, totalUsers int64
-
-	if h.messageRepo != nil {
-		totalMessages, _ = h.messageRepo.GetTotalCount(ctx)
-	}
-	if h.channelRepo != nil {
-		totalChannels, _ = h.channelRepo.GetCount(ctx)
-	}
-	if h.userRepo != nil {
-		totalUsers, _ = h.userRepo.GetCount(ctx)
-	}
-
-	// Get latest message ID as cursor
-	var cursor int64
-	if h.messageRepo != nil {
-		cursor, _ = h.messageRepo.GetGlobalLatestID(ctx)
-	}
-
-	event := MetricsEvent{
-		SSEEvent:      SSEEvent{Type: EventTypeMetrics, Cursor: cursor},
-		TotalMessages: totalMessages,
-		TotalChannels: totalChannels,
-		TotalUsers:    totalUsers,
-	}
-
-	h.sendEvent(client, event)
-	flusher.Flush()
-	return nil
 }
 
 // sendChannelsData sends initial channel counts.
