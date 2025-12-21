@@ -10,23 +10,33 @@
     
     <main class="flex-1 container-prose py-6 w-full">
         <div class="space-y-8">
-            <!-- Statistics -->
-            <div class="grid grid-cols-2 gap-4 sm:grid-cols-4" data-testid="statistics-section">
-                <div class="card p-4 text-center">
-                    <div class="text-3xl font-bold text-primary-500" id="stat-messages" data-testid="stat-messages">{{formatNumber .TotalMessages}}</div>
-                    <div class="text-sm text-gray-400 mt-1">Messages Archived</div>
+            <!-- Dashboard -->
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div
+                    hx-get="/dashboard/home/summary"
+                    hx-trigger="load, every 60s"
+                    hx-swap="outerHTML"
+                >
+                    <div class="card p-6" data-testid="dashboard-summary">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-lg font-medium text-white">Dashboard Summary</h2>
+                            <span class="text-xs text-gray-400">Last updated: —</span>
+                        </div>
+                        <div class="mt-4 text-sm text-gray-400">Loading summary…</div>
+                    </div>
                 </div>
-                <div class="card p-4 text-center">
-                    <div class="text-3xl font-bold text-primary-500" id="stat-channels" data-testid="stat-channels">{{.TotalChannels}}</div>
-                    <div class="text-sm text-gray-400 mt-1">Total Channels</div>
-                </div>
-                <div class="card p-4 text-center">
-                    <div class="text-3xl font-bold text-success-400" id="stat-enabled" data-testid="stat-enabled">{{.EnabledChannels}}</div>
-                    <div class="text-sm text-gray-400 mt-1">Active Channels</div>
-                </div>
-                <div class="card p-4 text-center">
-                    <div class="text-3xl font-bold text-primary-500" id="stat-users" data-testid="stat-users">{{formatNumber .TotalUsers}}</div>
-                    <div class="text-sm text-gray-400 mt-1">Unique Users</div>
+
+                <div
+                    hx-get="/dashboard/home/diagrams"
+                    hx-trigger="load, every 60s"
+                    hx-swap="outerHTML"
+                >
+                    <div class="card p-6" data-testid="dashboard-diagrams">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-lg font-medium text-white">Activity</h2>
+                            <span class="text-xs text-gray-400">Loading diagrams…</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -75,232 +85,11 @@
                 </a>
             </div>
 
-            <!-- Latest Messages -->
-            <div class="card" data-testid="latest-messages-section">
-                <div class="px-6 py-4 border-b border-surface-border flex items-center justify-between">
-                    <h2 class="text-xl font-bold text-white">Latest Messages</h2>
-                    <a href="/messages" class="text-sm text-primary-500 hover:text-twitch-light transition-colors">View all</a>
-                </div>
-                <div id="latest-messages-container" class="divide-y divide-gray-700 max-h-96 overflow-y-auto">
-                    {{if .RecentMessages}}
-                    {{range .RecentMessages}}
-                    <div class="px-6 py-3 hover:bg-surface-hover transition-colors message-row" data-testid="message-row" data-message-id="{{.ID}}">
-                        <div class="flex items-start space-x-3">
-                            <span class="text-gray-500 text-xs shrink-0 tabular-nums mt-0.5" title='{{.SentAt.Format `2006-01-02 15:04:05 MST`}}'>
-                                {{.SentAt.Format "15:04:05"}}
-                            </span>
-                            <div class="min-w-0 flex-1">
-                                <div class="flex items-center space-x-2 text-sm">
-                                    <a href="/users/{{.Username}}" class="font-medium text-primary-500 hover:underline shrink-0">
-                                        {{if .DisplayName}}{{.DisplayName}}{{else}}{{.Username}}{{end}}
-                                    </a>
-                                    <span class="text-gray-500">in</span>
-                                    <a href="/channels/{{.ChannelName}}/view" class="text-gray-400 hover:text-primary-500 hover:underline shrink-0">
-                                        #{{.ChannelName}}
-                                    </a>
-                                </div>
-                                <p class="text-twitch-light text-sm mt-1 break-words measure">{{.Text}}</p>
-                            </div>
-                        </div>
-                    </div>
-                    {{end}}
-                    {{else}}
-                    <div id="empty-messages" class="empty-state">
-                        <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                        <p>No messages yet</p>
-                        <p class="text-sm mt-1">Messages will appear here once channels start being tracked</p>
-                    </div>
-                    {{end}}
-                </div>
-            </div>
         </div>
     </main>
     
     {{template "shared/footer"}}
     {{template "shared/htmx-config"}}
-    
-    <!-- SSE Client Script for Home View -->
-    <script>
-    (function() {
-        'use strict';
-        
-        var eventSource = null;
-        var reconnectAttempts = 0;
-        var maxReconnectAttempts = 10;
-        var baseReconnectDelay = 1000;
-        var maxReconnectDelay = 30000;
-        var lastCursor = 0;
-        var isConnected = false;
-        
-        function showStatus(state) {
-            var states = ['connected', 'idle', 'reconnecting', 'error'];
-            states.forEach(function(s) {
-                var el = document.getElementById('sse-home-' + s);
-                if (el) {
-                    el.classList.add('hidden');
-                    el.classList.remove('inline-flex');
-                }
-            });
-            var el = document.getElementById('sse-home-' + state);
-            if (el) {
-                el.classList.remove('hidden');
-                el.classList.add('inline-flex');
-            }
-        }
-        
-        function formatNumber(n) {
-            if (n < 1000) return n.toString();
-            if (n < 1000000) return (n / 1000).toFixed(1) + 'K';
-            return (n / 1000000).toFixed(1) + 'M';
-        }
-        
-        function updateMetrics(data) {
-            var el = document.getElementById('stat-messages');
-            if (el) el.textContent = formatNumber(data.total_messages || 0);
-            
-            el = document.getElementById('stat-channels');
-            if (el) el.textContent = data.total_channels || 0;
-            
-            el = document.getElementById('stat-users');
-            if (el) el.textContent = formatNumber(data.total_users || 0);
-        }
-        
-        function addMessage(msg) {
-            var container = document.getElementById('latest-messages-container');
-            if (!container) return;
-            
-            var emptyState = document.getElementById('empty-messages');
-            if (emptyState) emptyState.remove();
-            
-            var existing = container.querySelector('[data-message-id="' + msg.id + '"]');
-            if (existing) return;
-            
-            var div = document.createElement('div');
-            div.className = 'px-6 py-3 hover:bg-surface-hover transition-colors message-row sse-updated';
-            div.setAttribute('data-testid', 'message-row');
-            div.setAttribute('data-message-id', msg.id);
-            
-            var time = new Date(msg.sent_at);
-            var timeStr = time.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            
-            div.innerHTML = '<div class="flex items-start space-x-3">' +
-                '<span class="text-gray-500 text-xs shrink-0 tabular-nums mt-0.5">' + timeStr + '</span>' +
-                '<div class="min-w-0 flex-1">' +
-                    '<div class="flex items-center space-x-2 text-sm">' +
-                        '<a href="/users/' + msg.username + '" class="font-medium text-primary-500 hover:underline shrink-0">' +
-                            (msg.display_name || msg.username) + '</a>' +
-                        '<span class="text-gray-500">in</span>' +
-                        '<a href="/channels/' + msg.channel_name + '/view" class="text-gray-400 hover:text-primary-500 hover:underline shrink-0">' +
-                            '#' + msg.channel_name + '</a>' +
-                    '</div>' +
-                    '<p class="text-twitch-light text-sm mt-1 break-words measure">' + escapeHtml(msg.text) + '</p>' +
-                '</div>' +
-            '</div>';
-            
-            container.insertBefore(div, container.firstChild);
-            
-            var messages = container.querySelectorAll('.message-row');
-            if (messages.length > 20) {
-                messages[messages.length - 1].remove();
-            }
-        }
-        
-        function escapeHtml(text) {
-            var div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        
-        function handleMessage(event) {
-            try {
-                var data = JSON.parse(event.data);
-                
-                if (data.cursor) lastCursor = data.cursor;
-                
-                switch (data.type) {
-                    case 'status':
-                        if (data.state === 'connected') {
-                            showStatus('connected');
-                            isConnected = true;
-                            reconnectAttempts = 0;
-                        } else if (data.state === 'idle') {
-                            showStatus('idle');
-                        } else if (data.state === 'error' || data.state === 'fallback') {
-                            showStatus('error');
-                        }
-                        break;
-                        
-                    case 'metrics':
-                        updateMetrics(data);
-                        break;
-                        
-                    case 'message':
-                        addMessage(data);
-                        break;
-                }
-            } catch (e) {
-                console.error('Failed to parse SSE event:', e);
-            }
-        }
-        
-        function connect() {
-            if (eventSource) {
-                eventSource.close();
-            }
-            
-            var url = '/live?view=home';
-            if (lastCursor > 0) {
-                url += '&after_id=' + lastCursor;
-            }
-            
-            showStatus('reconnecting');
-            
-            eventSource = new EventSource(url);
-            
-            eventSource.onopen = function() {
-                console.log('SSE connected');
-            };
-            
-            eventSource.onmessage = handleMessage;
-            
-            eventSource.onerror = function(e) {
-                console.error('SSE error:', e);
-                isConnected = false;
-                showStatus('error');
-                eventSource.close();
-                
-                if (reconnectAttempts < maxReconnectAttempts) {
-                    var delay = Math.min(baseReconnectDelay * Math.pow(2, reconnectAttempts), maxReconnectDelay);
-                    reconnectAttempts++;
-                    console.log('Reconnecting in ' + delay + 'ms (attempt ' + reconnectAttempts + ')');
-                    setTimeout(connect, delay);
-                } else {
-                    console.log('Max reconnect attempts reached');
-                }
-            };
-        }
-        
-        window.sseReconnect = function() {
-            reconnectAttempts = 0;
-            connect();
-        };
-        
-        if (typeof EventSource !== 'undefined') {
-            connect();
-        } else {
-            console.log('SSE not supported, falling back to polling');
-            showStatus('error');
-        }
-        
-        window.addEventListener('beforeunload', function() {
-            if (eventSource) {
-                eventSource.close();
-            }
-        });
-    })();
-    </script>
 </body>
 </html>
 {{end}}
