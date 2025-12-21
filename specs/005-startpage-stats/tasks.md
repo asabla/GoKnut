@@ -73,11 +73,11 @@ A user opens the start page to quickly understand whether the system is ingestin
 
 - [x] T014 [US1] Implement DB-backed KPI snapshot builder (messages/channels/enabled/users + last updated + partial error capture) in `internal/http/handlers/home_dashboard.go`
 - [x] T015 [US1] Implement minimal Prometheus range-query client (HTTP + JSON decode) in `internal/http/handlers/home_dashboard.go`
-- [ ] T016 [US1] Implement `GET /dashboard/home/summary` handler returning HTML fragment in `internal/http/handlers/home_dashboard.go`
-- [ ] T017 [US1] Implement `GET /dashboard/home/diagrams` handler using PromQL from `specs/005-startpage-stats/spec.md` (15m window, 30s step) in `internal/http/handlers/home_dashboard.go`
-- [ ] T018 [P] [US1] Implement KPI fragment markup (labels, values, last-updated, partial-error placeholders) in `internal/http/templates/dashboard/home_summary.html`
-- [ ] T019 [P] [US1] Implement diagrams fragment markup (total messages + total users, labeled SVG charts, time window labels, empty + degraded states) in `internal/http/templates/dashboard/home_diagrams.html`
-- [ ] T020 [US1] Refactor `/` page to include HTMX-polled containers for summary + diagrams fragments in `internal/http/templates/home.html`
+- [x] T016 [US1] Implement `GET /dashboard/home/summary` handler returning HTML fragment in `internal/http/handlers/home_dashboard.go`
+- [x] T017 [US1] Implement `GET /dashboard/home/diagrams` handler using PromQL from `specs/005-startpage-stats/spec.md` (15m window, 30s step) in `internal/http/handlers/home_dashboard.go`
+- [x] T018 [P] [US1] Implement KPI fragment markup (labels, values, last-updated, partial-error placeholders) in `internal/http/templates/dashboard/home_summary.html`
+- [x] T019 [P] [US1] Implement diagrams fragment markup (total messages + total users, labeled SVG charts, time window labels, empty + degraded states) in `internal/http/templates/dashboard/home_diagrams.html`
+- [x] T020 [US1] Refactor `/` page to include HTMX-polled containers for summary + diagrams fragments in `internal/http/templates/home.html`
 
 **Checkpoint**: Visiting `/` shows dashboard blocks; “Last updated” changes on refresh; diagrams degrade within timeout budget when Prometheus fails.
 
@@ -95,7 +95,7 @@ A user uses shortcut links on the start page to jump to commonly used areas (cha
 
 ### Tests for User Story 2 (write first; ensure they fail)
 
-- [ ] T021 [P] [US2] Add unit test asserting shortcuts to `/channels`, `/users`, `/messages` exist in `internal/http/templates/home.html` via `tests/unit/home_template_test.go`
+- [x] T021 [P] [US2] Add unit test asserting shortcuts to `/channels`, `/users`, `/messages` exist in `internal/http/templates/home.html` via `tests/unit/home_template_test.go`
 
 ### Implementation for User Story 2
 
@@ -117,15 +117,15 @@ A user no longer sees “latest messages” streaming into the start page; inste
 
 ### Tests for User Story 3 (write first; ensure they fail)
 
-- [ ] T023 [P] [US3] Add unit test asserting `internal/http/templates/home.html` does not contain "Latest Messages" or `/live?view=home` via `tests/unit/home_template_test.go`
-- [ ] T024 [P] [US3] Add integration test asserting `GET /` HTML has no "Latest Messages" and no `/live?view=home` in `tests/integration/home_view_integration_test.go`
+- [x] T023 [P] [US3] Add unit test asserting `internal/http/templates/home.html` does not contain "Latest Messages" or `/live?view=home` via `tests/unit/home_template_test.go`
+- [x] T024 [P] [US3] Add integration test asserting `GET /` HTML has no "Latest Messages" and no `/live?view=home` in `tests/integration/home_view_integration_test.go`
 
 ### Implementation for User Story 3
 
 - [ ] T025 [US3] Remove “Latest Messages” markup block from `internal/http/templates/home.html`
 - [ ] T026 [US3] Remove home SSE client script block (and related DOM ids) from `internal/http/templates/home.html`
-- [ ] T027 [US3] Stop querying recent messages for `/` render in `internal/http/server.go`
-- [ ] T028 [US3] Remove `view=home` support from SSE handler (valid views and any `sendHomeData`) in `internal/http/handlers/live_sse.go`
+- [x] T027 [US3] Stop querying recent messages for `/` render in `internal/http/server.go`
+- [x] T028 [US3] Remove `view=home` support from SSE handler (valid views and any `sendHomeData`) in `internal/http/handlers/live_sse.go`
 
 **Checkpoint**: `/` has no live feed UI and no SSE home dependency; other SSE views keep working.
 
@@ -135,9 +135,9 @@ A user no longer sees “latest messages” streaming into the start page; inste
 
 **Purpose**: Improvements that affect multiple user stories.
 
-- [ ] T029 [P] Add structured logs for dashboard refresh failures (rate-limited / low-noise) in `internal/http/handlers/home_dashboard.go`
-- [ ] T030 [P] Add unit test coverage for SVG empty/degraded rendering helpers in `tests/unit/home_dashboard_diagrams_test.go`
-- [ ] T031 [P] Update verification steps in `specs/005-startpage-stats/quickstart.md` to include Prometheus required/soft dependency behavior
+- [x] T029 [P] Add structured logs for dashboard refresh failures (rate-limited / low-noise) in `internal/http/handlers/home_dashboard.go`
+- [x] T030 [P] Add unit test coverage for SVG empty/degraded rendering helpers in `tests/unit/home_dashboard_diagrams_test.go`
+- [x] T031 [P] Update verification steps in `specs/005-startpage-stats/quickstart.md` to include Prometheus required/soft dependency behavior
 - [ ] T032 Run full test suite via `make test` (see `Makefile`)
 
 ---

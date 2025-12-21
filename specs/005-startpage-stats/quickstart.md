@@ -28,4 +28,4 @@ Prometheus should scrape the app `/metrics` endpoint when OTel metrics are enabl
 - The start page shows KPI tiles and shortcut links.
 - The start page no longer shows a "Latest Messages" list.
 - KPI tiles and diagrams update automatically (at least once per minute) without a full page reload.
-- If stats/diagram data is unavailable, the start page still renders shortcuts and shows clear empty/error states.
+- Prometheus is a soft dependency: if Prometheus is down/unavailable, `/dashboard/home/diagrams` still returns HTTP 200 with a degraded state and the start page still renders shortcuts.

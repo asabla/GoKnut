@@ -289,7 +289,7 @@ func TestHomeSSEStream(t *testing.T) {
 	defer server.Close()
 
 	// Connect to SSE stream
-	req, err := http.NewRequestWithContext(ctx, "GET", server.URL+"/live?view=home", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", server.URL+"/live?view=messages", nil)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
@@ -307,13 +307,13 @@ func TestHomeSSEStream(t *testing.T) {
 		t.Errorf("expected Content-Type text/event-stream, got %s", ct)
 	}
 
-	// Read first few events (with timeout)
+	// Read first event (with timeout)
 	scanner := bufio.NewScanner(resp.Body)
 	var events []string
 	eventCount := 0
 	timeout := time.After(3 * time.Second)
 
-	for eventCount < 2 {
+	for eventCount < 1 {
 		select {
 		case <-timeout:
 			t.Fatalf("timeout waiting for events, got %d events: %v", eventCount, events)
@@ -333,9 +333,9 @@ func TestHomeSSEStream(t *testing.T) {
 		}
 	}
 
-	// Verify we got status and metrics events
-	if len(events) < 2 {
-		t.Fatalf("expected at least 2 events, got %d", len(events))
+	// Verify we got the initial status event.
+	if len(events) < 1 {
+		t.Fatalf("expected at least 1 event, got %d", len(events))
 	}
 
 	// First event should be status=connected
@@ -348,26 +348,6 @@ func TestHomeSSEStream(t *testing.T) {
 	}
 	if statusEvent["state"] != "connected" {
 		t.Errorf("expected state 'connected', got %v", statusEvent["state"])
-	}
-
-	// Second event should be metrics
-	var metricsEvent map[string]any
-	if err := json.Unmarshal([]byte(events[1]), &metricsEvent); err != nil {
-		t.Fatalf("failed to parse metrics event: %v", err)
-	}
-	if metricsEvent["type"] != "metrics" {
-		t.Errorf("expected second event type 'metrics', got %v", metricsEvent["type"])
-	}
-
-	// Verify metrics content
-	if total, ok := metricsEvent["total_messages"].(float64); !ok || total != 5 {
-		t.Errorf("expected total_messages=5, got %v", metricsEvent["total_messages"])
-	}
-	if total, ok := metricsEvent["total_channels"].(float64); !ok || total != 1 {
-		t.Errorf("expected total_channels=1, got %v", metricsEvent["total_channels"])
-	}
-	if total, ok := metricsEvent["total_users"].(float64); !ok || total != 1 {
-		t.Errorf("expected total_users=1, got %v", metricsEvent["total_users"])
 	}
 }
 
