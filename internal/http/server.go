@@ -44,6 +44,9 @@ type Server struct {
 	profileRepo          *repository.ProfileRepository
 	enableSSE            bool
 	sseHandler           *handlers.SSEHandler
+
+	prometheusBaseURL string
+	prometheusTimeout time.Duration
 }
 
 // ServerConfig holds HTTP server configuration.
@@ -66,6 +69,9 @@ type ServerConfig struct {
 	UserRepo             *repository.UserRepository
 	ProfileRepo          *repository.ProfileRepository
 	EnableSSE            bool
+
+	PrometheusBaseURL string
+	PrometheusTimeout time.Duration
 }
 
 // templateFuncs returns the custom template functions.
@@ -133,6 +139,8 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 		userRepo:             cfg.UserRepo,
 		profileRepo:          cfg.ProfileRepo,
 		enableSSE:            cfg.EnableSSE,
+		prometheusBaseURL:    cfg.PrometheusBaseURL,
+		prometheusTimeout:    cfg.PrometheusTimeout,
 	}
 
 	// Parse templates with custom functions
@@ -243,7 +251,15 @@ func (s *Server) registerRoutes() {
 
 	// Register home dashboard fragments
 	if s.templates != nil {
-		homeDashboardHandler := handlers.NewHomeDashboardHandler(s.templates, s.logger, "", 0)
+		homeDashboardHandler := handlers.NewHomeDashboardHandler(
+			s.templates,
+			s.logger,
+			s.messageRepo,
+			s.channelRepo,
+			s.userRepo,
+			s.prometheusBaseURL,
+			s.prometheusTimeout,
+		)
 		homeDashboardHandler.RegisterRoutes(s.mux)
 	}
 

@@ -229,6 +229,8 @@ func run() error {
 		ProfileRepo:          profileRepo,
 		OrganizationRepo:     organizationRepo,
 		EnableSSE:            cfg.EnableSSE,
+		PrometheusBaseURL:    cfg.PrometheusBaseURL,
+		PrometheusTimeout:    time.Duration(cfg.PrometheusTimeout) * time.Millisecond,
 	})
 
 	if err != nil {
