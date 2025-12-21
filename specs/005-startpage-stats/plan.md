@@ -19,7 +19,7 @@ Refactor the start page to remove the live "Latest Messages" feed and replace it
 **Project Type**: Server-rendered web UI with HTMX partial updates
 **Performance Goals**: Home dashboard refresh endpoints respond fast enough for periodic polling
 **Constraints**: No new infrastructure/services; diagrams must be lightweight (SSR SVG), graceful no-data/failure behavior
-**Scale/Scope**: High-throughput ingestion metrics; low-frequency dashboard polling (e.g., every 30-60s per open page)
+**Scale/Scope**: High-throughput ingestion metrics; low-frequency dashboard polling (every 60s per open page)
 
 ## Constitution Check
 

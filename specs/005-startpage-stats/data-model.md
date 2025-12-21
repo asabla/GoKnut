@@ -38,15 +38,15 @@ A bounded series used to render diagrams. Values should be normalized to a numer
 
 ## Diagram Series Definitions
 
-### Diagram A: Activity
+### Diagram A: Total messages
 
-- Title: "Ingestion activity"
-- Values: messages ingested per step (Prometheus range query results; increase per step)
+- Title: "Messages"
+- Values: total messages over time (Prometheus range query results from DB count gauge)
 
-### Diagram B: Reliability
+### Diagram B: Total users
 
-- Title: "Dropped messages"
-- Values: dropped messages per step (Prometheus range query results; increase per step)
+- Title: "Users"
+- Values: total users over time (Prometheus range query results from DB count gauge)
 
 ## Storage / Persistence
 

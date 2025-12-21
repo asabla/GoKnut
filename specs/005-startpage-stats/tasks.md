@@ -54,11 +54,11 @@ Every task MUST use:
 
 A user opens the start page to quickly understand whether the system is ingesting messages and generally “healthy”, without reading a live message feed.
 
-**Goal**: Add a statistics-first dashboard: KPI tiles + “Last updated” + two lightweight time-series diagrams.
+**Goal**: Add a statistics-first dashboard: KPI tiles + “Last updated” + two lightweight time-series diagrams (total messages + total users).
 
 **Independent Test**:
 - Load `/` and confirm KPI + diagram widgets render.
-- Confirm both widgets auto-refresh at least once per minute (HTMX polling).
+- Confirm both widgets auto-refresh every minute (HTMX polling).
 - Force Prometheus timeout/unavailability and confirm diagrams show degraded state (HTTP 200 fragment).
 
 ### Tests for User Story 1 (write first; ensure they fail)
@@ -76,7 +76,7 @@ A user opens the start page to quickly understand whether the system is ingestin
 - [ ] T016 [US1] Implement `GET /dashboard/home/summary` handler returning HTML fragment in `internal/http/handlers/home_dashboard.go`
 - [ ] T017 [US1] Implement `GET /dashboard/home/diagrams` handler using PromQL from `specs/005-startpage-stats/spec.md` (15m window, 30s step) in `internal/http/handlers/home_dashboard.go`
 - [ ] T018 [P] [US1] Implement KPI fragment markup (labels, values, last-updated, partial-error placeholders) in `internal/http/templates/dashboard/home_summary.html`
-- [ ] T019 [P] [US1] Implement diagrams fragment markup (two labeled SVG charts, time window labels, empty + degraded states) in `internal/http/templates/dashboard/home_diagrams.html`
+- [ ] T019 [P] [US1] Implement diagrams fragment markup (total messages + total users, labeled SVG charts, time window labels, empty + degraded states) in `internal/http/templates/dashboard/home_diagrams.html`
 - [ ] T020 [US1] Refactor `/` page to include HTMX-polled containers for summary + diagrams fragments in `internal/http/templates/home.html`
 
 **Checkpoint**: Visiting `/` shows dashboard blocks; “Last updated” changes on refresh; diagrams degrade within timeout budget when Prometheus fails.

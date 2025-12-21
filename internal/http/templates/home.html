@@ -15,7 +15,7 @@
                 <div
                     hx-get="/dashboard/home/summary"
                     hx-trigger="load, every 60s"
-                    hx-swap="outerHTML"
+                    hx-swap="innerHTML"
                 >
                     <div class="card p-6" data-testid="dashboard-summary">
                         <div class="flex items-center justify-between">
@@ -29,11 +29,11 @@
                 <div
                     hx-get="/dashboard/home/diagrams"
                     hx-trigger="load, every 60s"
-                    hx-swap="outerHTML"
+                    hx-swap="innerHTML"
                 >
                     <div class="card p-6" data-testid="dashboard-diagrams">
                         <div class="flex items-center justify-between">
-                            <h2 class="text-lg font-medium text-white">Activity</h2>
+                            <h2 class="text-lg font-medium text-white">Diagrams</h2>
                             <span class="text-xs text-gray-400">Loading diagrams…</span>
                         </div>
                     </div>

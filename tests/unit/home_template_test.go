@@ -23,11 +23,14 @@ func TestHomeTemplateIncludesDashboardPollingContainers(t *testing.T) {
 	html := string(b)
 
 	// Failing-first for US1: once implemented, home.html includes HTMX containers
-	// that poll these fragments.
+	// that poll these fragments at a 60s interval.
 	if !strings.Contains(html, "hx-get=\"/dashboard/home/summary\"") {
 		t.Fatalf("expected home template to poll summary fragment")
 	}
 	if !strings.Contains(html, "hx-get=\"/dashboard/home/diagrams\"") {
 		t.Fatalf("expected home template to poll diagrams fragment")
+	}
+	if !strings.Contains(html, "every 60s") {
+		t.Fatalf("expected home template to poll every 60s")
 	}
 }
