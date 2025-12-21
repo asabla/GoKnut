@@ -36,7 +36,7 @@ func TestHomeDashboardDiagramsFragment_Success(t *testing.T) {
 		"internal/http/templates/dashboard/home_diagrams.html",
 	)
 
-	h := handlers.NewHomeDashboardHandler(templates, logger, promSrv.URL, 50*time.Millisecond)
+	h := handlers.NewHomeDashboardHandler(templates, logger, nil, nil, nil, promSrv.URL, 50*time.Millisecond)
 	h.RegisterRoutes(mux)
 
 	srv := httptest.NewServer(mux)
@@ -78,7 +78,7 @@ func TestHomeDashboardDiagramsFragment_PrometheusTimeoutDegraded(t *testing.T) {
 		"internal/http/templates/dashboard/home_diagrams.html",
 	)
 
-	h := handlers.NewHomeDashboardHandler(templates, logger, promSrv.URL, 5*time.Millisecond)
+	h := handlers.NewHomeDashboardHandler(templates, logger, nil, nil, nil, promSrv.URL, 5*time.Millisecond)
 	h.RegisterRoutes(mux)
 
 	srv := httptest.NewServer(mux)

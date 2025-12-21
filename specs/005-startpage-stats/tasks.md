@@ -71,8 +71,8 @@ A user opens the start page to quickly understand whether the system is ingestin
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Implement DB-backed KPI snapshot builder (messages/channels/enabled/users + last updated + partial error capture) in `internal/http/handlers/home_dashboard.go`
-- [ ] T015 [US1] Implement minimal Prometheus range-query client (HTTP + JSON decode) in `internal/http/handlers/home_dashboard.go`
+- [x] T014 [US1] Implement DB-backed KPI snapshot builder (messages/channels/enabled/users + last updated + partial error capture) in `internal/http/handlers/home_dashboard.go`
+- [x] T015 [US1] Implement minimal Prometheus range-query client (HTTP + JSON decode) in `internal/http/handlers/home_dashboard.go`
 - [ ] T016 [US1] Implement `GET /dashboard/home/summary` handler returning HTML fragment in `internal/http/handlers/home_dashboard.go`
 - [ ] T017 [US1] Implement `GET /dashboard/home/diagrams` handler using PromQL from `specs/005-startpage-stats/spec.md` (15m window, 30s step) in `internal/http/handlers/home_dashboard.go`
 - [ ] T018 [P] [US1] Implement KPI fragment markup (labels, values, last-updated, partial-error placeholders) in `internal/http/templates/dashboard/home_summary.html`

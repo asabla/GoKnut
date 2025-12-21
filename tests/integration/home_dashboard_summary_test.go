@@ -17,7 +17,7 @@ func TestHomeDashboardSummaryFragment(t *testing.T) {
 	templates := templateFromRepoFiles(t,
 		"internal/http/templates/dashboard/home_summary.html",
 	)
-	h := handlers.NewHomeDashboardHandler(templates, logger, "", 0)
+	h := handlers.NewHomeDashboardHandler(templates, logger, nil, nil, nil, "", 0)
 	h.RegisterRoutes(mux)
 
 	srv := httptest.NewServer(mux)
