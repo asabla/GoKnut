@@ -61,20 +61,117 @@ func (h *HomeDashboardHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /dashboard/home/diagrams", h.handleDiagrams)
 }
 
+type homeSummaryData struct {
+	Snapshot homeKPISnapshot
+}
+
 func (h *HomeDashboardHandler) handleSummary(w http.ResponseWriter, r *http.Request) {
+	snapshot := h.buildKPISnapshot(r.Context())
+	data := homeSummaryData{Snapshot: snapshot}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.templates.ExecuteTemplate(w, "dashboard/home_summary", nil); err != nil {
+	if err := h.templates.ExecuteTemplate(w, "dashboard/home_summary", data); err != nil {
 		h.logger.Error("failed to execute dashboard summary template", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
 
 func (h *HomeDashboardHandler) handleDiagrams(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	window := 15 * time.Minute
+	step := 30 * time.Second
+	end := time.Now()
+	start := end.Add(-window)
+
+	// PromQL per spec.
+	activityQuery := "increase(goknut_ingestion_messages_ingested_total[30s])"
+	droppedQuery := "increase(goknut_ingestion_dropped_messages_total[30s])"
+
+	activity, errA := h.queryPrometheusRange(ctx, activityQuery, start, end, step)
+	dropped, errB := h.queryPrometheusRange(ctx, droppedQuery, start, end, step)
+
+	data := homeDiagramsData{
+		WindowLabel: "Last 15m",
+		ActivitySVG: renderSparklineSVG(activity),
+		DroppedSVG:  renderSparklineSVG(dropped),
+		Degraded:    errA != nil || errB != nil,
+	}
+	if errA != nil {
+		data.Errors = append(data.Errors, "activity")
+	}
+	if errB != nil {
+		data.Errors = append(data.Errors, "dropped")
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.templates.ExecuteTemplate(w, "dashboard/home_diagrams", nil); err != nil {
+	if err := h.templates.ExecuteTemplate(w, "dashboard/home_diagrams", data); err != nil {
 		h.logger.Error("failed to execute dashboard diagrams template", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
+}
+
+type homeDiagramsData struct {
+	WindowLabel string
+	Degraded    bool
+	Errors      []string
+
+	ActivitySVG template.HTML
+	DroppedSVG  template.HTML
+}
+
+func renderSparklineSVG(points []promPoint) template.HTML {
+	const width = 240
+	const height = 48
+	const pad = 2
+
+	if len(points) == 0 {
+		return template.HTML(fmt.Sprintf(
+			"<svg width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"></svg>",
+			width, height, width, height,
+		))
+	}
+
+	minV := points[0].Value
+	maxV := points[0].Value
+	for _, p := range points[1:] {
+		if p.Value < minV {
+			minV = p.Value
+		}
+		if p.Value > maxV {
+			maxV = p.Value
+		}
+	}
+	if maxV == minV {
+		maxV = minV + 1
+	}
+
+	scaleX := float64(width-2*pad) / float64(max(1, len(points)-1))
+	scaleY := float64(height-2*pad) / (maxV - minV)
+
+	path := strings.Builder{}
+	for i, p := range points {
+		x := float64(pad) + float64(i)*scaleX
+		y := float64(height-pad) - (p.Value-minV)*scaleY
+		if i == 0 {
+			path.WriteString(fmt.Sprintf("M%.2f %.2f", x, y))
+			continue
+		}
+		path.WriteString(fmt.Sprintf(" L%.2f %.2f", x, y))
+	}
+
+	svg := fmt.Sprintf(
+		"<svg width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"%s\" stroke=\"#9146FF\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>",
+		width, height, width, height, path.String(),
+	)
+	return template.HTML(svg)
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 type homeKPISnapshot struct {
