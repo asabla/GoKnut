@@ -2,12 +2,47 @@
 
 ## Existing Behavior
 
+### Template parsing for dashboard templates
+
+- Server template parsing uses `ParseFS(tmplFS, "*.html", "*/*.html")` from `internal/http/server.go`.
+- This already includes subdirectories under `internal/http/templates/` (one level deep), so `internal/http/templates/dashboard/*.html` will be parsed automatically.
+
+
+### Baseline test run
+
+Command: `go test ./...`
+
+Output:
+
+```text
+?   	github.com/asabla/goknut/cmd/server	[no test files]
+?   	github.com/asabla/goknut/internal/config	[no test files]
+?   	github.com/asabla/goknut/internal/http	[no test files]
+?   	github.com/asabla/goknut/internal/http/dto	[no test files]
+?   	github.com/asabla/goknut/internal/http/handlers	[no test files]
+?   	github.com/asabla/goknut/internal/ingestion	[no test files]
+?   	github.com/asabla/goknut/internal/irc	[no test files]
+?   	github.com/asabla/goknut/internal/observability	[no test files]
+?   	github.com/asabla/goknut/internal/repository	[no test files]
+?   	github.com/asabla/goknut/internal/search	[no test files]
+?   	github.com/asabla/goknut/internal/services	[no test files]
+ok  	github.com/asabla/goknut/tests/contract	(cached)
+ok  	github.com/asabla/goknut/tests/integration	(cached)
+?   	github.com/asabla/goknut/tests/integration/fakes	[no test files]
+ok  	github.com/asabla/goknut/tests/unit	(cached)
+```
+
+### Start page behavior (current)
+
 - The start page template (`internal/http/templates/home.html`) currently includes:
-  - KPI tiles for totals
-  - Shortcut links
+  - KPI tiles for totals + ids: `#stat-messages`, `#stat-channels`, `#stat-enabled`, `#stat-users`
+  - Shortcut links (`/channels`, `/users`, `/messages`)
   - A "Latest Messages" list
   - A home-scoped SSE client (`/live?view=home`) that updates KPI values and prepends messages
-- The home handler (`internal/http/server.go`) currently queries DB repositories for totals and recent messages.
+- The home handler (`internal/http/server.go`):
+  - Queries DB repositories for totals
+  - Queries recent messages via `MessageRepository.GetRecentGlobal(ctx, 20)`
+  - Renders `home` template
 
 ## Constraints (from spec)
 

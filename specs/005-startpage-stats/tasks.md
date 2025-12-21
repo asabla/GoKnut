@@ -28,9 +28,9 @@ Every task MUST use:
 
 **Purpose**: Establish baseline behavior and document current start page implementation.
 
-- [ ] T001 Run baseline tests `go test ./...` and paste output into `specs/005-startpage-stats/research.md`
-- [ ] T002 Document current home page behavior (KPI tiles + shortcuts + latest messages + SSE) in `specs/005-startpage-stats/research.md`
-- [ ] T003 [P] Confirm template parsing supports `internal/http/templates/dashboard/*.html` (validate `ParseFS(..., "*.html", "*/*.html")`) and record result in `specs/005-startpage-stats/research.md`
+- [x] T001 Run baseline tests `go test ./...` and paste output into `specs/005-startpage-stats/research.md`
+- [x] T002 Document current home page behavior (KPI tiles + shortcuts + latest messages + SSE) in `specs/005-startpage-stats/research.md`
+- [x] T003 [P] Confirm template parsing supports `internal/http/templates/dashboard/*.html` (validate `ParseFS(..., "*.html", "*/*.html")`) and record result in `specs/005-startpage-stats/research.md`
 
 ---
 
@@ -40,11 +40,11 @@ Every task MUST use:
 
 ⚠️ **CRITICAL**: No user story work should begin until these routes compile and render placeholder HTML.
 
-- [ ] T004 Add Prometheus config fields (base URL + timeout) in `internal/config/config.go`
-- [ ] T005 Create `internal/http/handlers/home_dashboard.go` with `HomeDashboardHandler` skeleton and `RegisterRoutes(*http.ServeMux)`
-- [ ] T006 [P] Create dashboard fragment templates `internal/http/templates/dashboard/home_summary.html` and `internal/http/templates/dashboard/home_diagrams.html` (placeholder HTML)
-- [ ] T007 Wire dashboard routes in `internal/http/server.go` (register `GET /dashboard/home/summary` and `GET /dashboard/home/diagrams`)
-- [ ] T008 Ensure dashboard templates are parsed/registered in `internal/http/server.go` (or template loader used by server)
+- [x] T004 Add Prometheus config fields (base URL + timeout) in `internal/config/config.go`
+- [x] T005 Create `internal/http/handlers/home_dashboard.go` with `HomeDashboardHandler` skeleton and `RegisterRoutes(*http.ServeMux)`
+- [x] T006 [P] Create dashboard fragment templates `internal/http/templates/dashboard/home_summary.html` and `internal/http/templates/dashboard/home_diagrams.html` (placeholder HTML)
+- [x] T007 Wire dashboard routes in `internal/http/server.go` (register `GET /dashboard/home/summary` and `GET /dashboard/home/diagrams`)
+- [x] T008 Ensure dashboard templates are parsed/registered in `internal/http/server.go` (or template loader used by server)
 
 **Checkpoint**: `GET /dashboard/home/summary` and `GET /dashboard/home/diagrams` return 200 with basic HTML.
 
@@ -63,11 +63,11 @@ A user opens the start page to quickly understand whether the system is ingestin
 
 ### Tests for User Story 1 (write first; ensure they fail)
 
-- [ ] T009 [P] [US1] Add integration test for `GET /dashboard/home/summary` HTML fragment in `tests/integration/home_dashboard_summary_test.go`
-- [ ] T010 [P] [US1] Add integration test for `GET /dashboard/home/diagrams` success path (fake Prometheus) in `tests/integration/home_dashboard_diagrams_test.go`
-- [ ] T011 [P] [US1] Add integration test for `GET /dashboard/home/diagrams` timeout/unavailable degraded HTML (fake Prometheus) in `tests/integration/home_dashboard_diagrams_test.go`
-- [ ] T012 [P] [US1] Add Prometheus HTTP fake server helper in `tests/integration/fakes/prometheus_fake.go`
-- [ ] T013 [P] [US1] Add unit test asserting HTMX polling containers exist in `internal/http/templates/home.html` via `tests/unit/home_template_test.go`
+- [x] T009 [P] [US1] Add integration test for `GET /dashboard/home/summary` HTML fragment in `tests/integration/home_dashboard_summary_test.go`
+- [x] T010 [P] [US1] Add integration test for `GET /dashboard/home/diagrams` success path (fake Prometheus) in `tests/integration/home_dashboard_diagrams_test.go`
+- [x] T011 [P] [US1] Add integration test for `GET /dashboard/home/diagrams` timeout/unavailable degraded HTML (fake Prometheus) in `tests/integration/home_dashboard_diagrams_test.go`
+- [x] T012 [P] [US1] Add Prometheus HTTP fake server helper in `tests/integration/fakes/prometheus_fake.go`
+- [x] T013 [P] [US1] Add unit test asserting HTMX polling containers exist in `internal/http/templates/home.html` via `tests/unit/home_template_test.go`
 
 ### Implementation for User Story 1
 
