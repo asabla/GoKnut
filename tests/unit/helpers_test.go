@@ -213,6 +213,36 @@ func TestConfigValidation(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "prometheus not configured with zero timeout is valid",
+			cfg: &config.Config{
+				DBDriver:          config.DBDriverSQLite,
+				DBPath:            "./test.db",
+				HTTPAddr:          ":8080",
+				PrometheusTimeout: 0,
+				PrometheusBaseURL: "",
+				TwitchAuthMode:    config.AuthModeAnonymous,
+				BatchSize:         100,
+				FlushTimeout:      100,
+				BufferSize:        10000,
+			},
+			wantErr: false,
+		},
+		{
+			name: "prometheus configured requires positive timeout",
+			cfg: &config.Config{
+				DBDriver:          config.DBDriverSQLite,
+				DBPath:            "./test.db",
+				HTTPAddr:          ":8080",
+				PrometheusTimeout: 0,
+				PrometheusBaseURL: "http://localhost:9090",
+				TwitchAuthMode:    config.AuthModeAnonymous,
+				BatchSize:         100,
+				FlushTimeout:      100,
+				BufferSize:        10000,
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {

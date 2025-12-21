@@ -312,8 +312,8 @@ func (c *Config) Validate() error {
 	if c.HTTPAddr == "" {
 		errs = append(errs, "http-addr is required")
 	}
-	if c.PrometheusTimeout <= 0 {
-		errs = append(errs, "prometheus-timeout-ms must be positive")
+	if c.PrometheusBaseURL != "" && c.PrometheusTimeout <= 0 {
+		errs = append(errs, "prometheus-timeout-ms must be positive when Prometheus is configured")
 	}
 
 	// Auth mode-specific validation
