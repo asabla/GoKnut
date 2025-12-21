@@ -54,7 +54,7 @@ func NewHomeDashboardHandler(
 		messageRepo:       messageRepo,
 		channelRepo:       channelRepo,
 		userRepo:          userRepo,
-		httpClient:        &http.Client{},
+		httpClient:        &http.Client{Timeout: 30 * time.Second},
 		prometheusBaseURL: prometheusBaseURL,
 		prometheusTimeout: prometheusTimeout,
 		lastDegradedLogAt: map[string]time.Time{},

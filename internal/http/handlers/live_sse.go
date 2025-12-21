@@ -394,7 +394,6 @@ func (h *SSEHandler) BroadcastMessage(id, channelID int64, channelName string,
 	for _, client := range h.clients {
 		// Send to messages view (shows all messages)
 		if client.View == "messages" {
-
 			h.sendEvent(client, event)
 			continue
 		}
