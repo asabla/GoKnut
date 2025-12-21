@@ -31,7 +31,9 @@ services:
       - ENABLE_SSE=true
       # Ingestion
       - BATCH_SIZE=100
-      - FLUSH_TIMEOUT_MS=1000
+      - FLUSH_TIMEOUT=1000
+      # Dashboard diagrams (Prometheus)
+      - PROMETHEUS_BASE_URL=http://prometheus:9090
       # OpenTelemetry
       - OTEL_ENABLED=true
       - OTEL_SERVICE_NAME=goknut
