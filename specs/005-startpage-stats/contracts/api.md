@@ -20,7 +20,7 @@ All endpoints return HTML fragments (not JSON) to match the current server-rende
 - Returns an HTML fragment containing:
   - KPI tiles (messages/channels/enabled/users)
   - A "Last updated" timestamp
-- Refresh cadence: requested by client at 30–60 seconds.
+- Refresh cadence: requested by client every 60 seconds.
 
 **Success (200)**: HTML fragment
 
@@ -29,8 +29,8 @@ All endpoints return HTML fragments (not JSON) to match the current server-rende
 ### `GET /dashboard/home/diagrams`
 
 - Returns an HTML fragment containing:
-  - Diagram A: Ingestion activity sparkline (SVG)
-  - Diagram B: Dropped messages sparkline (SVG)
+  - Diagram A: Total messages sparkline (SVG)
+  - Diagram B: Total users sparkline (SVG)
   - Each diagram includes its time window label (e.g. "Last 15m")
 
 **Success (200)**: HTML fragment

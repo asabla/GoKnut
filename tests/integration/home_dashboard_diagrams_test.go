@@ -16,14 +16,26 @@ func TestHomeDashboardDiagramsFragment_Success(t *testing.T) {
 	logger := observability.NewLogger("test")
 
 	prom := fakes.NewPrometheusFake()
-	prom.SetQueryRangeResponse(fakes.PromQueryRangeResponse{
+	prom.SetQueryRangeResponseForQuery("goknut_db_total_messages", fakes.PromQueryRangeResponse{
 		Status: "success",
 		Data: fakes.PromQueryRangeData{
 			ResultType: "matrix",
 			Result: []fakes.PromQueryRangeResult{
 				{
-					Metric: map[string]string{"__name__": "goknut_ingestion_messages_ingested_total"},
+					Metric: map[string]string{"__name__": "goknut_db_total_messages"},
 					Values: [][]any{{float64(1730000000), "1"}, {float64(1730000030), "2"}},
+				},
+			},
+		},
+	})
+	prom.SetQueryRangeResponseForQuery("goknut_db_total_users", fakes.PromQueryRangeResponse{
+		Status: "success",
+		Data: fakes.PromQueryRangeData{
+			ResultType: "matrix",
+			Result: []fakes.PromQueryRangeResult{
+				{
+					Metric: map[string]string{"__name__": "goknut_db_total_users"},
+					Values: [][]any{{float64(1730000000), "1"}, {float64(1730000030), "1"}},
 				},
 			},
 		},
@@ -58,9 +70,14 @@ func TestHomeDashboardDiagramsFragment_Success(t *testing.T) {
 		t.Fatalf("expected diagrams marker, got body: %s", body)
 	}
 
-	// Failing-first: once implemented, the handler will render an SVG.
 	if !strings.Contains(body, "<svg") {
 		t.Fatalf("expected SVG diagram output")
+	}
+	if !strings.Contains(body, "Number of messages") {
+		t.Fatalf("expected messages diagram label")
+	}
+	if !strings.Contains(body, "Number of users") {
+		t.Fatalf("expected users diagram label")
 	}
 }
 

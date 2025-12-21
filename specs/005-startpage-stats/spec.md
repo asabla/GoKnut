@@ -107,16 +107,16 @@ A user no longer sees “latest messages” streaming into the start page; inste
 - **FR-002**: Start page MUST display at least 2 diagrams that visualize trends over time, using a clearly stated time window (default: last 15 minutes, 30s step).
 
   **Acceptance Criteria**:
-  - Diagram A communicates system activity (e.g., message ingestion volume over time).
-  - Diagram B communicates reliability or load (e.g., failures/dropped work over time, or request/latency volume over time).
-  - Diagram series values are retrieved by querying Prometheus via PromQL (historical window, not just current counters).
+  - Diagram A shows the total number of messages over time.
+  - Diagram B shows the total number of users over time.
+  - Diagram series values are retrieved by querying Prometheus via PromQL over the historical window, not just "current" snapshots.
   - Each diagram clearly shows its time window (default: last 15 minutes).
   - Optional enhancement: allow the window/step to be configured via app config later.
 
-- **FR-003**: While the start page is open, it MUST refresh its statistics and diagrams automatically at least once per minute.
+- **FR-003**: While the start page is open, it MUST refresh its statistics and diagrams automatically every minute.
 
   **Acceptance Criteria**:
-  - Without user interaction, values change (or "last updated" changes) within 60 seconds.
+  - Without user interaction, values change (or "last updated" changes) at least once within 60 seconds.
 
 - **FR-004**: Start page MUST show when the dashboard was last updated so users can judge data freshness.
 
@@ -164,16 +164,16 @@ A user no longer sees “latest messages” streaming into the start page; inste
 
 ### Prometheus Metrics & PromQL (for diagrams)
 
-- **Diagram A (Activity)**
-  - Metric: `goknut.ingestion.messages_ingested` (counter)
-  - PromQL (rate-ish per step): `increase(goknut_ingestion_messages_ingested_total[30s])`
+- **Diagram A (Total messages)**
+  - Metric (OTel instrument): `goknut.db.total_messages` (gauge)
+  - PromQL (range query): `goknut_db_total_messages`
 
-- **Diagram B (Reliability)**
-  - Metric: `goknut.ingestion.dropped_messages` (counter)
-  - PromQL (rate-ish per step): `increase(goknut_ingestion_dropped_messages_total[30s])`
+- **Diagram B (Total users)**
+  - Metric (OTel instrument): `goknut.db.total_users` (gauge)
+  - PromQL (range query): `goknut_db_total_users`
 
 **Notes**:
-- Prometheus counter names use the `_total` suffix when scraped from OTel/Prometheus.
+- OTel metric names use dots (e.g. `goknut.db.total_users`); the Prometheus scrape/export form replaces dots with underscores (e.g. `goknut_db_total_users`).
 - Step/window defaults are `30s` / `15m` respectively; step can be adjusted by implementation if Prometheus resolution requires it.
 
 ## Success Criteria *(mandatory)*

@@ -85,23 +85,23 @@ func (h *HomeDashboardHandler) handleDiagrams(w http.ResponseWriter, r *http.Req
 	start := end.Add(-window)
 
 	// PromQL per spec.
-	activityQuery := "increase(goknut_ingestion_messages_ingested_total[30s])"
-	droppedQuery := "increase(goknut_ingestion_dropped_messages_total[30s])"
+	messagesQuery := "goknut_db_total_messages"
+	usersQuery := "goknut_db_total_users"
 
-	activity, errA := h.queryPrometheusRange(ctx, activityQuery, start, end, step)
-	dropped, errB := h.queryPrometheusRange(ctx, droppedQuery, start, end, step)
+	messages, errMessages := h.queryPrometheusRange(ctx, messagesQuery, start, end, step)
+	users, errUsers := h.queryPrometheusRange(ctx, usersQuery, start, end, step)
 
 	data := homeDiagramsData{
 		WindowLabel: "Last 15m",
-		ActivitySVG: renderSparklineSVG(activity),
-		DroppedSVG:  renderSparklineSVG(dropped),
-		Degraded:    errA != nil || errB != nil,
+		MessagesSVG: renderSparklineSVG(messages),
+		UsersSVG:    renderSparklineSVG(users),
+		Degraded:    errMessages != nil || errUsers != nil,
 	}
-	if errA != nil {
-		data.Errors = append(data.Errors, "activity")
+	if errMessages != nil {
+		data.Errors = append(data.Errors, "messages")
 	}
-	if errB != nil {
-		data.Errors = append(data.Errors, "dropped")
+	if errUsers != nil {
+		data.Errors = append(data.Errors, "users")
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -116,8 +116,8 @@ type homeDiagramsData struct {
 	Degraded    bool
 	Errors      []string
 
-	ActivitySVG template.HTML
-	DroppedSVG  template.HTML
+	MessagesSVG template.HTML
+	UsersSVG    template.HTML
 }
 
 func renderSparklineSVG(points []promPoint) template.HTML {
@@ -322,8 +322,18 @@ func (h *HomeDashboardHandler) queryPrometheusRange(ctx context.Context, query s
 		return []promPoint{}, nil
 	}
 
-	// For the dashboard, we expect a single series; use the first one.
 	series := decoded.Data.Result[0]
+	if len(decoded.Data.Result) > 1 {
+		for _, candidate := range decoded.Data.Result {
+			if candidate.Metric != nil {
+				if name, ok := candidate.Metric["__name__"]; ok && name == query {
+					series = candidate
+					break
+				}
+			}
+		}
+	}
+
 	points := make([]promPoint, 0, len(series.Values))
 	for _, v := range series.Values {
 		if len(v) != 2 {

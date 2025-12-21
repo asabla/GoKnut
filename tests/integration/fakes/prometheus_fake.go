@@ -15,15 +15,17 @@ import (
 type PrometheusFake struct {
 	mu sync.RWMutex
 
-	queryRangeResponse PromQueryRangeResponse
-	queryRangeStatus   int
-	queryRangeDelayCh  chan struct{}
+	queryRangeResponses map[string]PromQueryRangeResponse
+	queryRangeResponse  PromQueryRangeResponse
+	queryRangeStatus    int
+	queryRangeDelayCh   chan struct{}
 }
 
 // NewPrometheusFake creates a new fake Prometheus server.
 func NewPrometheusFake() *PrometheusFake {
 	return &PrometheusFake{
-		queryRangeStatus: http.StatusOK,
+		queryRangeStatus:    http.StatusOK,
+		queryRangeResponses: map[string]PromQueryRangeResponse{},
 		queryRangeResponse: PromQueryRangeResponse{
 			Status: "success",
 			Data: PromQueryRangeData{
@@ -41,10 +43,15 @@ func (p *PrometheusFake) Server() *httptest.Server {
 
 func (p *PrometheusFake) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/api/v1/query_range" {
+		query := r.URL.Query().Get("query")
+
 		p.mu.RLock()
 		delayCh := p.queryRangeDelayCh
 		status := p.queryRangeStatus
-		resp := p.queryRangeResponse
+		resp, ok := p.queryRangeResponses[query]
+		if !ok {
+			resp = p.queryRangeResponse
+		}
 		p.mu.RUnlock()
 
 		if delayCh != nil {
@@ -60,11 +67,18 @@ func (p *PrometheusFake) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	http.NotFound(w, r)
 }
 
-// SetQueryRangeResponse sets the query_range response.
+// SetQueryRangeResponse sets the default query_range response.
 func (p *PrometheusFake) SetQueryRangeResponse(resp PromQueryRangeResponse) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.queryRangeResponse = resp
+}
+
+// SetQueryRangeResponseForQuery sets the query_range response for a specific PromQL query.
+func (p *PrometheusFake) SetQueryRangeResponseForQuery(query string, resp PromQueryRangeResponse) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.queryRangeResponses[query] = resp
 }
 
 // SetQueryRangeStatus sets the HTTP status for query_range.
