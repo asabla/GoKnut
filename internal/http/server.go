@@ -241,6 +241,12 @@ func (s *Server) registerRoutes() {
 		collaborationHandler.RegisterRoutes(s.mux)
 	}
 
+	// Register home dashboard fragments
+	if s.templates != nil {
+		homeDashboardHandler := handlers.NewHomeDashboardHandler(s.templates, s.logger, "", 0)
+		homeDashboardHandler.RegisterRoutes(s.mux)
+	}
+
 	// Register SSE live updates handler
 	if s.enableSSE {
 		s.sseHandler = handlers.NewSSEHandler(

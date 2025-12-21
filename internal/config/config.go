@@ -47,6 +47,10 @@ type Config struct {
 	// HTTP Server
 	HTTPAddr string
 
+	// Prometheus (optional, used for dashboard diagrams)
+	PrometheusBaseURL string
+	PrometheusTimeout int // milliseconds
+
 	// Twitch IRC
 	TwitchAuthMode   AuthMode // "authenticated" or "anonymous"
 	TwitchUsername   string   // Required for authenticated mode
@@ -89,6 +93,10 @@ func DefaultConfig() *Config {
 		// HTTP defaults
 		HTTPAddr: ":8080",
 
+		// Prometheus defaults
+		PrometheusBaseURL: "http://localhost:9090",
+		PrometheusTimeout: 1500,
+
 		// Twitch defaults
 		TwitchAuthMode: AuthModeAuthenticated,
 
@@ -125,6 +133,8 @@ func Load() (*Config, error) {
 	flag.IntVar(&cfg.FlushTimeout, "flush-timeout", cfg.FlushTimeout, "Batch flush timeout in milliseconds")
 	flag.IntVar(&cfg.BufferSize, "buffer-size", cfg.BufferSize, "Ingestion buffer size")
 	flag.BoolVar(&cfg.EnableFTS, "enable-fts", cfg.EnableFTS, "Enable FTS5 full-text search")
+	flag.StringVar(&cfg.PrometheusBaseURL, "prometheus-base-url", cfg.PrometheusBaseURL, "Prometheus base URL (optional; used for dashboard diagrams)")
+	flag.IntVar(&cfg.PrometheusTimeout, "prometheus-timeout-ms", cfg.PrometheusTimeout, "Prometheus HTTP timeout in milliseconds")
 
 	flag.Parse()
 
@@ -134,6 +144,14 @@ func Load() (*Config, error) {
 	}
 	if v := os.Getenv("HTTP_ADDR"); v != "" {
 		cfg.HTTPAddr = v
+	}
+	if v := os.Getenv("PROMETHEUS_BASE_URL"); v != "" {
+		cfg.PrometheusBaseURL = v
+	}
+	if v := os.Getenv("PROMETHEUS_TIMEOUT_MS"); v != "" {
+		if timeout, err := strconv.Atoi(v); err == nil && timeout > 0 {
+			cfg.PrometheusTimeout = timeout
+		}
 	}
 	if v := os.Getenv("TWITCH_USERNAME"); v != "" {
 		cfg.TwitchUsername = v
@@ -293,6 +311,9 @@ func (c *Config) Validate() error {
 
 	if c.HTTPAddr == "" {
 		errs = append(errs, "http-addr is required")
+	}
+	if c.PrometheusTimeout <= 0 {
+		errs = append(errs, "prometheus-timeout-ms must be positive")
 	}
 
 	// Auth mode-specific validation
